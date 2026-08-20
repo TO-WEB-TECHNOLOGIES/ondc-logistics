@@ -1,6 +1,6 @@
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
-// import * as ondcSchema from "./schema/index.js";
+import * as ondcSchema from "./schema/index.js";
 // import * as customerSchema from "./customer/schema/index.js";
 import { logger } from "../utils/logger.js";
 
@@ -135,7 +135,7 @@ poolWebhook.on("error", (err) =>
 // ─── Drizzle clients ─────────────────────────────────────────────────────────
 
 /** ONDC catalog, BPP, provider, item, category, on_select, on_init tables */
-// export const db1 = drizzle(pool1, { schema: ondcSchema });
+export const db1 = drizzle(pool1, { schema: ondcSchema });
 
 /** Customer profile, address, and related tables */
 // export const db2 = drizzle(pool2, { schema: customerSchema });
@@ -145,7 +145,7 @@ poolWebhook.on("error", (err) =>
  * the dedicated poolIngest so the Kafka catalog consumer never competes with
  * API reads on pool1. Used by catalog-kafka.consumer.ts only.
  */
-// export const db1Ingest = drizzle(poolIngest, { schema: ondcSchema });
+export const db1Ingest = drizzle(poolIngest, { schema: ondcSchema });
 
 /**
  * ONDC /on_search staging client (3-process split) — same schema as db1, backed by
@@ -153,7 +153,7 @@ poolWebhook.on("error", (err) =>
  * so the ondc-webhook process writes staging rows on its own connection budget,
  * never touching pool1.
  */
-// export const db1Webhook = drizzle(poolWebhook, { schema: ondcSchema });
+export const db1Webhook = drizzle(poolWebhook, { schema: ondcSchema });
 
 export { pool1, pool2, poolIngest, poolWebhook };
 
