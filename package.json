@@ -6,17 +6,13 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node --import ./dist/instrument.js dist/index.js",
-    "dev": "tsx watch --import ./src/instrument.ts src/index.ts",
+    "start": "node --import dist/index.js",
+    "dev": "tsx watch --import index.ts",
     "build": "tsc && tsc-alias",
-    "db:generate": "drizzle-kit generate --config=src/db/drizzle.config.ts",
-    "db:migrate": "drizzle-kit migrate --config=src/db/drizzle.config.ts",
-    "db:studio": "drizzle-kit studio --config=src/db/drizzle.config.ts",
-    "db:push": "drizzle-kit push --config=src/db/drizzle.config.ts",
-    "db:customer:generate": "drizzle-kit generate --config=src/db/drizzle.customer.config.ts",
-    "db:customer:migrate": "drizzle-kit migrate --config=src/db/drizzle.customer.config.ts",
-    "db:customer:studio": "drizzle-kit studio --config=src/db/drizzle.customer.config.ts",
-    "backfill:embeddings": "tsx src/scripts/backfill-embeddings.ts"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "keywords": [],
   "author": "",
@@ -24,6 +20,7 @@
   "dependencies": {
     "@sentry/node": "^10.57.0",
     "@sentry/profiling-node": "^10.59.0",
+    "@types/pdfkit": "^0.17.6",
     "axios": "^1.13.6",
     "bullmq": "^5.75.2",
     "date-fns": "^4.1.0",

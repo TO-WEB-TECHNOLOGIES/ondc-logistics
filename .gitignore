@@ -7,3 +7,5 @@ dist/
 drizzle/meta/
 
 *.log
+
+ondc-docs.md

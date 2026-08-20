@@ -5,9 +5,9 @@ import swaggerUi from "swagger-ui-express";
 // Sentry namespace — only used here for the Express error handler and flush.
 // SDK init/instrumentation happens in src/instrument.ts, preloaded via --import.
 import * as Sentry from "@sentry/node";
-// import { router } from "@routes/index.js";
-// import { swaggerSpec } from "./utils/swagger.js";
-// import { connectPostgres } from "./db/index.js";
+import { router } from "@routes/index.js";
+import { swaggerSpec } from "./utils/swagger.js";
+import { connectPostgres } from "./db/index.js";
 // import "./utils/redis.js";
 
 // RECON-01 (2026-07-11): settlement-cron.service.ts deleted entirely — settlement preparation is
@@ -105,7 +105,7 @@ const startApp = async () => {
   }
 };
 
-startApp();
+// startApp();
 
 // Health check — registered before all middleware (JSON parser, CORS) so liveness
 // probes (PM2, load balancer / target-group checks) get a fast, dependency-free 200
@@ -166,9 +166,6 @@ app.get("/", (req: Request, res: Response) => {
 //   customCss: ".swagger-ui .topbar { display: none }",
 //   customSiteTitle: "ONDC BAP API",
 // }));
-
-console.log("DATABASE_URL:", process.env.DATABASE_URL);
-console.log("REDIS_URL:", process.env.REDIS_URL);
 
 // Sentry Express error handler — MUST be registered after all controllers/routes
 // and before any other (fall-through) error middleware. Captures errors thrown
