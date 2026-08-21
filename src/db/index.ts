@@ -36,6 +36,7 @@ const APP_NAME = `ondc-${NODE_ROLE}`;
 const pool1 = new Pool({
   connectionString:
     process.env.PSQL_URI ||
+    process.env.DATABASE_URL ||
     "postgresql://postgres:postgres@localhost:5432/ondc",
   max: Number(process.env.POOL1_MAX) || 50,
   application_name: APP_NAME,
@@ -86,6 +87,7 @@ pool2.on("error", (err) =>
 const poolIngest = new Pool({
   connectionString:
     process.env.PSQL_URI ||
+    process.env.DATABASE_URL ||
     "postgresql://postgres:postgres@localhost:5432/ondc",
   // 2026-06-20 (3-process split): env-configurable (POOL_INGEST_MAX, default 15).
   // This pool only does the consumer's staging-table bookkeeping (claim/done/fail),
@@ -120,6 +122,7 @@ poolIngest.on("error", (err) =>
 const poolWebhook = new Pool({
   connectionString:
     process.env.PSQL_URI ||
+    process.env.DATABASE_URL ||
     "postgresql://postgres:postgres@localhost:5432/ondc",
   max: Number(process.env.POOL_WEBHOOK_MAX) || 15,
   application_name: APP_NAME,

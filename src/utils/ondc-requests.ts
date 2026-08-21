@@ -37,6 +37,7 @@ export async function sendOndcRequest(opts: {
       error: err?.message,
       ...logMeta,
     });
+    console.log(err.response.data);
     throw err;
   }
 }

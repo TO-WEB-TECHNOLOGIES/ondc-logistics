@@ -71,7 +71,8 @@ export interface SearchRequest {
 export interface SearchResponse {
   searchId: string;
   transactionId: string;
-  status: "pending";
+  messageId: string;
+  status: "SEARCH_SENT";
 }
 
 export interface NormalizedProviderResult {
