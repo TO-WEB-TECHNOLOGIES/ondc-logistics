@@ -1,4 +1,4 @@
-import { api } from "@utils/axios.js";
+import { api } from "./v1/axios.js";
 import { createAuthorizationHeader } from "./crypto.js";
 import ondcLog, { OndcAction, OndcLogMeta } from "./ondc-logger.js";
 

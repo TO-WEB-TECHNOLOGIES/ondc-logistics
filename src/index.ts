@@ -5,7 +5,7 @@ import swaggerUi from "swagger-ui-express";
 // Sentry namespace — only used here for the Express error handler and flush.
 // SDK init/instrumentation happens in src/instrument.ts, preloaded via --import.
 import * as Sentry from "@sentry/node";
-import { router } from "@routes/index.js";
+import { router } from "./routes/index.js";
 import { swaggerSpec } from "./utils/swagger.js";
 import { connectPostgres } from "./db/index.js";
 // import "./utils/redis.js";
