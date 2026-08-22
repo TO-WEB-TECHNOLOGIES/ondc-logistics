@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+﻿import { and, eq } from "drizzle-orm";
 import { db1 } from "../db/index.js";
 import {
   logisticsSearchHolidays,
@@ -90,3 +90,4 @@ export class DrizzleSearchRepository implements SearchRepository {
     }).where(and(eq(ondcTransactions.transactionId, transactionId), eq(ondcTransactions.action, "search")));
   }
 }
+
