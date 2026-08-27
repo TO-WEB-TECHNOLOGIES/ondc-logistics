@@ -172,6 +172,8 @@ app.use(router);
 // in route handlers and reports them to Sentry.
 Sentry.setupExpressErrorHandler(app);
 
-server.listen(3000, () => {
-  logger.info("server", "Server started on port 3000");
+const port = Number(process.env.PORT) || 3000;
+
+server.listen(port, () => {
+  logger.info("server", `Server started on port ${port}`);
 });

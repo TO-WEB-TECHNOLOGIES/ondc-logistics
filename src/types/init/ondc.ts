@@ -1,0 +1,3 @@
+import type { OndcContext, OndcFulfillmentLocation, OndcPayloadDetails } from "../search/ondc.js";
+export interface OndcInitRequest { context: OndcContext & { action: "init"; bpp_id: string; bpp_uri: string }; message: { order: { provider: { id: string }; items: Array<{ id: string; quantity: { count: number } }>; fulfillments: Array<{ id: string; type: string; start: OndcFulfillmentLocation; end: OndcFulfillmentLocation }>; billing: Record<string, unknown>; payment: Record<string, unknown>; "@ondc/org/payload_details"?: OndcPayloadDetails; }; }; }
+export interface OndcOnInitResponse { context: OndcContext & { action: "on_init"; transaction_id: string }; message: Record<string, unknown>; error?: Record<string, unknown>; }

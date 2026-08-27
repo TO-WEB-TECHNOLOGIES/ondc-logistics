@@ -1,6 +1,6 @@
 Health check:
 
-  curl.exe http://localhost:3000/health
+  curl.exe https://ondc-logistics.onrender.com/health
 
   Expected:
 
@@ -40,7 +40,7 @@ Health check:
 
   $search = Invoke-RestMethod `
     -Method Post `
-    -Uri "http://localhost:3000/logistics/search" `
+    -Uri "https://ondc-logistics.onrender.com/logistics/search" `
     -ContentType "application/json" `
     -Body ($body | ConvertTo-Json -Depth 10)
 
@@ -57,7 +57,7 @@ Health check:
 
   Open SSE in another terminal:
 
-  curl.exe -N "http://localhost:3000/logistics/search/$($search.searchId)/events"
+  curl.exe -N "https://ondc-logistics.onrender.com/logistics/search/$($search.searchId)/events"
 
   Send a test on_search callback from the original terminal:
 
@@ -140,7 +140,7 @@ Health check:
 
   Invoke-RestMethod `
     -Method Post `
-    -Uri "http://localhost:3000/on_search" `
+    -Uri "https://ondc-logistics.onrender.com/on_search" `
     -ContentType "application/json" `
     -Body ($callback | ConvertTo-Json -Depth 20)
 
@@ -166,7 +166,7 @@ Health check:
 
   Invoke-RestMethod `
     -Method Post `
-    -Uri "http://localhost:3000/on_search" `
+    -Uri "https://ondc-logistics.onrender.com/on_search" `
     -ContentType "application/json" `
     -Body '{"message":{}}'
 
