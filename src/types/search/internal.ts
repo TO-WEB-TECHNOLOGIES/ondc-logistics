@@ -57,7 +57,20 @@ export interface SearchPayment {
   currency?: string;
 }
 
+export interface SearchProtocolContext {
+  domain: string;
+  country: string;
+  city: string;
+  coreVersion: string;
+  bapId: string;
+  bapUri: string;
+  transactionId?: string;
+  messageId?: string;
+  timestamp?: string;
+  ttl?: string;
+}
 export interface SearchRequest {
+  protocol?: SearchProtocolContext;
   categoryId: string;
   fulfillmentType: string;
   authorization: SearchAuthorization;
@@ -143,4 +156,7 @@ export interface SearchCompletedEvent {
   reason: "timeout" | "transport_error" | "completed";
 }
 
-export type SearchSseEvent = SearchResultEvent | SearchErrorEvent | SearchCompletedEvent;
+export type SearchSseEvent =
+  | SearchResultEvent
+  | SearchErrorEvent
+  | SearchCompletedEvent;
