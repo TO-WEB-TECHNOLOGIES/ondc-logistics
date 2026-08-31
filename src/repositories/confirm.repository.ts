@@ -22,8 +22,9 @@ export interface ConfirmRepository {
     init: OndcInitRequest;
     onInit: OndcOnInitResponse;
     initTransactionId: string;
+    orderId?: string;
   }>;
-  create(payload: OndcConfirmRequest, initTransactionId: string): Promise<void>;
+  create(payload: OndcConfirmRequest, initTransactionId: string): Promise<boolean>;
   updateStatus(
     transactionId: string,
     status: string,
@@ -68,6 +69,20 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
     };
   }
   async create(payload: OndcConfirmRequest, initTransactionId: string) {
+    const existing = await this.database
+      .select({ id: ondcTransactions.id })
+      .from(ondcTransactions)
+      .where(
+        and(
+          eq(ondcTransactions.transactionId, payload.context.transaction_id),
+          eq(ondcTransactions.messageId, payload.context.message_id),
+          eq(ondcTransactions.action, "confirm"),
+          eq(ondcTransactions.orderId, payload.message.order.id),
+        ),
+      )
+      .limit(1);
+    if (existing.length > 0) return false;
+
     console.log("[confirm.repository] persisting /confirm", {
       orderId: payload.message.order.id,
       transactionId: payload.context.transaction_id,
@@ -96,6 +111,7 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
         ttl: payload.context.ttl,
         requestPayload: payload,
       });
+    return true;
   }
   async updateStatus(
     transactionId: string,
