@@ -20,9 +20,8 @@ export interface SearchServiceDependencies {
 }
 
 export class SearchService {
-
   constructor(private readonly dependencies: SearchServiceDependencies) {}
-  
+
   async createSearch(request: SearchRequest): Promise<SearchResponse> {
     const payload = this.createOndcRequest(request);
     // console.log("[search.service] identifiers", {
@@ -78,6 +77,5 @@ export class SearchService {
       messageId: source?.messageId ?? randomUUID(),
       timestamp: source?.timestamp ?? new Date().toISOString(),
     });
-    
   }
 }

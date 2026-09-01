@@ -250,59 +250,51 @@ export class DrizzleOnSearchRepository implements OnSearchRepository {
       .where(eq(lspCatalogItems.providerDbId, providerId));
 
     if (p.categories?.length)
-      await tx
-        .insert(lspProviderCategories)
-        .values(
-          p.categories.map((x) => ({
-            providerDbId: providerId,
-            categoryId: x.id,
-            timeLabel: x.time?.label,
-            duration: x.time?.duration,
-            timestamp: parseDate(x.time?.timestamp),
-          })),
-        );
+      await tx.insert(lspProviderCategories).values(
+        p.categories.map((x) => ({
+          providerDbId: providerId,
+          categoryId: x.id,
+          timeLabel: x.time?.label,
+          duration: x.time?.duration,
+          timestamp: parseDate(x.time?.timestamp),
+        })),
+      );
     if (p.fulfillments?.length)
-      await tx
-        .insert(lspProviderFulfillments)
-        .values(
-          p.fulfillments.map((x) => ({
-            providerDbId: providerId,
-            fulfillmentId: x.id,
-            type: x.type,
-          })),
-        );
+      await tx.insert(lspProviderFulfillments).values(
+        p.fulfillments.map((x) => ({
+          providerDbId: providerId,
+          fulfillmentId: x.id,
+          type: x.type,
+        })),
+      );
     if (p.locations?.length)
-      await tx
-        .insert(lspProviderLocations)
-        .values(
-          p.locations.map((x) => ({
-            providerDbId: providerId,
-            locationId: x.id,
-            gps: x.gps,
-            street: x.address?.street,
-            city: x.address?.city,
-            state: x.address?.state,
-            areaCode: x.address?.area_code,
-          })),
-        );
+      await tx.insert(lspProviderLocations).values(
+        p.locations.map((x) => ({
+          providerDbId: providerId,
+          locationId: x.id,
+          gps: x.gps,
+          street: x.address?.street,
+          city: x.address?.city,
+          state: x.address?.state,
+          areaCode: x.address?.area_code,
+        })),
+      );
     if (p.items?.length)
-      await tx
-        .insert(lspCatalogItems)
-        .values(
-          p.items.map((x) => ({
-            providerDbId: providerId,
-            catalogItemId: x.id,
-            categoryId: x.category_id,
-            descriptorCode: x.descriptor?.code,
-            name: x.descriptor?.name,
-            shortDescription: x.descriptor?.short_desc,
-            longDescription: x.descriptor?.long_desc,
-            tatLabel: x.time?.label,
-            tatDuration: x.time?.duration,
-            tatTimestamp: parseDate(x.time?.timestamp),
-            priceAmount: x.price?.value,
-            priceCurrency: x.price?.currency,
-          })),
-        );
+      await tx.insert(lspCatalogItems).values(
+        p.items.map((x) => ({
+          providerDbId: providerId,
+          catalogItemId: x.id,
+          categoryId: x.category_id,
+          descriptorCode: x.descriptor?.code,
+          name: x.descriptor?.name,
+          shortDescription: x.descriptor?.short_desc,
+          longDescription: x.descriptor?.long_desc,
+          tatLabel: x.time?.label,
+          tatDuration: x.time?.duration,
+          tatTimestamp: parseDate(x.time?.timestamp),
+          priceAmount: x.price?.value,
+          priceCurrency: x.price?.currency,
+        })),
+      );
   }
 }

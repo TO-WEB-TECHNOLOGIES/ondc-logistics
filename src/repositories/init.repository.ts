@@ -1,11 +1,27 @@
-import { and, eq } from "drizzle-orm";
+﻿import { and, eq } from "drizzle-orm";
 import { db1 } from "../db/index.js";
-import { ondcTransactions } from "../db/schema/index.js";
+import {
+  logisticsSearches,
+  onSearchCallbacks,
+  ondcTransactions,
+} from "../db/schema/index.js";
+import type {
+  InitRequest,
+  ResolvedInitSelection,
+} from "../types/init/internal.js";
 import type {
   OndcInitRequest,
   OndcOnInitResponse,
 } from "../types/init/ondc.js";
+import type { OndcOnSearchResponse } from "../types/search/ondc.js";
+
 export interface InitRepository {
+  resolveSelection(
+    request: InitRequest,
+  ): Promise<
+    | { status: "ok"; selection: ResolvedInitSelection }
+    | { status: "not_found" | "not_ready" | "ambiguous" }
+  >;
   create(payload: OndcInitRequest): Promise<{ initId: string }>;
   updateStatus(
     transactionId: string,
@@ -16,14 +32,81 @@ export interface InitRepository {
     response: OndcOnInitResponse,
   ): Promise<"processed" | "duplicate" | "not_found">;
 }
+
 export class DrizzleInitRepository implements InitRepository {
   constructor(private readonly database: typeof db1 = db1) {}
+
+  async resolveSelection(request: InitRequest) {
+    const [search] = await this.database
+      .select({
+        transactionId: ondcTransactions.transactionId,
+        requestPayload: ondcTransactions.requestPayload,
+      })
+      .from(logisticsSearches)
+      .innerJoin(
+        ondcTransactions,
+        eq(logisticsSearches.transactionDbId, ondcTransactions.id),
+      )
+      .where(eq(logisticsSearches.id, request.searchId))
+      .limit(1);
+    if (!search) return { status: "not_found" as const };
+    const callbacks = await this.database
+      .select({
+        payload: onSearchCallbacks.payload,
+        status: onSearchCallbacks.status,
+      })
+      .from(onSearchCallbacks)
+      .where(eq(onSearchCallbacks.transactionId, search.transactionId));
+    const processed = callbacks.filter((x) => x.status === "processed");
+    if (!processed.length) return { status: "not_ready" as const };
+    const candidates: ResolvedInitSelection[] = [];
+    for (const row of processed) {
+      const callback = row.payload as OndcOnSearchResponse;
+      for (const provider of callback.message.catalog["bpp/providers"] ?? []) {
+        for (const item of provider.items ?? []) {
+          for (const fulfillment of provider.fulfillments ?? []) {
+            if (item.fulfillment_id && item.fulfillment_id !== fulfillment.id)
+              continue;
+            if (request.bppId && callback.context.bpp_id !== request.bppId)
+              continue;
+            if (request.providerId && provider.id !== request.providerId)
+              continue;
+            if (request.itemId && item.id !== request.itemId) continue;
+            if (
+              request.fulfillmentId &&
+              fulfillment.id !== request.fulfillmentId
+            )
+              continue;
+            candidates.push({
+              searchTransactionId: search.transactionId,
+              bppId: callback.context.bpp_id ?? "",
+              bppUri: callback.context.bpp_uri ?? "",
+              provider,
+              item,
+              fulfillment,
+              search: search.requestPayload as unknown as any,
+              providerLocations: provider.locations ?? [],
+            });
+          }
+        }
+      }
+    }
+    const unique = candidates.filter(
+      (candidate, index, all) =>
+        all.findIndex(
+          (x) =>
+            x.bppId === candidate.bppId &&
+            x.provider.id === candidate.provider.id &&
+            x.item.id === candidate.item.id &&
+            x.fulfillment.id === candidate.fulfillment.id,
+        ) === index,
+    );
+    if (!unique.length) return { status: "not_found" as const };
+    if (unique.length !== 1) return { status: "ambiguous" as const };
+    return { status: "ok" as const, selection: unique[0] };
+  }
+
   async create(payload: OndcInitRequest) {
-    console.log("[init.repository] persisting /init", {
-      transactionId: payload.context.transaction_id,
-      messageId: payload.context.message_id,
-      bppId: payload.context.bpp_id,
-    });
     const [row] = await this.database
       .insert(ondcTransactions)
       .values({
@@ -51,11 +134,6 @@ export class DrizzleInitRepository implements InitRepository {
     status: string,
     error?: { code?: string; message?: string },
   ) {
-    console.log("[init.repository] updating status", {
-      transactionId,
-      status,
-      error,
-    });
     await this.database
       .update(ondcTransactions)
       .set({
@@ -73,11 +151,6 @@ export class DrizzleInitRepository implements InitRepository {
   }
   async handleCallback(response: OndcOnInitResponse) {
     const c = response.context;
-    console.log("[init.repository] looking up /on_init", {
-      transactionId: c.transaction_id,
-      messageId: c.message_id,
-      bppId: c.bpp_id,
-    });
     const [row] = await this.database
       .select({
         id: ondcTransactions.id,
@@ -91,38 +164,22 @@ export class DrizzleInitRepository implements InitRepository {
         ),
       )
       .limit(1);
-    if (!row) {
-      console.log("[init.repository] init transaction not found", {
-        transactionId: c.transaction_id,
-      });
-      return "not_found" as const;
-    }
-    if (row.callbackMessageId === c.message_id) {
-      console.log("[init.repository] duplicate /on_init ignored", {
-        transactionId: c.transaction_id,
-        messageId: c.message_id,
-      });
-      return "duplicate" as const;
-    }
-    const error = response.error;
+    if (!row) return "not_found" as const;
+    if (row.callbackMessageId === c.message_id) return "duplicate" as const;
     await this.database
       .update(ondcTransactions)
       .set({
-        status: error ? "failed" : "completed",
+        status: response.error ? "failed" : "completed",
         responsePayload: response,
         callbackMessageId: c.message_id,
         callbackTimestamp: new Date(c.timestamp),
         bppId: c.bpp_id,
         bppUri: c.bpp_uri,
-        errorCode: error?.code as string | undefined,
-        errorMessage: error?.message as string | undefined,
+        errorCode: response.error?.code as string | undefined,
+        errorMessage: response.error?.message as string | undefined,
         updatedAt: new Date(),
       })
       .where(eq(ondcTransactions.id, row.id));
-    console.log("[init.repository] /on_init persisted", {
-      transactionId: c.transaction_id,
-      status: error ? "failed" : "completed",
-    });
     return "processed" as const;
   }
 }

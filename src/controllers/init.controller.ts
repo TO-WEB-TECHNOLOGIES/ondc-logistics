@@ -1,8 +1,9 @@
-import type { Request, Response } from "express";
+﻿import type { Request, Response } from "express";
 import { InitService } from "../services/init.service.js";
 import {
   InitValidationError,
   parseInitRequest,
+  parseMinimalInitRequest,
   parseOnInitResponse,
 } from "../utils/init-validation.js";
 const validation = (error: InitValidationError) => ({
@@ -14,11 +15,12 @@ export const createInitController =
   (request: Request, response: Response): void => {
     console.log("[init.controller] incoming /init request");
     try {
-      const payload = parseInitRequest(request.body);
+      const payload = parseMinimalInitRequest(request.body);
       console.log("[init.controller] /init validated", {
-        transactionId: payload.context.transaction_id,
-        messageId: payload.context.message_id,
-        bppId: payload.context.bpp_id,
+        searchId: payload.searchId,
+        providerId: payload.providerId,
+        itemId: payload.itemId,
+        fulfillmentId: payload.fulfillmentId,
       });
       void service
         .createInit(payload)
@@ -30,7 +32,18 @@ export const createInitController =
           console.log("[init.controller] /init failed", {
             error: error instanceof Error ? error.message : error,
           });
-          response.status(502).json({
+          const status =
+            error instanceof Error &&
+            error.message === "search option not found"
+              ? 404
+              : error instanceof Error &&
+                  error.message === "search option is ambiguous"
+                ? 409
+                : error instanceof Error &&
+                    error.message === "search results not ready"
+                  ? 425
+                  : 502;
+          response.status(status).json({
             error: {
               code: "INIT_SUBMISSION_FAILED",
               message: "Unable to submit ONDC init request",

@@ -1,3 +1,4 @@
+﻿import type { InitRequest } from "../types/init/internal.js";
 import type {
   OndcInitRequest,
   OndcOnInitResponse,
@@ -203,4 +204,87 @@ export const parseOnInitResponse = (value: unknown): OndcOnInitResponse => {
     arr(o.cancellation_terms, "message.order.cancellation_terms");
   }
   return value as OndcOnInitResponse;
+};
+
+const minimalContact = (v: unknown, p: string) => {
+  const x = record(v, p);
+  if (x.phone === undefined && x.email === undefined)
+    throw new InitValidationError("phone or email is required", p);
+  if (x.phone !== undefined) str(x.phone, `${p}.phone`);
+  if (x.email !== undefined) str(x.email, `${p}.email`);
+  return {
+    ...(x.phone !== undefined ? { phone: x.phone } : {}),
+    ...(x.email !== undefined ? { email: x.email } : {}),
+  };
+};
+
+export const parseMinimalInitRequest = (value: unknown): InitRequest => {
+  const x = record(value, "request body");
+  str(x.search_id, "search_id");
+  for (const key of ["bpp_id", "provider_id", "item_id", "fulfillment_id"])
+    if (x[key] !== undefined) str(x[key], key);
+  if (
+    x.quantity !== undefined &&
+    (!Number.isInteger(x.quantity) || x.quantity < 1)
+  )
+    throw new InitValidationError("must be a positive integer", "quantity");
+  const billing = record(x.billing, "billing");
+  const billingAddress = record(billing.address, "billing.address");
+  str(billing.name, "billing.name");
+  str(billingAddress.area_code, "billing.address.area_code");
+  if (billing.phone !== undefined) str(billing.phone, "billing.phone");
+  if (billing.email !== undefined) str(billing.email, "billing.email");
+  const payment = record(x.payment, "payment");
+  str(payment.type, "payment.type");
+  str(payment.collected_by, "payment.collected_by");
+  if (
+    (typeof payment.amount !== "string" &&
+      typeof payment.amount !== "number") ||
+    String(payment.amount).trim() === ""
+  )
+    throw new InitValidationError("must be a decimal value", "payment.amount");
+  str(payment.currency, "payment.currency");
+  if (!Array.isArray(payment.settlement_details))
+    throw new InitValidationError(
+      "must be an array",
+      "payment.settlement_details",
+    );
+  return {
+    searchId: x.search_id,
+    ...(x.bpp_id !== undefined ? { bppId: x.bpp_id } : {}),
+    ...(x.provider_id !== undefined ? { providerId: x.provider_id } : {}),
+    ...(x.item_id !== undefined ? { itemId: x.item_id } : {}),
+    ...(x.fulfillment_id !== undefined
+      ? { fulfillmentId: x.fulfillment_id }
+      : {}),
+    ...(x.quantity !== undefined ? { quantity: x.quantity } : {}),
+    pickupContact: minimalContact(x.pickup_contact, "pickup_contact"),
+    deliveryContact: minimalContact(x.delivery_contact, "delivery_contact"),
+    billing: {
+      name: billing.name,
+      ...(billing.email ? { email: billing.email } : {}),
+      ...(billing.phone ? { phone: billing.phone } : {}),
+      address: {
+        ...(billingAddress.name ? { name: billingAddress.name } : {}),
+        ...(billingAddress.building
+          ? { building: billingAddress.building }
+          : {}),
+        ...(billingAddress.locality
+          ? { locality: billingAddress.locality }
+          : {}),
+        ...(billingAddress.street ? { street: billingAddress.street } : {}),
+        ...(billingAddress.city ? { city: billingAddress.city } : {}),
+        ...(billingAddress.state ? { state: billingAddress.state } : {}),
+        ...(billingAddress.country ? { country: billingAddress.country } : {}),
+        areaCode: billingAddress.area_code,
+      },
+    },
+    payment: {
+      type: payment.type,
+      collectedBy: payment.collected_by,
+      amount: payment.amount,
+      currency: payment.currency,
+      settlementDetails: payment.settlement_details,
+    },
+  };
 };

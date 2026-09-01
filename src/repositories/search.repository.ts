@@ -8,15 +8,22 @@ import {
   logisticsSearchProviderSchedules,
   logisticsSearches,
   ondcTransactions,
+  onSearchCallbacks,
 } from "../db/schema/index.js";
 import type { SearchRequest } from "../types/search/internal.js";
-import type { OndcSearchRequest } from "../types/search/ondc.js";
+import type {
+  OndcOnSearchResponse,
+  OndcSearchRequest,
+} from "../types/search/ondc.js";
 
 export type SearchRepository = {
   createSearch(input: {
     request: SearchRequest;
     payload: OndcSearchRequest;
   }): Promise<{ searchId: string }>;
+  getSearchOptions(
+    searchId: string,
+  ): Promise<{ status: "NOT_FOUND" | "PENDING" | "READY"; options: unknown[] }>;
   updateTransactionStatus(
     transactionId: string,
     status: string,
@@ -93,14 +100,12 @@ export class DrizzleSearchRepository implements SearchRepository {
           })
           .returning({ id: logisticsSearchProviderSchedules.id });
         if (request.schedule.holidays?.length) {
-          await tx
-            .insert(logisticsSearchHolidays)
-            .values(
-              request.schedule.holidays.map((holidayDate) => ({
-                scheduleId: schedule.id,
-                holidayDate,
-              })),
-            );
+          await tx.insert(logisticsSearchHolidays).values(
+            request.schedule.holidays.map((holidayDate) => ({
+              scheduleId: schedule.id,
+              holidayDate,
+            })),
+          );
         }
       }
 
@@ -136,6 +141,49 @@ export class DrizzleSearchRepository implements SearchRepository {
     });
   }
 
+  async getSearchOptions(searchId: string) {
+    const [search] = await this.database
+      .select({ transactionId: ondcTransactions.transactionId })
+      .from(logisticsSearches)
+      .innerJoin(
+        ondcTransactions,
+        eq(logisticsSearches.transactionDbId, ondcTransactions.id),
+      )
+      .where(eq(logisticsSearches.id, searchId))
+      .limit(1);
+    if (!search) return { status: "NOT_FOUND" as const, options: [] };
+    const rows = await this.database
+      .select({
+        payload: onSearchCallbacks.payload,
+        status: onSearchCallbacks.status,
+      })
+      .from(onSearchCallbacks)
+      .where(eq(onSearchCallbacks.transactionId, search.transactionId));
+    const processed = rows.filter((row) => row.status === "processed");
+    if (!processed.length) return { status: "PENDING" as const, options: [] };
+    const options = processed.flatMap((row) => {
+      const callback = row.payload as OndcOnSearchResponse;
+      return (callback.message.catalog["bpp/providers"] ?? []).map(
+        (provider) => ({
+          bppId: callback.context.bpp_id,
+          bppUri: callback.context.bpp_uri,
+          providerId: provider.id,
+          provider: provider.descriptor,
+          locations: provider.locations ?? [],
+          items: (provider.items ?? []).map((item) => ({
+            itemId: item.id,
+            categoryId: item.category_id,
+            fulfillmentId: item.fulfillment_id,
+            descriptor: item.descriptor,
+            price: item.price,
+            time: item.time,
+          })),
+          fulfillments: provider.fulfillments ?? [],
+        }),
+      );
+    });
+    return { status: "READY" as const, options };
+  }
   async updateTransactionStatus(
     transactionId: string,
     status: string,

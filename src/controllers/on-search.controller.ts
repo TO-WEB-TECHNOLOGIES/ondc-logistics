@@ -50,13 +50,11 @@ export const createOnSearchController =
         });
         return;
       }
-      response
-        .status(500)
-        .json({
-          error: {
-            code: "ON_SEARCH_FAILED",
-            message: "Unable to stage callback",
-          },
-        });
+      response.status(500).json({
+        error: {
+          code: "ON_SEARCH_FAILED",
+          message: "Unable to stage callback",
+        },
+      });
     }
   };

@@ -312,9 +312,8 @@ export const parseOnSearchResponse = (value: unknown): OndcOnSearchResponse => {
 };
 
 // request-side validation
-export const parseMinimalSearchRequest = (
-  value: unknown,
-): SearchRequest => {
+// request-side validation
+export const parseMinimalSearchRequest = (value: unknown): SearchRequest => {
   if (!isRecord(value)) {
     throw new SearchValidationError("request body must be an object");
   }
@@ -359,28 +358,16 @@ export const parseMinimalSearchRequest = (
         throw new SearchValidationError("payload must be an object");
       })();
 
-  // ------------------------------------------------------------
-  // PAYLOAD.WEIGHT
-  // ------------------------------------------------------------
-
   const weight = isRecord(payload.weight)
     ? payload.weight
     : (() => {
-        throw new SearchValidationError(
-          "payload.weight must be an object",
-        );
+        throw new SearchValidationError("payload.weight must be an object");
       })();
-
-  // ------------------------------------------------------------
-  // PAYLOAD.DIMENSIONS
-  // ------------------------------------------------------------
 
   const dimensions = isRecord(payload.dimensions)
     ? payload.dimensions
     : (() => {
-        throw new SearchValidationError(
-          "payload.dimensions must be an object",
-        );
+        throw new SearchValidationError("payload.dimensions must be an object");
       })();
 
   const length = isRecord(dimensions.length)
@@ -407,16 +394,30 @@ export const parseMinimalSearchRequest = (
         );
       })();
 
-  // ------------------------------------------------------------
-  // PAYLOAD.VALUE
-  // ------------------------------------------------------------
-
   const payloadValue = isRecord(payload.value)
     ? payload.value
     : (() => {
-        throw new SearchValidationError(
-          "payload.value must be an object",
-        );
+        throw new SearchValidationError("payload.value must be an object");
+      })();
+
+  // ------------------------------------------------------------
+  // FULL START ADDRESS
+  // ------------------------------------------------------------
+
+  const startAddress = isRecord(start.address)
+    ? start.address
+    : (() => {
+        throw new SearchValidationError("start.address must be an object");
+      })();
+
+  // ------------------------------------------------------------
+  // FULL END ADDRESS
+  // ------------------------------------------------------------
+
+  const endAddress = isRecord(end.address)
+    ? end.address
+    : (() => {
+        throw new SearchValidationError("end.address must be an object");
       })();
 
   // ------------------------------------------------------------
@@ -424,10 +425,7 @@ export const parseMinimalSearchRequest = (
   // ------------------------------------------------------------
 
   return {
-    categoryId: requiredString(
-      value.category_id,
-      "category_id",
-    ),
+    categoryId: requiredString(value.category_id, "category_id"),
 
     // Defaulted internally.
     fulfillmentType: "Delivery",
@@ -440,59 +438,70 @@ export const parseMinimalSearchRequest = (
 
     start: {
       type: "start",
-      gps: requiredString(
-        start.gps,
-        "start.gps",
-      ),
+
+      gps: requiredString(start.gps, "start.gps"),
+
       address: {
-        areaCode: requiredString(
-          start.area_code,
-          "start.area_code",
+        name: requiredString(startAddress.name, "start.address.name"),
+
+        building: requiredString(
+          startAddress.building,
+          "start.address.building",
         ),
+
+        locality: requiredString(
+          startAddress.locality,
+          "start.address.locality",
+        ),
+
+        street: optionalString(startAddress.street, "start.address.street"),
+
+        city: requiredString(startAddress.city, "start.address.city"),
+
+        state: requiredString(startAddress.state, "start.address.state"),
+
+        country: requiredString(startAddress.country, "start.address.country"),
+
+        areaCode: requiredString(start.area_code, "start.area_code"),
       },
     },
 
     end: {
       type: "end",
-      gps: requiredString(
-        end.gps,
-        "end.gps",
-      ),
+
+      gps: requiredString(end.gps, "end.gps"),
+
       address: {
-        areaCode: requiredString(
-          end.area_code,
-          "end.area_code",
-        ),
+        name: requiredString(endAddress.name, "end.address.name"),
+
+        building: requiredString(endAddress.building, "end.address.building"),
+
+        locality: requiredString(endAddress.locality, "end.address.locality"),
+
+        street: optionalString(endAddress.street, "end.address.street"),
+
+        city: requiredString(endAddress.city, "end.address.city"),
+
+        state: requiredString(endAddress.state, "end.address.state"),
+
+        country: requiredString(endAddress.country, "end.address.country"),
+
+        areaCode: requiredString(end.area_code, "end.area_code"),
       },
     },
 
     schedule: {
-      days: requiredString(
-        schedule.days,
-        "schedule.days",
-      ),
+      days: requiredString(schedule.days, "schedule.days"),
 
-      rangeStart: requiredString(
-        schedule.range_start,
-        "schedule.range_start",
-      ),
+      rangeStart: requiredString(schedule.range_start, "schedule.range_start"),
 
-      rangeEnd: requiredString(
-        schedule.range_end,
-        "schedule.range_end",
-      ),
+      rangeEnd: requiredString(schedule.range_end, "schedule.range_end"),
     },
 
     payload: {
       weight: {
-        value: requiredDecimal(
-          weight.value,
-          "payload.weight.value",
-        ),
-        unit: requiredString(
-          weight.unit,
-          "payload.weight.unit",
-        ),
+        value: requiredDecimal(weight.value, "payload.weight.value"),
+        unit: requiredString(weight.unit, "payload.weight.unit"),
       },
 
       dimensions: {
@@ -501,10 +510,7 @@ export const parseMinimalSearchRequest = (
             length.value,
             "payload.dimensions.length.value",
           ),
-          unit: requiredString(
-            length.unit,
-            "payload.dimensions.length.unit",
-          ),
+          unit: requiredString(length.unit, "payload.dimensions.length.unit"),
         },
 
         breadth: {
@@ -512,10 +518,7 @@ export const parseMinimalSearchRequest = (
             breadth.value,
             "payload.dimensions.breadth.value",
           ),
-          unit: requiredString(
-            breadth.unit,
-            "payload.dimensions.breadth.unit",
-          ),
+          unit: requiredString(breadth.unit, "payload.dimensions.breadth.unit"),
         },
 
         height: {
@@ -523,23 +526,14 @@ export const parseMinimalSearchRequest = (
             height.value,
             "payload.dimensions.height.value",
           ),
-          unit: requiredString(
-            height.unit,
-            "payload.dimensions.height.unit",
-          ),
+          unit: requiredString(height.unit, "payload.dimensions.height.unit"),
         },
       },
 
-      category: requiredString(
-        payload.category,
-        "payload.category",
-      ),
+      category: requiredString(payload.category, "payload.category"),
 
       value: {
-        amount: requiredDecimal(
-          payloadValue.amount,
-          "payload.value.amount",
-        ),
+        amount: requiredDecimal(payloadValue.amount, "payload.value.amount"),
         currency: requiredString(
           payloadValue.currency,
           "payload.value.currency",
@@ -554,40 +548,22 @@ export const parseMinimalSearchRequest = (
   };
 };
 
-const requiredDecimal = (
-  value: unknown,
-  path: string,
-): string | number => {
-  if (
-    typeof value !== "string" &&
-    typeof value !== "number"
-  ) {
-    throw new SearchValidationError(
-      `${path} must be a string or number`,
-    );
+const requiredDecimal = (value: unknown, path: string): string | number => {
+  if (typeof value !== "string" && typeof value !== "number") {
+    throw new SearchValidationError(`${path} must be a string or number`);
   }
 
-  if (
-    typeof value === "string" &&
-    value.trim() === ""
-  ) {
-    throw new SearchValidationError(
-      `${path} must not be empty`,
-    );
+  if (typeof value === "string" && value.trim() === "") {
+    throw new SearchValidationError(`${path} must not be empty`);
   }
 
   return value;
 };
 
-const requiredBoolean = (
-  value: unknown,
-  path: string,
-): boolean => {
+const requiredBoolean = (value: unknown, path: string): boolean => {
   if (typeof value !== "boolean") {
-    throw new SearchValidationError(
-      `${path} must be a boolean`,
-    );
+    throw new SearchValidationError(`${path} must be a boolean`);
   }
 
   return value;
-}
+};

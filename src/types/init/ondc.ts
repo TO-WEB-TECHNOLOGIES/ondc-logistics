@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   OndcContext,
   OndcFulfillmentLocation,
   OndcPayloadDetails,
@@ -9,6 +9,7 @@ export interface OndcInitProvider {
   locations: Array<{ id: string }>;
 }
 export interface OndcInitItem {
+  quantity?: { count: number };
   id: string;
   fulfillment_id?: string;
   category_id?: string;

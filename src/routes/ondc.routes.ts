@@ -1,6 +1,7 @@
-import express from "express";
+﻿import express from "express";
 import { createOnSearchController } from "../controllers/on-search.controller.js";
 import { createSearchController } from "../controllers/search.controller.js";
+import { createSearchOptionsController } from "../controllers/search-options.controller.js";
 import {
   createInitController,
   createOnInitController,
@@ -31,15 +32,21 @@ const protocol = {
 };
 
 const transport = new GatewayOndcTransport();
+const searchRepository = new DrizzleSearchRepository();
 const searchService = new SearchService({
   transport,
-  repository: new DrizzleSearchRepository(),
+  repository: searchRepository,
   protocol,
 });
 const onSearchService = new OnSearchService(new DrizzleOnSearchRepository());
+const initProtocol = {
+  ...protocol,
+  bapUri: process.env.BAP_URI ?? process.env.BFF ?? "",
+};
 const initService = new InitService({
   transport,
   repository: new DrizzleInitRepository(),
+  protocol: initProtocol,
 });
 const confirmService = new ConfirmService({
   transport,
@@ -48,6 +55,11 @@ const confirmService = new ConfirmService({
 
 export const searchRouter = express.Router();
 searchRouter.post("/search", createSearchController(searchService));
+
+searchRouter.get(
+  "/search/:searchId/options",
+  createSearchOptionsController(searchRepository),
+);
 
 searchRouter.get("/search/:searchId/events", (request, response) => {
   searchSseManager.subscribe(request.params.searchId, response);
@@ -67,4 +79,3 @@ confirmRouter.post("/confirm", createConfirmController(confirmService));
 
 export const onConfirmRouter = express.Router();
 onConfirmRouter.post("/on_confirm", createOnConfirmController(confirmService));
-

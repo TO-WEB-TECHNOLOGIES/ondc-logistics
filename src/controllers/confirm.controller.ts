@@ -29,39 +29,33 @@ export const createConfirmController =
             error: error instanceof Error ? error.message : error,
           });
           if (error instanceof ConfirmValidationError) {
-            response
-              .status(409)
-              .json({
-                error: {
-                  code: "CONFIRM_STATE_INVALID",
-                  message: error.message,
-                  path: error.path,
-                },
-              });
+            response.status(409).json({
+              error: {
+                code: "CONFIRM_STATE_INVALID",
+                message: error.message,
+                path: error.path,
+              },
+            });
             return;
           }
           if (
             error instanceof Error &&
             /not found|no completed/.test(error.message)
           ) {
-            response
-              .status(409)
-              .json({
-                error: {
-                  code: "CONFIRM_STATE_INVALID",
-                  message: error.message,
-                },
-              });
-            return;
-          }
-          response
-            .status(502)
-            .json({
+            response.status(409).json({
               error: {
-                code: "CONFIRM_SUBMISSION_FAILED",
-                message: "Unable to submit ONDC confirm request",
+                code: "CONFIRM_STATE_INVALID",
+                message: error.message,
               },
             });
+            return;
+          }
+          response.status(502).json({
+            error: {
+              code: "CONFIRM_SUBMISSION_FAILED",
+              message: "Unable to submit ONDC confirm request",
+            },
+          });
         });
     } catch (error) {
       if (error instanceof ConfirmValidationError) {
@@ -69,26 +63,22 @@ export const createConfirmController =
           "[confirm.controller] /confirm validation failed",
           detail(error),
         );
-        response
-          .status(400)
-          .json({
-            error: {
-              code: "INVALID_CONFIRM_REQUEST",
-              message: "Invalid confirm request",
-              details: [detail(error)],
-            },
-          });
+        response.status(400).json({
+          error: {
+            code: "INVALID_CONFIRM_REQUEST",
+            message: "Invalid confirm request",
+            details: [detail(error)],
+          },
+        });
         return;
       }
       console.log("[confirm.controller] unexpected failure", error);
-      response
-        .status(500)
-        .json({
-          error: {
-            code: "CONFIRM_FAILED",
-            message: "Unable to process confirm request",
-          },
-        });
+      response.status(500).json({
+        error: {
+          code: "CONFIRM_FAILED",
+          message: "Unable to process confirm request",
+        },
+      });
     }
   };
 
@@ -110,40 +100,33 @@ export const createOnConfirmController =
         .handleCallback(callback)
         .then((result) => {
           if (result === "not_found") {
-            response
-              .status(200)
-              .json(
-                ondcNack({
-                  type: "CONTEXT-ERROR",
-                  code: "63002",
-                  message: "confirm transaction not found",
-                }),
-              );
+            response.status(200).json(
+              ondcNack({
+                type: "CONTEXT-ERROR",
+                code: "63002",
+                message: "confirm transaction not found",
+              }),
+            );
             return;
           }
           if (result === "invalid_order") {
-            response
-              .status(200)
-              .json(
-                ondcNack({
-                  type: "CONTEXT-ERROR",
-                  code: "63002",
-                  message:
-                    "on_confirm order.id does not match confirm order.id",
-                }),
-              );
+            response.status(200).json(
+              ondcNack({
+                type: "CONTEXT-ERROR",
+                code: "63002",
+                message: "on_confirm order.id does not match confirm order.id",
+              }),
+            );
             return;
           }
           if (result === "invalid_bpp") {
-            response
-              .status(200)
-              .json(
-                ondcNack({
-                  type: "CONTEXT-ERROR",
-                  code: "63002",
-                  message: "on_confirm bpp_id does not match confirm bpp_id",
-                }),
-              );
+            response.status(200).json(
+              ondcNack({
+                type: "CONTEXT-ERROR",
+                code: "63002",
+                message: "on_confirm bpp_id does not match confirm bpp_id",
+              }),
+            );
             return;
           }
           response.status(200).json({ message: { ack: { status: "ACK" } } });
@@ -152,37 +135,31 @@ export const createOnConfirmController =
           console.log("[on-confirm.controller] processing failed", {
             error: error instanceof Error ? error.message : error,
           });
-          response
-            .status(500)
-            .json({
-              error: {
-                code: "ON_CONFIRM_FAILED",
-                message: "Unable to process callback",
-              },
-            });
+          response.status(500).json({
+            error: {
+              code: "ON_CONFIRM_FAILED",
+              message: "Unable to process callback",
+            },
+          });
         });
     } catch (error) {
       if (error instanceof ConfirmValidationError) {
         console.log("[on-confirm.controller] validation failed", detail(error));
-        response
-          .status(200)
-          .json(
-            ondcNack({
-              type: "JSON-SCHEMA-ERROR",
-              code: "63002",
-              message: error.message,
-            }),
-          );
+        response.status(200).json(
+          ondcNack({
+            type: "JSON-SCHEMA-ERROR",
+            code: "63002",
+            message: error.message,
+          }),
+        );
         return;
       }
       console.log("[on-confirm.controller] unexpected failure", error);
-      response
-        .status(500)
-        .json({
-          error: {
-            code: "ON_CONFIRM_FAILED",
-            message: "Unable to process callback",
-          },
-        });
+      response.status(500).json({
+        error: {
+          code: "ON_CONFIRM_FAILED",
+          message: "Unable to process callback",
+        },
+      });
     }
   };
