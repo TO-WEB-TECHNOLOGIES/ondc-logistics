@@ -15,10 +15,7 @@
  */
 
 export type CancellationReasonWho =
-  | "BNP"
-  | "SNP"
-  | "LSP"
-  | "SNP_OFFLINE_LOGISTICS";
+  "BNP" | "SNP" | "LSP" | "SNP_OFFLINE_LOGISTICS";
 
 export interface CancellationReasonEntry {
   /** Current ONDC numbering, if this reason has one (some legacy-only codes don't). */
@@ -96,7 +93,8 @@ export const CANCELLATION_REASON_CODES: CancellationReasonEntry[] = [
     reason: "Order received during store rush",
     whoCanUse: "SNP",
     costAttributionTo: "SNP",
-    comment: "SNP receives order during store rush, i.e. kitchen full or manpower shortage",
+    comment:
+      "SNP receives order during store rush, i.e. kitchen full or manpower shortage",
     statesWhereApplicable: "Pending",
   },
   {
@@ -260,7 +258,9 @@ export function getCancellationReason(
  * Falls back to a safe generic string when the code is unrecognized (e.g. a future
  * ONDC code this table hasn't been updated for yet) rather than surfacing raw codes
  * or nothing at all to the buyer. */
-export function getCancellationReasonText(code: string | null | undefined): string {
+export function getCancellationReasonText(
+  code: string | null | undefined,
+): string {
   return getCancellationReason(code)?.reason ?? "Order cancelled";
 }
 
@@ -274,8 +274,10 @@ export function getCancellationReasonText(code: string | null | undefined): stri
  * BAP-sendable legacy codes. Corrected here (CANCEL-01, 2026-07-13).
  */
 export const BNP_CANCELLATION_REASON_CODES: string[] =
-  CANCELLATION_REASON_CODES.filter((entry) => entry.whoCanUse === "BNP").flatMap(
-    (entry) => [entry.newCode, entry.currentCode].filter((c): c is string => !!c),
+  CANCELLATION_REASON_CODES.filter(
+    (entry) => entry.whoCanUse === "BNP",
+  ).flatMap((entry) =>
+    [entry.newCode, entry.currentCode].filter((c): c is string => !!c),
   );
 
 export function isValidBnpCancellationReason(code: string): boolean {

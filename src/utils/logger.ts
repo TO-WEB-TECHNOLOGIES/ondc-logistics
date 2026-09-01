@@ -47,7 +47,12 @@ function todayIST(): string {
   return formatTimestamp().slice(0, 10);
 }
 
-function write(level: string, namespace: string, message: string, meta?: Record<string, any>) {
+function write(
+  level: string,
+  namespace: string,
+  message: string,
+  meta?: Record<string, any>,
+) {
   const category = categoryFor(namespace);
 
   // Global kill switch (src/config/log-switches.ts) — gated per category.
@@ -70,7 +75,9 @@ function write(level: string, namespace: string, message: string, meta?: Record<
     const file = `${category}-${ROLE}-${todayIST()}.log`;
     appendFileSync(join(categoryDir, file), line);
   } catch (err) {
-    process.stderr.write(`[${timestamp}] [ERROR] [logger] Failed to write to log file: ${(err as Error).message}\n`);
+    process.stderr.write(
+      `[${timestamp}] [ERROR] [logger] Failed to write to log file: ${(err as Error).message}\n`,
+    );
   }
 }
 

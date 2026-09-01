@@ -4,6 +4,67 @@ import { NotImplementedError } from "./not-implemented-error.js";
 import type { OndcSearchRequest } from "../types/search/ondc.js";
 import type { OndcInitRequest } from "../types/init/ondc.js";
 import type { OndcConfirmRequest } from "../types/confirm/ondc.js";
-export interface OndcTransport { sendSearch(request:OndcSearchRequest):Promise<void>; sendInit(request:OndcInitRequest):Promise<void>; sendConfirm(request:OndcConfirmRequest):Promise<void>; }
-export class UnconfiguredOndcTransport implements OndcTransport { async sendSearch(_request:OndcSearchRequest){throw new NotImplementedError("ONDC transport/signing is not configured yet");} async sendInit(_request:OndcInitRequest){throw new NotImplementedError("ONDC transport/signing is not configured yet");} async sendConfirm(_request:OndcConfirmRequest){throw new NotImplementedError("ONDC transport/signing is not configured yet");} }
-export class GatewayOndcTransport implements OndcTransport { constructor(private readonly gatewayUrl:string=GATEWAY_URL){} async sendSearch(request:OndcSearchRequest){await sendOndcRequest({action:"search",payload:request as unknown as Record<string,unknown>,baseURL:this.gatewayUrl,logMeta:{transaction_id:request.context.transaction_id,message_id:request.context.message_id,bap_id:request.context.bap_id}});} async sendInit(request:OndcInitRequest){await sendOndcRequest({action:"init",payload:request as unknown as Record<string,unknown>,baseURL:request.context.bpp_uri,logMeta:{transaction_id:request.context.transaction_id,message_id:request.context.message_id,bap_id:request.context.bap_id,bpp_id:request.context.bpp_id}});} async sendConfirm(request:OndcConfirmRequest){await sendOndcRequest({action:"confirm",payload:request as unknown as Record<string,unknown>,baseURL:request.context.bpp_uri,logMeta:{transaction_id:request.context.transaction_id,message_id:request.context.message_id,bap_id:request.context.bap_id,bpp_id:request.context.bpp_id,order_id:request.message.order.id}});} }
+export interface OndcTransport {
+  sendSearch(request: OndcSearchRequest): Promise<void>;
+  sendInit(request: OndcInitRequest): Promise<void>;
+  sendConfirm(request: OndcConfirmRequest): Promise<void>;
+}
+export class UnconfiguredOndcTransport implements OndcTransport {
+  async sendSearch(_request: OndcSearchRequest) {
+    throw new NotImplementedError(
+      "ONDC transport/signing is not configured yet",
+    );
+  }
+  async sendInit(_request: OndcInitRequest) {
+    throw new NotImplementedError(
+      "ONDC transport/signing is not configured yet",
+    );
+  }
+  async sendConfirm(_request: OndcConfirmRequest) {
+    throw new NotImplementedError(
+      "ONDC transport/signing is not configured yet",
+    );
+  }
+}
+export class GatewayOndcTransport implements OndcTransport {
+  constructor(private readonly gatewayUrl: string = GATEWAY_URL) {}
+  async sendSearch(request: OndcSearchRequest) {
+    await sendOndcRequest({
+      action: "search",
+      payload: request as unknown as Record<string, unknown>,
+      baseURL: this.gatewayUrl,
+      logMeta: {
+        transaction_id: request.context.transaction_id,
+        message_id: request.context.message_id,
+        bap_id: request.context.bap_id,
+      },
+    });
+  }
+  async sendInit(request: OndcInitRequest) {
+    await sendOndcRequest({
+      action: "init",
+      payload: request as unknown as Record<string, unknown>,
+      baseURL: request.context.bpp_uri,
+      logMeta: {
+        transaction_id: request.context.transaction_id,
+        message_id: request.context.message_id,
+        bap_id: request.context.bap_id,
+        bpp_id: request.context.bpp_id,
+      },
+    });
+  }
+  async sendConfirm(request: OndcConfirmRequest) {
+    await sendOndcRequest({
+      action: "confirm",
+      payload: request as unknown as Record<string, unknown>,
+      baseURL: request.context.bpp_uri,
+      logMeta: {
+        transaction_id: request.context.transaction_id,
+        message_id: request.context.message_id,
+        bap_id: request.context.bap_id,
+        bpp_id: request.context.bpp_id,
+        order_id: request.message.order.id,
+      },
+    });
+  }
+}

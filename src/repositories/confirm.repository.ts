@@ -10,21 +10,18 @@ import type {
   OndcOnInitResponse,
 } from "../types/init/ondc.js";
 export type ConfirmCallbackResult =
-  | "processed"
-  | "duplicate"
-  | "not_found"
-  | "invalid_order"
-  | "invalid_bpp";
+  "processed" | "duplicate" | "not_found" | "invalid_order" | "invalid_bpp";
 export interface ConfirmRepository {
-  loadInitialized(
-    initTransactionId: string,
-  ): Promise<{
+  loadInitialized(initTransactionId: string): Promise<{
     init: OndcInitRequest;
     onInit: OndcOnInitResponse;
     initTransactionId: string;
     orderId?: string;
   }>;
-  create(payload: OndcConfirmRequest, initTransactionId: string): Promise<boolean>;
+  create(
+    payload: OndcConfirmRequest,
+    initTransactionId: string,
+  ): Promise<boolean>;
   updateStatus(
     transactionId: string,
     status: string,
@@ -89,28 +86,26 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
       messageId: payload.context.message_id,
       parentTransactionId: initTransactionId,
     });
-    await this.database
-      .insert(ondcTransactions)
-      .values({
-        transactionId: payload.context.transaction_id,
-        messageId: payload.context.message_id,
-        action: "confirm",
-        parentTransactionId: initTransactionId,
-        orderId: payload.message.order.id,
-        orderState: payload.message.order.state,
-        status: "pending",
-        domain: payload.context.domain,
-        country: payload.context.country,
-        city: payload.context.city,
-        coreVersion: payload.context.core_version,
-        bapId: payload.context.bap_id,
-        bapUri: payload.context.bap_uri,
-        bppId: payload.context.bpp_id,
-        bppUri: payload.context.bpp_uri,
-        timestamp: new Date(payload.context.timestamp),
-        ttl: payload.context.ttl,
-        requestPayload: payload,
-      });
+    await this.database.insert(ondcTransactions).values({
+      transactionId: payload.context.transaction_id,
+      messageId: payload.context.message_id,
+      action: "confirm",
+      parentTransactionId: initTransactionId,
+      orderId: payload.message.order.id,
+      orderState: payload.message.order.state,
+      status: "pending",
+      domain: payload.context.domain,
+      country: payload.context.country,
+      city: payload.context.city,
+      coreVersion: payload.context.core_version,
+      bapId: payload.context.bap_id,
+      bapUri: payload.context.bap_uri,
+      bppId: payload.context.bpp_id,
+      bppUri: payload.context.bpp_uri,
+      timestamp: new Date(payload.context.timestamp),
+      ttl: payload.context.ttl,
+      requestPayload: payload,
+    });
     return true;
   }
   async updateStatus(

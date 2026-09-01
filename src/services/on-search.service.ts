@@ -7,24 +7,33 @@ export interface OnSearchQueue {
 }
 
 export class InProcessOnSearchQueue implements OnSearchQueue {
-
   constructor(private readonly repository: OnSearchRepository) {}
 
-  async enqueue(callbackId: string, response: OndcOnSearchResponse): Promise<void> {
-
-    console.log("[on-search.queue] callback queued", { callbackId, transactionId: response.context.transaction_id });
+  async enqueue(
+    callbackId: string,
+    response: OndcOnSearchResponse,
+  ): Promise<void> {
+    console.log("[on-search.queue] callback queued", {
+      callbackId,
+      transactionId: response.context.transaction_id,
+    });
 
     setImmediate(async () => {
-
       try {
         console.log("[on-search.queue] processing callback", { callbackId });
         const result = await this.repository.process(callbackId, response);
-        console.log("[on-search.queue] callback processed", { searchId: result.searchId, providerCount: result.providers.length });
+        console.log("[on-search.queue] callback processed", {
+          searchId: result.searchId,
+          providerCount: result.providers.length,
+        });
         for (const provider of result.providers) {
-          searchSseManager.publish(result.searchId, { event: "search_result", searchId: result.searchId, provider });
+          searchSseManager.publish(result.searchId, {
+            event: "search_result",
+            searchId: result.searchId,
+            provider,
+          });
         }
-      }
-      catch (error) {
+      } catch (error) {
         console.error("[on-search.queue] processing failed", error);
       }
     });
@@ -32,10 +41,11 @@ export class InProcessOnSearchQueue implements OnSearchQueue {
 }
 
 export class OnSearchService {
-
   constructor(
     private readonly repository: OnSearchRepository,
-    private readonly queue: OnSearchQueue = new InProcessOnSearchQueue(repository),
+    private readonly queue: OnSearchQueue = new InProcessOnSearchQueue(
+      repository,
+    ),
   ) {}
 
   async handleCallback(response: OndcOnSearchResponse): Promise<void> {
@@ -49,7 +59,7 @@ export class OnSearchService {
     console.log("[on-search.service] callback staged", staged);
 
     if (!staged.callbackId) throw new Error("search transaction not found");
-    if (!staged.duplicate) await this.queue.enqueue(staged.callbackId, response);
+    if (!staged.duplicate)
+      await this.queue.enqueue(staged.callbackId, response);
   }
 }
-

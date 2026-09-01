@@ -33,19 +33,19 @@
 that is **not a full cancellation** (`/cancel`) and **not a state update**
 (`/on_status`). This includes:
 
-| Flow | Who Initiates | update_target |
-|------|--------------|---------------|
-| Part return request | **BAP** (buyer) | `"item"` |
-| Return approval (seller wants item back) | **BPP** | `"item"` (via `/on_update`) |
-| Return approval (seller doesn't want item back) | **BPP** | `"item"` (via `/on_update`) |
-| Return rejected | **BPP** | `"item"` (via `/on_update`) |
-| Return picked | **BPP/LSP** | `"item"` (via `/on_update`) |
-| Return pick failed + rescheduled | **BPP/LSP** | `"item"` (via `/on_update`) |
-| Return delivered | **BPP/LSP** | `"item"` (via `/on_update`) |
-| Merchant part cancellation | **BPP** (unsolicited) | `"item"` (via `/on_update`) |
-| Settlement trail update (refund initiated) | **BAP** | `"payment"` |
-| Fulfillment state update (Buyer-Delivery LSP) | **BAP or BPP** | `"fulfillment"` |
-| Agent details update | **BAP/BPP** | `"fulfillment"` |
+| Flow                                            | Who Initiates         | update_target               |
+| ----------------------------------------------- | --------------------- | --------------------------- |
+| Part return request                             | **BAP** (buyer)       | `"item"`                    |
+| Return approval (seller wants item back)        | **BPP**               | `"item"` (via `/on_update`) |
+| Return approval (seller doesn't want item back) | **BPP**               | `"item"` (via `/on_update`) |
+| Return rejected                                 | **BPP**               | `"item"` (via `/on_update`) |
+| Return picked                                   | **BPP/LSP**           | `"item"` (via `/on_update`) |
+| Return pick failed + rescheduled                | **BPP/LSP**           | `"item"` (via `/on_update`) |
+| Return delivered                                | **BPP/LSP**           | `"item"` (via `/on_update`) |
+| Merchant part cancellation                      | **BPP** (unsolicited) | `"item"` (via `/on_update`) |
+| Settlement trail update (refund initiated)      | **BAP**               | `"payment"`                 |
+| Fulfillment state update (Buyer-Delivery LSP)   | **BAP or BPP**        | `"fulfillment"`             |
+| Agent details update                            | **BAP/BPP**           | `"fulfillment"`             |
 
 **Key invariant**: `quote.price.value` **cannot increase** via `/on_update`.
 If the order value decreases, it must be due to a decrease in item quantity
@@ -62,6 +62,7 @@ merchant/seller-initiated part cancellations or return status updates.
 ### `"item"` — Item-Level Amendment (Returns + Part Cancellations)
 
 Used when changing **which items are in the order**:
+
 - Buyer initiates a **return request** for specific items
 - BPP responds with **approval/rejection/interim status** for the return
 - BPP sends **return pickup/delivery** updates
@@ -74,6 +75,7 @@ together in the same proportion.
 ### `"payment"` — Settlement Trail Update
 
 Used to communicate **settlement details for a refund**:
+
 - Settlement phase: `"refund"` (buyer gets money back)
 - Settlement counterparty: `"buyer"` (refund goes to buyer)
 - Settlement type: `"upi"`, `"neft"`, `"rtgs"`, etc.
@@ -84,6 +86,7 @@ Used to communicate **settlement details for a refund**:
 
 Used for **Buyer-Delivery** logistics (LSP managed by buyer NP) or any
 fulfillment-level state change:
+
 - LSP picks up the order (state change to `Order-picked-up`)
 - LSP delivery delay
 - Fulfillment cancellation via `/update` (not `/cancel`)
@@ -94,6 +97,7 @@ fulfillment-level state change:
 ### `"order"` — Order-Level Amendment
 
 Used to update **non-item, non-payment, non-fulfillment** aspects of the order:
+
 - Delivery time slot change (not common for F&B)
 
 ---
@@ -136,6 +140,7 @@ Used to update **non-item, non-payment, non-fulfillment** aspects of the order:
 ```
 
 **Key fields:**
+
 - `update_target: "item"` — signals item-level update
 - `order.items[].id` — catalog item ID being returned
 - `order.items[].fulfillment_id` — fulfillment containing the item
@@ -302,6 +307,7 @@ Full fulfillment update example:
 
 `/on_update` mirrors the order structure with any changes applied.
 It returns the **same information as `/on_status`**:
+
 - Audit trail of items (returns, cancels processed or in-progress)
 - Current state of order items + fulfillment
 - Order quote and breakup (updated to reflect change)
@@ -329,11 +335,11 @@ It returns the **same information as `/on_status`**:
 
 **`/on_update` state values** (for `order.state`):
 
-| Value | When |
-|-------|------|
-| `"In-progress"` | Order active — return/partial cancel in progress |
-| `"Completed"` | All fulfillments delivered; no further updates except returns |
-| `"Cancelled"` | Order fully cancelled |
+| Value           | When                                                          |
+| --------------- | ------------------------------------------------------------- |
+| `"In-progress"` | Order active — return/partial cancel in progress              |
+| `"Completed"`   | All fulfillments delivered; no further updates except returns |
+| `"Cancelled"`   | Order fully cancelled                                         |
 
 ---
 
@@ -485,7 +491,7 @@ and the BPP may skip creating a Return fulfillment.
         {
           "id": "I1",
           "fulfillment_id": "F1",
-          "quantity": { "count": 0 }  // refunded
+          "quantity": { "count": 0 } // refunded
         }
       ],
       "fulfillments": [
@@ -552,9 +558,7 @@ and the BPP may skip creating a Return fulfillment.
     "update_target": "payment",
     "order": {
       "id": "ord_abc123",
-      "fulfillments": [
-        { "id": "R1", "type": "Return" }
-      ],
+      "fulfillments": [{ "id": "R1", "type": "Return" }],
       "payment": {
         "@ondc/org/settlement_details": [
           {
@@ -579,6 +583,7 @@ BPP can send `/on_update` to part-cancel items **without a prior `/update`**
 from BAP. This is a **seller-initiated part cancellation**.
 
 **Rules:**
+
 - Only valid when fulfillment state is `"Pending"` or `"Packed"`
 - A separate cancellation fulfillment is created for the cancelled items
 - Quote is updated to reflect the cancellation fee
@@ -703,9 +708,7 @@ initiated** after a return or cancellation.
     "update_target": "payment",
     "order": {
       "id": "ord_abc123",
-      "fulfillments": [
-        { "id": "R1", "type": "Return" }
-      ],
+      "fulfillments": [{ "id": "R1", "type": "Return" }],
       "payment": {
         "@ondc/org/settlement_details": [
           {
@@ -724,13 +727,13 @@ initiated** after a return or cancellation.
 
 **Settlement field definitions:**
 
-| Field | Value |
-|-------|-------|
-| `settlement_counterparty` | `"buyer"` — refund goes to buyer |
-| `settlement_phase` | `"refund"` — phase is refund |
-| `settlement_type` | `"upi"`, `"neft"`, `"rtgs"`, etc. |
-| `settlement_amount` | Amount being refunded |
-| `settlement_timestamp` | ISO8601 timestamp |
+| Field                     | Value                             |
+| ------------------------- | --------------------------------- |
+| `settlement_counterparty` | `"buyer"` — refund goes to buyer  |
+| `settlement_phase`        | `"refund"` — phase is refund      |
+| `settlement_type`         | `"upi"`, `"neft"`, `"rtgs"`, etc. |
+| `settlement_amount`       | Amount being refunded             |
+| `settlement_timestamp`    | ISO8601 timestamp                 |
 
 ---
 
@@ -740,6 +743,7 @@ Applicable for **Buyer-Delivery** fulfillment type (LSP managed by buyer NP).
 Can also be used for cancelling individual fulfillments.
 
 **Rules:**
+
 - Request for update can be sent for 1 or more existing fulfillments
   that **have not reached terminal state**
 - `/on_update` response is **solicited** (in response to `/update`)
@@ -866,14 +870,14 @@ NACK with error code `22508`.
 
 ### Errors in /on_update (BPP → BAP)
 
-| Code | Type | Meaning | BAP Action |
-|------|------|---------|------------|
-| `22508` | DOMAIN-ERROR | Dynamic item cancel proportions not followed | NACK; investigate |
-| `20000` | DOMAIN-ERROR | Invalid context | NACK |
-| `22502` | DOMAIN-ERROR | Invalid cancellation reason in unsolicited on_update | NACK with `22502` |
-| `30018` | ORDER-NOT-FOUND | Order not found at SNP | Do not retry |
-| `31003` | ORDER-PROCESSING-IN-PROGRESS | Order in retry window | Wait; retry window |
-| `20002` | DOMAIN-ERROR | Stale timestamp for same transaction | NACK |
+| Code    | Type                         | Meaning                                              | BAP Action         |
+| ------- | ---------------------------- | ---------------------------------------------------- | ------------------ |
+| `22508` | DOMAIN-ERROR                 | Dynamic item cancel proportions not followed         | NACK; investigate  |
+| `20000` | DOMAIN-ERROR                 | Invalid context                                      | NACK               |
+| `22502` | DOMAIN-ERROR                 | Invalid cancellation reason in unsolicited on_update | NACK with `22502`  |
+| `30018` | ORDER-NOT-FOUND              | Order not found at SNP                               | Do not retry       |
+| `31003` | ORDER-PROCESSING-IN-PROGRESS | Order in retry window                                | Wait; retry window |
+| `20002` | DOMAIN-ERROR                 | Stale timestamp for same transaction                 | NACK               |
 
 ### NACK Response Shape
 

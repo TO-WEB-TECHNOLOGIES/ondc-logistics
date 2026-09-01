@@ -28,7 +28,9 @@ export const logisticsSearches = pgTable(
     createdAt: timestampWithTimezone("created_at").defaultNow().notNull(),
     updatedAt: timestampWithTimezone("updated_at").defaultNow().notNull(),
   },
-  (table) => [index("logistics_searches_transaction_db_id_idx").on(table.transactionDbId)],
+  (table) => [
+    index("logistics_searches_transaction_db_id_idx").on(table.transactionDbId),
+  ],
 );
 
 export const logisticsSearchLocations = pgTable(
@@ -50,7 +52,9 @@ export const logisticsSearchLocations = pgTable(
     country: varchar("country"),
     createdAt: timestampWithTimezone("created_at").defaultNow().notNull(),
   },
-  (table) => [index("logistics_search_locations_search_id_idx").on(table.searchId)],
+  (table) => [
+    index("logistics_search_locations_search_id_idx").on(table.searchId),
+  ],
 );
 
 export const logisticsSearchProviderSchedules = pgTable(
@@ -66,7 +70,11 @@ export const logisticsSearchProviderSchedules = pgTable(
     rangeEnd: time("range_end"),
     createdAt: timestampWithTimezone("created_at").defaultNow().notNull(),
   },
-  (table) => [index("logistics_search_provider_schedules_search_id_idx").on(table.searchId)],
+  (table) => [
+    index("logistics_search_provider_schedules_search_id_idx").on(
+      table.searchId,
+    ),
+  ],
 );
 
 export const logisticsSearchHolidays = pgTable(
@@ -75,10 +83,14 @@ export const logisticsSearchHolidays = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     scheduleId: uuid("schedule_id")
       .notNull()
-      .references(() => logisticsSearchProviderSchedules.id, { onDelete: "cascade" }),
+      .references(() => logisticsSearchProviderSchedules.id, {
+        onDelete: "cascade",
+      }),
     holidayDate: date("holiday_date"),
   },
-  (table) => [index("logistics_search_holidays_schedule_id_idx").on(table.scheduleId)],
+  (table) => [
+    index("logistics_search_holidays_schedule_id_idx").on(table.scheduleId),
+  ],
 );
 
 export const logisticsSearchPayloads = pgTable(
@@ -101,7 +113,9 @@ export const logisticsSearchPayloads = pgTable(
     valueCurrency: varchar("value_currency"),
     dangerousGoods: boolean("dangerous_goods"),
   },
-  (table) => [index("logistics_search_payloads_search_id_idx").on(table.searchId)],
+  (table) => [
+    index("logistics_search_payloads_search_id_idx").on(table.searchId),
+  ],
 );
 
 export const logisticsSearchPayments = pgTable(
@@ -115,5 +129,7 @@ export const logisticsSearchPayments = pgTable(
     collectionAmount: decimal("collection_amount", { precision: 18, scale: 2 }),
     currency: varchar("currency"),
   },
-  (table) => [index("logistics_search_payments_search_id_idx").on(table.searchId)],
+  (table) => [
+    index("logistics_search_payments_search_id_idx").on(table.searchId),
+  ],
 );

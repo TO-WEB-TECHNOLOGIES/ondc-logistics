@@ -45,7 +45,9 @@ export const lspProviderCategories = pgTable(
     timestamp: timestampWithTimezone("timestamp"),
     createdAt: timestampWithTimezone("created_at").defaultNow().notNull(),
   },
-  (table) => [index("lsp_provider_categories_provider_db_id_idx").on(table.providerDbId)],
+  (table) => [
+    index("lsp_provider_categories_provider_db_id_idx").on(table.providerDbId),
+  ],
 );
 
 export const lspProviderFulfillments = pgTable(
@@ -58,11 +60,18 @@ export const lspProviderFulfillments = pgTable(
     fulfillmentId: varchar("fulfillment_id"),
     type: varchar("type"),
     pickupDuration: varchar("pickup_duration"),
-    motorableDistance: decimal("motorable_distance", { precision: 18, scale: 6 }),
+    motorableDistance: decimal("motorable_distance", {
+      precision: 18,
+      scale: 6,
+    }),
     motorableDistanceUnit: varchar("motorable_distance_unit"),
     createdAt: timestampWithTimezone("created_at").defaultNow().notNull(),
   },
-  (table) => [index("lsp_provider_fulfillments_provider_db_id_idx").on(table.providerDbId)],
+  (table) => [
+    index("lsp_provider_fulfillments_provider_db_id_idx").on(
+      table.providerDbId,
+    ),
+  ],
 );
 
 export const lspProviderLocations = pgTable(
@@ -80,7 +89,9 @@ export const lspProviderLocations = pgTable(
     areaCode: varchar("area_code"),
     createdAt: timestampWithTimezone("created_at").defaultNow().notNull(),
   },
-  (table) => [index("lsp_provider_locations_provider_db_id_idx").on(table.providerDbId)],
+  (table) => [
+    index("lsp_provider_locations_provider_db_id_idx").on(table.providerDbId),
+  ],
 );
 
 export const lspCatalogItems = pgTable(
@@ -90,13 +101,19 @@ export const lspCatalogItems = pgTable(
     providerDbId: uuid("provider_db_id")
       .notNull()
       .references(() => lspProviders.id, { onDelete: "cascade" }),
-    parentItemId: uuid("parent_item_id").references((): AnyPgColumn => lspCatalogItems.id, {
-      onDelete: "set null",
-    }),
+    parentItemId: uuid("parent_item_id").references(
+      (): AnyPgColumn => lspCatalogItems.id,
+      {
+        onDelete: "set null",
+      },
+    ),
     categoryId: varchar("category_id"),
-    fulfillmentDbId: uuid("fulfillment_db_id").references(() => lspProviderFulfillments.id, {
-      onDelete: "set null",
-    }),
+    fulfillmentDbId: uuid("fulfillment_db_id").references(
+      () => lspProviderFulfillments.id,
+      {
+        onDelete: "set null",
+      },
+    ),
     catalogItemId: varchar("catalog_item_id"),
     descriptorCode: varchar("descriptor_code"),
     name: varchar("name"),
@@ -131,5 +148,7 @@ export const lspStaticTerms = pgTable(
     createdAt: timestampWithTimezone("created_at").defaultNow().notNull(),
     updatedAt: timestampWithTimezone("updated_at").defaultNow().notNull(),
   },
-  (table) => [index("lsp_static_terms_provider_db_id_idx").on(table.providerDbId)],
+  (table) => [
+    index("lsp_static_terms_provider_db_id_idx").on(table.providerDbId),
+  ],
 );

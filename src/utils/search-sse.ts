@@ -22,13 +22,18 @@ export class SearchSseManager {
       response,
       close: () => {
         this.subscribers.get(searchId)?.delete(subscriber);
-        if (this.subscribers.get(searchId)?.size === 0) this.subscribers.delete(searchId);
+        if (this.subscribers.get(searchId)?.size === 0)
+          this.subscribers.delete(searchId);
       },
     };
-    const searchSubscribers = this.subscribers.get(searchId) ?? new Set<Subscriber>();
+    const searchSubscribers =
+      this.subscribers.get(searchId) ?? new Set<Subscriber>();
     searchSubscribers.add(subscriber);
     this.subscribers.set(searchId, searchSubscribers);
-    console.log("[search.sse] subscriber registered", { searchId, subscriberCount: searchSubscribers.size });
+    console.log("[search.sse] subscriber registered", {
+      searchId,
+      subscriberCount: searchSubscribers.size,
+    });
     response.on("close", subscriber.close);
     return subscriber.close;
   }
@@ -46,7 +51,10 @@ export class SearchSseManager {
   }
 
   complete(searchId: string, event: SearchSseEvent): void {
-    console.log("[search.sse] completing stream", { searchId, reason: event.event });
+    console.log("[search.sse] completing stream", {
+      searchId,
+      reason: event.event,
+    });
     this.publish(searchId, event);
     for (const subscriber of this.subscribers.get(searchId) ?? []) {
       subscriber.close();
@@ -57,4 +65,3 @@ export class SearchSseManager {
 }
 
 export const searchSseManager = new SearchSseManager();
-

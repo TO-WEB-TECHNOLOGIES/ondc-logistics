@@ -28,6 +28,7 @@ is called **after** ACK has already been sent — during the async processing ph
 deeper validation discovers schema violations.
 
 **Key characteristics**:
+
 - Direction: BAP → BPP (synchronous HTTP POST)
 - Not a callback — BAP initiates this call
 - Requires BAP to sign the request with Ed25519 private key
@@ -50,6 +51,7 @@ Call `/catalog_rejection` when:
    - Offer schema violations
 
 **NOT used for** (these use NACK instead):
+
 - Incremental push with unknown provider/location/item (codes 20003/20004/20005)
 - Missing Authorization header
 - Signature verification failure
@@ -94,33 +96,34 @@ Call `/catalog_rejection` when:
 
 ### Context Fields
 
-| Field | Value | Notes |
-|-------|-------|-------|
-| `domain` | `"ONDC:RET11"` | Fixed for F&B |
-| `action` | `"catalog_rejection"` | API identifier |
-| `core_version` | `"1.2.0"` | ONDC protocol version |
-| `bap_id` | BAP subscriber ID | From app constants |
-| `bap_uri` | BAP callback URI | From app constants |
-| `bpp_id` | From original `on_search` | Must match incoming callback |
-| `bpp_uri` | From original `on_search` | Target for this POST |
+| Field            | Value                     | Notes                            |
+| ---------------- | ------------------------- | -------------------------------- |
+| `domain`         | `"ONDC:RET11"`            | Fixed for F&B                    |
+| `action`         | `"catalog_rejection"`     | API identifier                   |
+| `core_version`   | `"1.2.0"`                 | ONDC protocol version            |
+| `bap_id`         | BAP subscriber ID         | From app constants               |
+| `bap_uri`        | BAP callback URI          | From app constants               |
+| `bpp_id`         | From original `on_search` | Must match incoming callback     |
+| `bpp_uri`        | From original `on_search` | Target for this POST             |
 | `transaction_id` | From original `on_search` | Correlates with original request |
-| `message_id` | Fresh UUID | New unique ID for this message |
-| `timestamp` | Current ISO 8601 | Indian time |
+| `message_id`     | Fresh UUID                | New unique ID for this message   |
+| `timestamp`      | Current ISO 8601          | Indian time                      |
 
 ### errors[] Fields (root-level array)
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `type` | string | Error category: `"BPP-ERROR"`, `"PROVIDER-ERROR"`, or `"ITEM-ERROR"` |
-| `code` | string | Error code from §5 |
-| `message` | string | Human-readable description |
-| `path` | string (optional) | JSON path to the failing field in original catalog |
+| Field     | Type              | Description                                                          |
+| --------- | ----------------- | -------------------------------------------------------------------- |
+| `type`    | string            | Error category: `"BPP-ERROR"`, `"PROVIDER-ERROR"`, or `"ITEM-ERROR"` |
+| `code`    | string            | Error code from §5                                                   |
+| `message` | string            | Human-readable description                                           |
+| `path`    | string (optional) | JSON path to the failing field in original catalog                   |
 
 ---
 
 ## 4. Response Schema
 
 **Success (ACK)**:
+
 ```json
 {
   "context": {
@@ -141,6 +144,7 @@ Call `/catalog_rejection` when:
 ```
 
 **Failure (NACK)**:
+
 ```json
 {
   "context": { ... },
@@ -159,19 +163,19 @@ Call `/catalog_rejection` when:
 
 ## 5. Error Codes
 
-| Code | Description | When Used |
-|------|-------------|-----------|
-| `20001` | Catalog parsing failure | Cannot parse JSON or structure is completely invalid |
-| `20002` | Schema validation failure | Field-level validation errors |
-| `20003` | Provider not found | Incremental push — provider not in cache (use NACK instead) |
-| `20004` | Location not found | Incremental push — location not in cache (use NACK instead) |
-| `20005` | Item not found | Incremental push — item not in cache (use NACK instead) |
-| `20006` | Invalid BPP descriptor | BPP-level descriptor missing or invalid |
-| `20007` | Missing mandatory provider fields | Provider missing required fields (e.g., `descriptor.name`) |
-| `20008` | FSSAI license missing/invalid | F&B requires 14-digit FSSAI license number |
-| `20009` | Invalid item schema | Item-level schema validation failures |
-| `20010` | Invalid category schema | Category (custom_group/custom_menu) validation failures |
-| `20011` | Invalid offer schema | Offer validation failures |
+| Code    | Description                       | When Used                                                   |
+| ------- | --------------------------------- | ----------------------------------------------------------- |
+| `20001` | Catalog parsing failure           | Cannot parse JSON or structure is completely invalid        |
+| `20002` | Schema validation failure         | Field-level validation errors                               |
+| `20003` | Provider not found                | Incremental push — provider not in cache (use NACK instead) |
+| `20004` | Location not found                | Incremental push — location not in cache (use NACK instead) |
+| `20005` | Item not found                    | Incremental push — item not in cache (use NACK instead)     |
+| `20006` | Invalid BPP descriptor            | BPP-level descriptor missing or invalid                     |
+| `20007` | Missing mandatory provider fields | Provider missing required fields (e.g., `descriptor.name`)  |
+| `20008` | FSSAI license missing/invalid     | F&B requires 14-digit FSSAI license number                  |
+| `20009` | Invalid item schema               | Item-level schema validation failures                       |
+| `20010` | Invalid category schema           | Category (custom_group/custom_menu) validation failures     |
+| `20011` | Invalid offer schema              | Offer validation failures                                   |
 
 ---
 
@@ -214,6 +218,7 @@ using the same algorithm as all other ONDC BAP requests:
 5. Include in `Authorization` header: `Authorization: <signature>`
 
 **Implementation** (reuse existing `createAuthorizationHeader` utility):
+
 ```typescript
 import { createAuthorizationHeader } from "../utils/crypto.js";
 

@@ -1,12 +1,20 @@
 import type { NormalizedProviderResult } from "../types/search/internal.js";
-import type { OndcOnSearchResponse, OndcProvider } from "../types/search/ondc.js";
+import type {
+  OndcOnSearchResponse,
+  OndcProvider,
+} from "../types/search/ondc.js";
 
 const distanceTag = (provider: OndcProvider, fulfillmentId: string) => {
-  const fulfillment = provider.fulfillments?.find((item) => item.id === fulfillmentId);
+  const fulfillment = provider.fulfillments?.find(
+    (item) => item.id === fulfillmentId,
+  );
   const distance = fulfillment?.tags?.find((tag) => tag.code === "distance");
   return {
-    type: distance?.list?.find((item) => item.code === "motorable_distance_type")?.value,
-    value: distance?.list?.find((item) => item.code === "motorable_distance")?.value,
+    type: distance?.list?.find(
+      (item) => item.code === "motorable_distance_type",
+    )?.value,
+    value: distance?.list?.find((item) => item.code === "motorable_distance")
+      ?.value,
   };
 };
 

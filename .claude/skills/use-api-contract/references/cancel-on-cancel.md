@@ -3,6 +3,7 @@
 **Scope**: BAP-collected prepaid (ON-ORDER) only. Delivery fulfillment only.
 
 Read this when implementing or debugging anything related to:
+
 - Sending `/cancel` — buyer-initiated order cancellation
 - Processing `/on_cancel` — BPP cancellation acknowledgment (buyer-initiated or BPP/seller-initiated)
 - Cancellation reason codes — which ones the BAP can use vs. which are seller-only
@@ -16,13 +17,13 @@ Read this when implementing or debugging anything related to:
 
 ### BAP (Buyer NP) cancellation reason codes
 
-| ID | Meaning | When valid | Cancellation fee |
-|----|---------|------------|-----------------|
-| `001` | Price change | Always | Per `cancellation_terms` from `/on_init` |
-| `002` | Item unavailable | Always | Per `cancellation_terms` |
-| `003` | Lower price elsewhere | Always | Per `cancellation_terms` |
-| `004` | Pending delivery (buyer asked to wait) | Always | Per `cancellation_terms` |
-| `005` | Merchant not accepting orders | Always | Per `cancellation_terms` |
+| ID    | Meaning                                             | When valid                       | Cancellation fee                         |
+| ----- | --------------------------------------------------- | -------------------------------- | ---------------------------------------- |
+| `001` | Price change                                        | Always                           | Per `cancellation_terms` from `/on_init` |
+| `002` | Item unavailable                                    | Always                           | Per `cancellation_terms`                 |
+| `003` | Lower price elsewhere                               | Always                           | Per `cancellation_terms`                 |
+| `004` | Pending delivery (buyer asked to wait)              | Always                           | Per `cancellation_terms`                 |
+| `005` | Merchant not accepting orders                       | Always                           | Per `cancellation_terms`                 |
 | `006` | **TAT breach** — buyer-initiated after TAT exceeded | Only if TAT is actually breached | **No fee** (buyer-initiated, no penalty) |
 
 **NACK 30012**: If `cancellation_reason_id` is invalid or not applicable, BPP NACKs with `30012`.
@@ -31,18 +32,19 @@ Read this when implementing or debugging anything related to:
 
 ### Cancellation rules by fulfillment state
 
-| Fulfillment state | Can buyer cancel via `/cancel`? | Cancellation fee |
-|------------------|--------------------------------|-----------------|
-| `Pending` | **Yes** | Per `cancellation_terms` (often 0%) |
-| `Packed` | **Yes** | Per `cancellation_terms` (often 10%) |
-| `Agent-assigned` | **Yes** | Per `cancellation_terms` |
-| `Order-picked-up` | **Yes** | Per `cancellation_terms` (often 10%) |
-| `Out-for-delivery` | **NOT allowed** via `/cancel` | NACK `30014` — "cannot cancel at this stage" |
-| `Order-delivered` | **NOT allowed** | Already delivered |
+| Fulfillment state  | Can buyer cancel via `/cancel`? | Cancellation fee                             |
+| ------------------ | ------------------------------- | -------------------------------------------- |
+| `Pending`          | **Yes**                         | Per `cancellation_terms` (often 0%)          |
+| `Packed`           | **Yes**                         | Per `cancellation_terms` (often 10%)         |
+| `Agent-assigned`   | **Yes**                         | Per `cancellation_terms`                     |
+| `Order-picked-up`  | **Yes**                         | Per `cancellation_terms` (often 10%)         |
+| `Out-for-delivery` | **NOT allowed** via `/cancel`   | NACK `30014` — "cannot cancel at this stage" |
+| `Order-delivered`  | **NOT allowed**                 | Already delivered                            |
 
 ### Force cancellation flow
 
 If BPP does not respond to `/cancel` within TAT:
+
 1. Resend `/cancel` with `descriptor.tags[code="params"].list[code="force"]` = `"yes"`
 2. If BPP still doesn't respond → issue IGM (Interoperable Governance Message)
 
@@ -89,15 +91,15 @@ If BPP does not respond to `/cancel` within TAT:
 
 **Field breakdown:**
 
-| Field | Mandatory | Description |
-|-------|-----------|-------------|
-| `message.order_id` | **Yes** | BAP-generated order UUID from `/confirm` |
-| `message.cancellation_reason_id` | **Yes** | BAP reason code (`001`–`006`) |
-| `message.descriptor.name` | No | `"fulfillment"` — signals fulfillment-level cancel |
-| `message.descriptor.short_desc` | No | Fulfillment ID to cancel (e.g. `"F1"`) |
-| `descriptor.tags[].code="params"` | No | Contains `force` and `ttl_response` |
-| `params.list[].code="force"` | No | `"yes"` = force cancel (TAT breach flow); `"no"` = normal |
-| `params.list[].code="ttl_response"` | No | Max time BPP should respond (e.g. `"PT1H"`) |
+| Field                               | Mandatory | Description                                               |
+| ----------------------------------- | --------- | --------------------------------------------------------- |
+| `message.order_id`                  | **Yes**   | BAP-generated order UUID from `/confirm`                  |
+| `message.cancellation_reason_id`    | **Yes**   | BAP reason code (`001`–`006`)                             |
+| `message.descriptor.name`           | No        | `"fulfillment"` — signals fulfillment-level cancel        |
+| `message.descriptor.short_desc`     | No        | Fulfillment ID to cancel (e.g. `"F1"`)                    |
+| `descriptor.tags[].code="params"`   | No        | Contains `force` and `ttl_response`                       |
+| `params.list[].code="force"`        | No        | `"yes"` = force cancel (TAT breach flow); `"no"` = normal |
+| `params.list[].code="ttl_response"` | No        | Max time BPP should respond (e.g. `"PT1H"`)               |
 
 **Optional fields in `/cancel`:** All descriptor fields are optional except `order_id` and `cancellation_reason_id`.
 
@@ -145,21 +147,23 @@ If BPP does not respond to `/cancel` within TAT:
 
 **Field breakdown:**
 
-| Field | Mandatory | Description |
-|-------|-----------|-------------|
-| `order.id` | **Yes** | Same as `order_id` from `/cancel` |
-| `order.state` | **Yes** | `"Cancelled"` |
-| `order.cancellation.cancelled_by` | **Yes** | `"buyerNP.com"` or `"sellerNP.com"` |
-| `order.cancellation.reason.id` | **Yes** | Cancellation reason code used |
-| `order.items` | **Yes** | Items with updated quantities (cancelled = `count: 0`) |
-| `order.fulfillments` | **Yes** | Fulfillment states set to `"Cancelled"` |
-| `order.quote` | **Yes** | Updated quote reflecting refund amount |
+| Field                             | Mandatory | Description                                            |
+| --------------------------------- | --------- | ------------------------------------------------------ |
+| `order.id`                        | **Yes**   | Same as `order_id` from `/cancel`                      |
+| `order.state`                     | **Yes**   | `"Cancelled"`                                          |
+| `order.cancellation.cancelled_by` | **Yes**   | `"buyerNP.com"` or `"sellerNP.com"`                    |
+| `order.cancellation.reason.id`    | **Yes**   | Cancellation reason code used                          |
+| `order.items`                     | **Yes**   | Items with updated quantities (cancelled = `count: 0`) |
+| `order.fulfillments`              | **Yes**   | Fulfillment states set to `"Cancelled"`                |
+| `order.quote`                     | **Yes**   | Updated quote reflecting refund amount                 |
 
 **On `cancelled_by`:**
+
 - `"buyerNP.com"` → buyer-initiated via `/cancel`
 - `"sellerNP.com"` → seller/BPP-initiated cancellation (unsolicited)
 
 **On `order.items` with quantities:**
+
 - Cancelled items: `quantity.count = 0`
 - Non-cancelled items: `quantity.count = original count`
 - For partial cancel: only cancelled items have `count: 0`
@@ -224,6 +228,7 @@ Stored from `/on_init` — defines fees per fulfillment state:
 BPP can cancel the order **without receiving `/cancel`** from the BAP. This is an unsolicited cancellation.
 
 **Rules:**
+
 - BPP can cancel at any fulfillment state
 - `cancellation.cancelled_by` = `"sellerNP.com"`
 - Buyer app receives `/on_cancel` as a webhook and must process it
@@ -237,13 +242,13 @@ BPP can cancel the order **without receiving `/cancel`** from the BAP. This is a
 
 ## Error Codes
 
-| Code | Scenario | BAP Action |
-|------|----------|------------|
-| `30012` | `cancellation_reason_id` invalid or not applicable for buyer | Use correct reason code; do not retry |
+| Code    | Scenario                                                        | BAP Action                                      |
+| ------- | --------------------------------------------------------------- | ----------------------------------------------- |
+| `30012` | `cancellation_reason_id` invalid or not applicable for buyer    | Use correct reason code; do not retry           |
 | `30014` | TAT not breached but buyer sent `cancellation_reason_id: "006"` | Do not cancel on TAT basis; escalate to support |
-| `22502` | Seller sent unsolicited `/on_cancel` with invalid reason | NACK with `22502`; log for investigation |
-| `31003` | Order processing in progress at SNP (retry window) | Retry after short delay |
-| `30018` | Order not found at SNP | Cancel the local order record; do not retry |
+| `22502` | Seller sent unsolicited `/on_cancel` with invalid reason        | NACK with `22502`; log for investigation        |
+| `31003` | Order processing in progress at SNP (retry window)              | Retry after short delay                         |
+| `30018` | Order not found at SNP                                          | Cancel the local order record; do not retry     |
 
 ---
 
@@ -271,10 +276,12 @@ Send /cancel with appropriate reason code (001-005)
 ## Part Cancellation — Item Level vs. Fulfillment Level
 
 **When `Order.state = "Created"`:**
+
 - Part cancellation is at **item level** — buyer can cancel specific items
 - Use `/cancel` with specific `fulfillment_id` to target items in that fulfillment
 
 **When `Order.state` is anything else (Accepted, Pending, etc.):**
+
 - Part cancellation is at **fulfillment level** only
 - Must cancel entire fulfillment, not individual items within it
 
@@ -304,6 +311,7 @@ After `/on_cancel` for a prepaid (BAP-collected) order, BAP updates `Order.payme
 ```
 
 **Refund amount rules:**
+
 - **Pre-shipment cancellation**: full item amount minus logistics costs (at buyer app's discretion)
 - **Post-shipment cancellation**: full item amount (logistics already incurred)
 - F&B is non-returnable — returns do not apply to food items

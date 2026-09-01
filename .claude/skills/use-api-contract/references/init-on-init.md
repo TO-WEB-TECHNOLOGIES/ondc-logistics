@@ -847,36 +847,36 @@ From ONDC Reason Codes document (updated May 2025).
 
 ### Buyer NP (BNP) — codes BAP sends in /cancel
 
-| Code | Phase | Reason | States Applicable |
-|------|-------|--------|-------------------|
-| `001` | pre-pickup | Price of one or more items changed (buyer asked additional payment) | Pending, Packed, Agent-assigned, Out-for-pickup |
-| `003` | pre-pickup | Product available at lower than order price | Pending, Packed, Agent-assigned, Out-for-pickup |
-| `051` (was `004`) | pre-pickup | Store is not accepting order | Pending |
-| `052` (was `006`) | post-pickup | Order/fulfillment not received as per O2D TAT | Order-picked-up, At-delivery |
-| `053` (was `010`) | any | Buyer wants to modify address / other order details | Any state prior to Order-delivered |
-| `009` | post-pickup | Wrong product delivered | At-delivery |
+| Code              | Phase       | Reason                                                              | States Applicable                               |
+| ----------------- | ----------- | ------------------------------------------------------------------- | ----------------------------------------------- |
+| `001`             | pre-pickup  | Price of one or more items changed (buyer asked additional payment) | Pending, Packed, Agent-assigned, Out-for-pickup |
+| `003`             | pre-pickup  | Product available at lower than order price                         | Pending, Packed, Agent-assigned, Out-for-pickup |
+| `051` (was `004`) | pre-pickup  | Store is not accepting order                                        | Pending                                         |
+| `052` (was `006`) | post-pickup | Order/fulfillment not received as per O2D TAT                       | Order-picked-up, At-delivery                    |
+| `053` (was `010`) | any         | Buyer wants to modify address / other order details                 | Any state prior to Order-delivered              |
+| `009`             | post-pickup | Wrong product delivered                                             | At-delivery                                     |
 
 > **Note on reason code history**: Codes `004`, `006`, and `010` were deprecated and replaced by `051`, `052`, and `053` respectively. BPPs may still return the old codes; BAP should treat them as equivalent.
 
 ### Seller NP (SNP) — codes BPP sends in /on_cancel (BAP must handle)
 
-| Code | Phase | Reason |
-|------|-------|--------|
-| `002` | pre-pickup | One or more items in the order not available |
-| `021` | pre-pickup | Store not responsive (auto-accepted but unresponsive) |
-| `022` | pre-pickup | Technical issue in merchant device |
-| `023` | pre-pickup | Order received during non-operational hours |
-| `024` | pre-pickup | Order received during store rush |
-| `011` | post-pickup | Retail buyer not found / can't be contacted |
-| `013` | post-pickup | Retail buyer can't/doesn't want to accept delivery |
-| `014` | post-pickup | Delivery address incorrect or not found |
-| `016` | post-pickup | Force majeure (accident/strike/law & order) |
-| `018` | post-pickup | Order not serviceable (logistics issue) |
+| Code  | Phase       | Reason                                                |
+| ----- | ----------- | ----------------------------------------------------- |
+| `002` | pre-pickup  | One or more items in the order not available          |
+| `021` | pre-pickup  | Store not responsive (auto-accepted but unresponsive) |
+| `022` | pre-pickup  | Technical issue in merchant device                    |
+| `023` | pre-pickup  | Order received during non-operational hours           |
+| `024` | pre-pickup  | Order received during store rush                      |
+| `011` | post-pickup | Retail buyer not found / can't be contacted           |
+| `013` | post-pickup | Retail buyer can't/doesn't want to accept delivery    |
+| `014` | post-pickup | Delivery address incorrect or not found               |
+| `016` | post-pickup | Force majeure (accident/strike/law & order)           |
+| `018` | post-pickup | Order not serviceable (logistics issue)               |
 
 ### Special internal codes (not for /cancel in post-confirm flow)
 
-| Code | Who | Meaning |
-|------|-----|---------|
+| Code  | Who | Meaning                                                  |
+| ----- | --- | -------------------------------------------------------- |
 | `999` | BNP | Order confirmation failure (internal — pre-confirm only) |
 | `998` | SNP | Order confirmation failure (internal — pre-confirm only) |
 
@@ -910,6 +910,7 @@ After `/on_cancel` for a prepaid order, BAP updates `Order.payment` with settlem
 ```
 
 **Refund amount rules:**
+
 - Pre-shipment cancellation: full item amount minus logistics costs (buyer app discretion)
 - Post-shipment cancellation: full item amount (logistics already incurred)
 - F&B is non-returnable — returns do not apply to food items
@@ -917,6 +918,7 @@ After `/on_cancel` for a prepaid order, BAP updates `Order.payment` with settlem
 ### Logistics Provider (LSP) Cancellation
 
 LSP can initiate cancellation (RTO flow):
+
 - LSP sends cancellation request to the entity that confirmed the logistics order
 - LSP includes cancellation reason + AWB number
 - If cause is LSP's fault: entity that confirmed (Seller App or Buyer App) finds replacement LSP

@@ -18,12 +18,13 @@ the ONDC API Contract for Retail v1.2.0. Read this alongside `ondc-core-knowledg
 
 The Buyer NP (BAP) exposes two surfaces:
 
-| Surface | Purpose |
-|---------|---------|
-| **Outbound API** | Sends requests to BPP (via Gateway for `/search`) |
-| **Webhook (callback receiver)** | Receives `on_*` async callbacks from BPP |
+| Surface                         | Purpose                                           |
+| ------------------------------- | ------------------------------------------------- |
+| **Outbound API**                | Sends requests to BPP (via Gateway for `/search`) |
+| **Webhook (callback receiver)** | Receives `on_*` async callbacks from BPP          |
 
 The BAP never waits for a callback inline. Every request-response pair is async:
+
 1. BAP sends request → BPP sends ACK (or NACK) synchronously
 2. BPP sends `on_*` callback → BAP sends ACK (or NACK) synchronously
 
@@ -51,7 +52,10 @@ The `/search` request must always include `bap_terms` in `message.intent.tags`:
   "code": "bap_terms",
   "list": [
     { "code": "static_terms", "value": "" },
-    { "code": "static_terms_new", "value": "https://github.com/ONDC-Official/NP-Static-Terms/buyerNP_BNP/1.0/tc.pdf" },
+    {
+      "code": "static_terms_new",
+      "value": "https://github.com/ONDC-Official/NP-Static-Terms/buyerNP_BNP/1.0/tc.pdf"
+    },
     { "code": "effective_date", "value": "2023-10-01T00:00:00.000Z" }
   ]
 }
@@ -98,34 +102,39 @@ catalog
 
 Items array contains three distinct types, differentiated by tags:
 
-| Tag `type.type` | Meaning |
-|-----------------|---------|
-| `item` | A base SKU (e.g. "Farmhouse Pizza") — what the buyer orders |
-| `customization` | An individual option (e.g. "Large", "Wheat Crust") |
-| `customization_group` (category) | Group of options (e.g. "Size", "Crust") |
+| Tag `type.type`                  | Meaning                                                     |
+| -------------------------------- | ----------------------------------------------------------- |
+| `item`                           | A base SKU (e.g. "Farmhouse Pizza") — what the buyer orders |
+| `customization`                  | An individual option (e.g. "Large", "Wheat Crust")          |
+| `customization_group` (category) | Group of options (e.g. "Size", "Crust")                     |
 
 ### Customization Group rules (critical for catalog ingestion)
 
 Categories define customization group configs:
+
 ```json
 {
   "id": "CG1",
   "descriptor": { "name": "Crust" },
   "tags": [
-    { "code": "config", "list": [
-      { "code": "min", "value": "1" },      // min=1 means mandatory
-      { "code": "max", "value": "1" },
-      { "code": "input", "value": "select" },
-      { "code": "seq", "value": "1" }
-    ]}
+    {
+      "code": "config",
+      "list": [
+        { "code": "min", "value": "1" }, // min=1 means mandatory
+        { "code": "max", "value": "1" },
+        { "code": "input", "value": "select" },
+        { "code": "seq", "value": "1" }
+      ]
+    }
   ]
 }
 ```
 
 **Mandatory CG rule**: If a CG has `min > 0` and either:
+
 - Its definition is missing/invalid, OR
 - No customizations are mapped to it
-→ The BAP **must disable the base item** entirely. Do not show it to the buyer.
+  → The BAP **must disable the base item** entirely. Do not show it to the buyer.
 
 Item-level CG config overrides category-level config if provided.
 
@@ -150,9 +159,11 @@ Item-level CG config overrides category-level config if provided.
 ### Incremental refresh (push mode)
 
 BAP subscribes by sending `/search` with `catalog_inc` tag:
+
 ```json
 { "code": "catalog_inc", "list": [{ "code": "mode", "value": "start" }] }
 ```
+
 - BPP pushes deltas every 1–30 minutes (its discretion)
 - BAP can have **only 1 open incremental request** at a time — stop before starting a new one
 - Stop using `mode: "stop"` with the **same `transaction_id`** as the start request
@@ -160,6 +171,7 @@ BAP subscribes by sending `/search` with `catalog_inc` tag:
 ### Race condition handling
 
 If full refresh and incremental arrive simultaneously:
+
 - Option A: Process full refresh, then restart incremental from its timestamp
 - Option B: Process both in sequence, use timestamps to decide which updates to persist
 
@@ -216,19 +228,24 @@ In F&B, the buyer builds a customized product. The BAP sends a **dynamic item ID
       "items": [
         {
           "id": "I1",
-          "parent_item_id": "DI1",   // dynamic item ID — groups this cart line
-          "location_id": "L1",
-          "quantity": { "count": 1 },
-          "tags": [{ "code": "type", "list": [{ "code": "type", "value": "item" }] }]
-        },
-        {
-          "id": "C1",                 // customization item (e.g. "New Hand Tossed" crust)
-          "parent_item_id": "DI1",   // same dynamic item ID as the base item
+          "parent_item_id": "DI1", // dynamic item ID — groups this cart line
           "location_id": "L1",
           "quantity": { "count": 1 },
           "tags": [
-            { "code": "type", "list": [{ "code": "type", "value": "customization" }] },
-            { "code": "parent", "list": [{ "code": "id", "value": "CG1" }] }  // which CG this belongs to
+            { "code": "type", "list": [{ "code": "type", "value": "item" }] }
+          ]
+        },
+        {
+          "id": "C1", // customization item (e.g. "New Hand Tossed" crust)
+          "parent_item_id": "DI1", // same dynamic item ID as the base item
+          "location_id": "L1",
+          "quantity": { "count": 1 },
+          "tags": [
+            {
+              "code": "type",
+              "list": [{ "code": "type", "value": "customization" }]
+            },
+            { "code": "parent", "list": [{ "code": "id", "value": "CG1" }] } // which CG this belongs to
           ]
         }
         // ... more customizations for same DI1, or another DI2 for a second pizza
@@ -239,6 +256,7 @@ In F&B, the buyer builds a customized product. The BAP sends a **dynamic item ID
 ```
 
 Key rules:
+
 - Each customized product instance gets its own `parent_item_id` (dynamic item ID)
 - Each base item has tag `type: "item"`, each customization has tag `type: "customization"` + `parent: CG_ID`
 - Multiple items in cart = multiple groups of `parent_item_id`
@@ -250,6 +268,7 @@ Key rules:
 BPP checks serviceability and inventory, then returns a quote.
 
 **What BAP must do:**
+
 1. Check if fulfillment state is `"Serviceable"` — if not, show appropriate error to buyer
 2. Check if items are in stock (from `quote.breakup[].item.quantity.available`)
 3. If `error.code == 30023` → minimum order value not met — prompt buyer to add more items
@@ -258,6 +277,7 @@ BPP checks serviceability and inventory, then returns a quote.
 6. Quote is **not frozen** until `/on_init` — changes in address or cart require calling `/select` again
 
 Quote structure:
+
 ```
 quote.price.value = sum of all quote.breakup[].price.value
 title_type "item"     → item price (has both unit + total)
@@ -313,6 +333,7 @@ Provides buyer billing and delivery address. Fulfillment ID may change if buyer 
 BPP confirms payment terms and cancellation terms. Quote is frozen here.
 
 **Key fields BAP must process:**
+
 1. **Payment link** (if BPP collects payment, i.e. `collect_payment: "Y"`):
    - `payment.type = "ON-ORDER"`, `payment.collected_by = "BPP"`
    - `payment.uri` = secure payment link → BAP must render this to the buyer
@@ -362,14 +383,17 @@ Places the order. Includes `order.id` and `order.state: "Created"`.
 ## /on_confirm — What Seller NP Returns
 
 BPP sets `order.state` to:
+
 - `"Accepted"` — order placed, auto-accepted
 - `"Created"` — order placed, deferred acceptance (BNP must poll `/status`)
 - Error with rejection — BAP must inform buyer
 
 **Fulfillment states in F&B order lifecycle:**
+
 ```
 Pending → Packed → Order-picked-up → Out-for-delivery → Order-delivered
 ```
+
 Each state is in `fulfillments[].state.descriptor.code`.
 
 ---
@@ -377,6 +401,7 @@ Each state is in `fulfillments[].state.descriptor.code`.
 ## /status — BAP Sends (Polling)
 
 Simple poll:
+
 ```json
 { "message": { "order_id": "O1" } }
 ```
@@ -395,36 +420,45 @@ BPP returns the current order + all fulfillment states.
     "order_id": "O1",
     "cancellation_reason_id": "001",
     "descriptor": {
-      "short_desc": "F1",  // fulfillment ID being cancelled (if partial)
-      "tags": [{ "code": "params", "list": [
-        { "code": "force", "value": "no" },
-        { "code": "ttl_response", "value": "PT1H" }
-      ]}]
+      "short_desc": "F1", // fulfillment ID being cancelled (if partial)
+      "tags": [
+        {
+          "code": "params",
+          "list": [
+            { "code": "force", "value": "no" },
+            { "code": "ttl_response", "value": "PT1H" }
+          ]
+        }
+      ]
     }
   }
 }
 ```
 
 **Cancellation reason codes (Buyer NP)**:
-| Code | Reason |
-|------|--------|
-| 001 | Price of one or more items have changed |
-| 002 | One or more items in the Order not available |
-| 003 | Product available at lower price |
-| 004 | Order in pending shipment/delivery state |
-| 005 | Merchant not accepting orders |
-| 006 | Fulfillment not available for customer's location (TAT breach) |
+
+| Code | Reason                                                         |
+| ---- | -------------------------------------------------------------- |
+| 001  | Price of one or more items have changed                        |
+| 002  | One or more items in the Order not available                   |
+| 003  | Product available at lower price                               |
+| 004  | Order in pending shipment/delivery state                       |
+| 005  | Merchant not accepting orders                                  |
+| 006  | Fulfillment not available for customer's location (TAT breach) |
 
 **Force cancellation flow**: If BPP doesn't send valid `/on_cancel` within the `ttl_response`:
+
 1. BAP sends `/cancel` again with `force: "yes"`
 2. If still no response → raise IGM issue for resolution
 3. IGM resolution creates a valid `/on_cancel` for the force cancel
 
 **Cancellation fee calculation**:
+
 - From `/on_cancel` response: `order_value_at_confirm - updated_order_value_in_on_cancel`
 - If no response: use cancellation terms from `/on_init` for matching fulfillment state + reason code
 
 **Unsolicited cancellation** (BPP initiates via `/on_cancel`):
+
 - BPP sets all order + fulfillment states to `"Cancelled"`
 - BAP may NACK with `22502` if `cancellation_reason_id` is invalid for seller-initiated cancel
 
@@ -451,17 +485,20 @@ BPP returns tracking URL or GPS coordinates. F&B tracking is typically live for 
 **Order states**: `Created` → `Accepted` → `Completed` / `Cancelled`
 
 **Fulfillment states** (forward):
+
 ```
 Pending → Packed → Order-picked-up → Out-for-delivery → Order-delivered
 ```
 
 **Fulfillment states** (cancellation/RTO):
+
 ```
 Cancelled
 RTO-Initiated → RTO-Delivered / RTO-Disposed
 ```
 
 **Rules**:
+
 - Item-level cancel only allowed when fulfillment state is `"Pending"`
 - Return only allowed when fulfillment state is `"Order-delivered"`
 
@@ -489,6 +526,7 @@ payment. However, this project does **not** support BPP payment collection. The 
 `collected_by: "BAP"` in `/init`.
 
 If `/on_init` echoes back `collected_by: "BPP"`:
+
 - Log and alert engineering (this indicates a catalog or BPP misconfiguration)
 - Treat as an error condition — do not proceed with payment collection through BPP's URI
 
@@ -502,17 +540,17 @@ payment.type = "ON-ORDER"
 
 ## Key Error Codes for BAP
 
-| Code | Meaning | Sent by |
-|------|---------|---------|
-| `30001` | Item not found | BPP |
-| `30004` | Item quantity unavailable | BPP |
-| `30009` | No items available | BPP |
-| `30012` | Invalid cancellation reason ID | BPP |
-| `30014` | Fulfillment TAT not breached | BPP |
-| `30023` | Cart below minimum order value | BPP |
-| `22502` | Invalid seller cancellation reason | BAP (NACK to unsolicited on_cancel) |
-| `20002` | Stale request (timestamp earlier than processed) | Both |
-| `20009` | Late payment status update (after BAP TAT expired) | BAP (NACK to late on_init) |
+| Code    | Meaning                                            | Sent by                             |
+| ------- | -------------------------------------------------- | ----------------------------------- |
+| `30001` | Item not found                                     | BPP                                 |
+| `30004` | Item quantity unavailable                          | BPP                                 |
+| `30009` | No items available                                 | BPP                                 |
+| `30012` | Invalid cancellation reason ID                     | BPP                                 |
+| `30014` | Fulfillment TAT not breached                       | BPP                                 |
+| `30023` | Cart below minimum order value                     | BPP                                 |
+| `22502` | Invalid seller cancellation reason                 | BAP (NACK to unsolicited on_cancel) |
+| `20002` | Stale request (timestamp earlier than processed)   | Both                                |
+| `20009` | Late payment status update (after BAP TAT expired) | BAP (NACK to late on_init)          |
 
 ---
 

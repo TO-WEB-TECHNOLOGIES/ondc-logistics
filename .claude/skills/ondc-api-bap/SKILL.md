@@ -16,6 +16,7 @@ This skill is the authoritative knowledge base for the ONDC Buyer App Platform (
 **What it does:** Implements the buyer-side of the ONDC order flow. It allows buyers to search a catalog of restaurants/food items from multiple BPPs (seller platforms), select items, initialize orders, pay via HDFC SmartGateway (Juspay), confirm orders, track fulfillment, and cancel orders.
 
 **Technology stack:**
+
 - **Runtime:** Node.js with TypeScript (ESNext)
 - **Web Framework:** Express.js
 - **Databases:** PostgreSQL (via Drizzle ORM) for structured data; MongoDB for raw webhook audit logs
@@ -25,6 +26,7 @@ This skill is the authoritative knowledge base for the ONDC Buyer App Platform (
 - **Real-time:** Server-Sent Events (SSE) with Redis Pub/Sub for multi-instance support
 
 **Key constants** (from `src/constants/v1/appConstants.ts`):
+
 - `SUBSCRIBER_ID` — BAP's ONDC subscriber ID
 - `DOMAIN` — Always `ONDC:RET11` (F&B)
 - `CORE_VERSION` — Always `1.2.0`
@@ -195,19 +197,19 @@ Every ONDC message has a `context` object:
 
 ```typescript
 interface ONDCContext {
-  domain: "ONDC:RET11";       // F&B domain
-  country: "IND";             // India
-  city: "std:080";            // City code (e.g., std:080 for Bangalore)
-  action: string;             // "search" | "select" | "init" | "confirm" | "status" | "track" | "cancel"
-  core_version: "1.2.0";       // ONDC core spec version
-  bap_id: string;             // BAP's subscriber ID
-  bap_uri: string;            // BAP's callback URL
-  bpp_id: string;            // BPP's subscriber ID
-  bpp_uri: string;            // BPP's endpoint URL
-  transaction_id: string;     // Session ID (same across all messages in one session)
-  message_id: string;        // Unique per message (for idempotency)
-  timestamp: string;          // ISO8601 UTC
-  ttl?: string;               // TTL for response (e.g., "PT30S")
+  domain: "ONDC:RET11"; // F&B domain
+  country: "IND"; // India
+  city: "std:080"; // City code (e.g., std:080 for Bangalore)
+  action: string; // "search" | "select" | "init" | "confirm" | "status" | "track" | "cancel"
+  core_version: "1.2.0"; // ONDC core spec version
+  bap_id: string; // BAP's subscriber ID
+  bap_uri: string; // BAP's callback URL
+  bpp_id: string; // BPP's subscriber ID
+  bpp_uri: string; // BPP's endpoint URL
+  transaction_id: string; // Session ID (same across all messages in one session)
+  message_id: string; // Unique per message (for idempotency)
+  timestamp: string; // ISO8601 UTC
+  ttl?: string; // TTL for response (e.g., "PT30S")
 }
 ```
 
@@ -230,19 +232,22 @@ interface ONDCContext {
 ### 4.2 Schema Files
 
 #### `ondc-context.schema.ts` — Shared ONDC Context
+
 Every ONDC message is stored here first. All response tables reference `ondc_context` via `contextId FK`.
 
 ```typescript
 // Key columns:
-id: uuid (PK)
-domain, country, city, action, coreVersion
-bapId, bapUri, bppId, bppUri
-transactionId, messageId
-timestamp, ttl (optional)
-createdAt, updatedAt
-
-// Unique indexes:
-(transaction_id, message_id)  // idempotency
+id: uuid(PK);
+(domain, country, city, action, coreVersion);
+(bapId, bapUri, bppId, bppUri);
+(transactionId, messageId);
+(timestamp, ttl(optional));
+(createdAt,
+  updatedAt(
+    // Unique indexes:
+    transaction_id,
+    message_id,
+  )); // idempotency
 // Indexes: transaction_id, message_id, bap_id, bpp_id
 ```
 
@@ -250,51 +255,71 @@ createdAt, updatedAt
 
 ```typescript
 // Domain
-domainEnum: ["ONDC:RET11"]
+domainEnum: ["ONDC:RET11"];
 
 // Item
-itemTypeEnum: ["item", "customization"]
-vegNonvegEnum: ["yes", "no"]
+itemTypeEnum: ["item", "customization"];
+vegNonvegEnum: ["yes", "no"];
 
 // Fulfillment
-fulfillmentTypeEnum: ["Delivery", "Self-Pickup", "Delivery and Self-Pickup", "Buyer-Delivery"]
-fulfillmentStateEnum: ["Serviceable", "Non-serviceable"]
-fulfillmentCategoryEnum: ["Immediate Delivery", ""]
+fulfillmentTypeEnum: [
+  "Delivery",
+  "Self-Pickup",
+  "Delivery and Self-Pickup",
+  "Buyer-Delivery",
+];
+fulfillmentStateEnum: ["Serviceable", "Non-serviceable"];
+fulfillmentCategoryEnum: ["Immediate Delivery", ""];
 
 // Payment
-paymentTypeEnum: ["ON-ORDER", "ON-FULFILLMENT", "POST-FULFILLMENT"]
-collectedByEnum: ["BAP", "BPP"]
-paymentStatusEnum: ["PAID", "NOT-PAID"]
+paymentTypeEnum: ["ON-ORDER", "ON-FULFILLMENT", "POST-FULFILLMENT"];
+collectedByEnum: ["BAP", "BPP"];
+paymentStatusEnum: ["PAID", "NOT-PAID"];
 
 // Cancellation
-cancellationFulfillmentStateEnum: ["Pending", "Packed", "Order-picked-up", "Out-for-delivery", "Cancelled"]
+cancellationFulfillmentStateEnum: [
+  "Pending",
+  "Packed",
+  "Order-picked-up",
+  "Out-for-delivery",
+  "Cancelled",
+];
 
 // PG (HDFC/Juspay)
 pgPaymentStatusEnum: [
-  "PENDING",           // Session created, buyer hasn't paid
-  "CHARGED",           // Payment successful
-  "PENDING_VBV",       // 3DS authentication pending
+  "PENDING", // Session created, buyer hasn't paid
+  "CHARGED", // Payment successful
+  "PENDING_VBV", // 3DS authentication pending
   "AUTHENTICATION_FAILED",
   "AUTHORIZATION_FAILED",
   "REFUND_PENDING",
   "REFUNDED",
   "EXPIRED",
-  "CANCELLED"
-]
+  "CANCELLED",
+];
 
 // Order state
-orderStateEnum: ["Created", "Accepted", "Pending", "Cancelled"]
-fulfillmentStateCodeEnum: ["Pending", "Accepted", "Packed", "Agent-assigned", "Order-picked-up", "Out-for-delivery", "Order-delivered", "Cancelled"]
+orderStateEnum: ["Created", "Accepted", "Pending", "Cancelled"];
+fulfillmentStateCodeEnum: [
+  "Pending",
+  "Accepted",
+  "Packed",
+  "Agent-assigned",
+  "Order-picked-up",
+  "Out-for-delivery",
+  "Order-delivered",
+  "Cancelled",
+];
 
 // BAP internal tracking state (SSE state machine)
 bapTrackingStateEnum: [
-  "pending_confirm",    // /confirm sent, waiting for /on_confirm
-  "confirmed",          // /on_confirm received
-  "fulfillment_pending",// /on_status: fulfillment state=Pending
-  "in_delivery",        // /on_status: fulfillment state=Packed or later
-  "delivered",          // Terminal
-  "cancelled"           // Terminal
-]
+  "pending_confirm", // /confirm sent, waiting for /on_confirm
+  "confirmed", // /on_confirm received
+  "fulfillment_pending", // /on_status: fulfillment state=Pending
+  "in_delivery", // /on_status: fulfillment state=Packed or later
+  "delivered", // Terminal
+  "cancelled", // Terminal
+];
 ```
 
 #### `item.schema.ts` — Catalog Item Schema with FK Chain
@@ -527,6 +552,7 @@ on_cancel_quote_breakup (includes cancellation fee as negative line item)
 ### 5.1 /search → /on_search (Catalog Discovery)
 
 **Outbound (BAP → Gateway → BPPs):**
+
 ```typescript
 // POST /api/v1/search
 {
@@ -544,6 +570,7 @@ on_cancel_quote_breakup (includes cancellation fee as negative line item)
 ```
 
 **Inbound (BPP → BAP via gateway):**
+
 ```typescript
 // POST /api/v1/on_search (BPP webhook)
 {
@@ -573,6 +600,7 @@ on_cancel_quote_breakup (includes cancellation fee as negative line item)
 ### 5.2 /select → /on_select (Item Selection)
 
 **Outbound (BAP → BPP direct):**
+
 ```typescript
 // POST /api/v1/select
 {
@@ -591,6 +619,7 @@ on_cancel_quote_breakup (includes cancellation fee as negative line item)
 ```
 
 **Inbound (BPP → BAP):**
+
 ```typescript
 // POST /api/v1/on_select
 {
@@ -615,6 +644,7 @@ on_cancel_quote_breakup (includes cancellation fee as negative line item)
 ```
 
 **Important business rules:**
+
 - `transaction_id` is reused if no `/on_init` was received yet; otherwise a new one is generated
 - Items without `fulfillment_id` from BPP are rejected
 - Quote is FROZEN at this point — it MUST be echoed verbatim in `/init` and `/confirm`
@@ -622,6 +652,7 @@ on_cancel_quote_breakup (includes cancellation fee as negative line item)
 ### 5.3 /init → /on_init (Order Initialization)
 
 **Outbound (BAP → BPP direct):**
+
 ```typescript
 // POST /api/v1/init
 {
@@ -637,6 +668,7 @@ on_cancel_quote_breakup (includes cancellation fee as negative line item)
 ```
 
 **Inbound (BPP → BAP):**
+
 ```typescript
 // POST /api/v1/on_init
 {
@@ -681,6 +713,7 @@ on_cancel_quote_breakup (includes cancellation fee as negative line item)
 ### 5.4 Payment Flow (HDFC SmartGateway / Juspay)
 
 **Architecture:**
+
 1. BAP receives `/on_init` → creates Juspay order session → gets HDFC payment page URL
 2. Frontend redirects buyer to HDFC payment page
 3. Buyer completes payment → HDFC redirects to `/payment/callback`
@@ -688,10 +721,12 @@ on_cancel_quote_breakup (includes cancellation fee as negative line item)
 5. If `CHARGED` → auto-triggers `/confirm` (idempotent via `pg_transaction.confirmSentAt`)
 
 **Juspay Order ID mapping:**
+
 - ONDC `transaction_id` is a UUID (36 chars, e.g., `9cd6e5f9-52b7-447e-be14-ad55b8adc54b`)
 - Juspay requires <18 chars → `toJuspayOrderId()` strips hyphens and takes last 16 chars: `e14-ad55b8adc54b`
 
 **SSE Events during payment:**
+
 - `payment_url` — contains HDFC payment page URL (redirect buyer here)
 - `payment_status` — CHARGED/PENDING/FAILED/etc.
 - `payment_error` — session creation failed (with retryable flag)
@@ -701,6 +736,7 @@ on_cancel_quote_breakup (includes cancellation fee as negative line item)
 ### 5.5 /confirm → /on_confirm (Order Confirmation)
 
 **Outbound (BAP → BPP direct):**
+
 ```typescript
 // POST /api/v1/confirm
 {
@@ -728,6 +764,7 @@ on_cancel_quote_breakup (includes cancellation fee as negative line item)
 ```
 
 **Important rules:**
+
 - Quote MUST be echoed verbatim — never modify prices
 - `payment.transaction_id` is the HDFC reference (pgTxnId), NOT the ONDC transaction_id
 - `payment.paid_amount` MUST equal `on_init.quote.price.value`
@@ -736,12 +773,18 @@ on_cancel_quote_breakup (includes cancellation fee as negative line item)
 ### 5.6 /status → /on_status (Fulfillment Polling)
 
 **Outbound (BAP → BPP):**
+
 ```typescript
 // POST /api/v1/status
-{ message: { order_id: "od260410a3f9b2c1" } }
+{
+  message: {
+    order_id: "od260410a3f9b2c1";
+  }
+}
 ```
 
 **Inbound (BPP → BAP):**
+
 ```typescript
 // POST /api/v1/on_status
 {
@@ -772,12 +815,14 @@ on_cancel_quote_breakup (includes cancellation fee as negative line item)
 ```
 
 **BAP Internal Tracking State Machine:**
+
 ```
 pending_confirm → confirmed → fulfillment_pending → in_delivery → delivered
                                                               ↘ cancelled (terminal)
 ```
 
 State transitions based on `fulfillmentStateCode`:
+
 - `Pending` → `fulfillment_pending`
 - `Packed` | `Agent-assigned` | `Order-picked-up` → `in_delivery`
 - `Order-delivered` → `delivered` (terminal, stops polling)
@@ -788,12 +833,18 @@ State transitions based on `fulfillmentStateCode`:
 **Polling:** When buyer requests tracking, BAP starts a cron job that polls `/track` every 5 minutes. Polling stops when BPP returns `inactive` status (delivered/cancelled).
 
 **Outbound (BAP → BPP):**
+
 ```typescript
 // POST /api/v1/track
-{ message: { order_id: "od260410a3f9b2c1" } }
+{
+  message: {
+    order_id: "od260410a3f9b2c1";
+  }
+}
 ```
 
 **Inbound (BPP → BAP):**
+
 ```typescript
 // POST /api/v1/on_track
 {
@@ -813,12 +864,14 @@ State transitions based on `fulfillmentStateCode`:
 ```
 
 **Error handling:**
+
 - NACK `40005` (rider not assigned / tracking disabled / delivered) → stop polling immediately
 - NACK `31003` (order processing) → retry once after 5 seconds
 
 ### 5.8 /cancel → /on_cancel (Cancellation)
 
 **Outbound (BAP → BPP):**
+
 ```typescript
 // POST /api/v1/cancel
 {
@@ -835,25 +888,28 @@ State transitions based on `fulfillmentStateCode`:
 ```
 
 **Valid Cancellation Reason IDs:**
+
 ```typescript
 const VALID_CANCEL_REASON_IDS = [
-  "001",  // Price change
-  "002",  // Item unavailable
-  "003",  // Lower price elsewhere
-  "006",  // TAT breach — no cancellation fee
-  "051",  // Store not accepting order
-  "052",  // Order/fulfillment not received as per O2D TAT
-  "053",  // Buyer wants to modify address/other details
+  "001", // Price change
+  "002", // Item unavailable
+  "003", // Lower price elsewhere
+  "006", // TAT breach — no cancellation fee
+  "051", // Store not accepting order
+  "052", // Order/fulfillment not received as per O2D TAT
+  "053", // Buyer wants to modify address/other details
 ];
 ```
 
 **Cancellation Rules:**
+
 - `Pending` state → 0% cancellation fee (food not prepared)
 - `Packed` or later → 100% cancellation fee (food prepared/in-delivery)
 - `Out-for-delivery` → BPP will NACK 30014 (cannot cancel)
 - `Order-delivered` → NOT cancellable
 
 **Inbound (BPP → BAP):**
+
 ```typescript
 // POST /api/v1/on_cancel
 {
@@ -884,19 +940,19 @@ Real-time updates are delivered to the frontend via SSE. The architecture suppor
 
 ### 6.2 SSE Events
 
-| Event | Trigger | Contents |
-|---|---|---|
-| `init_sent` | `/init` sent to BPP | transaction_id |
-| `on_init` | `/on_init` received | Full /on_init payload + payment_url |
-| `payment_url` | HDFC session created | session_url, sdk_payload, order_id, amount |
-| `payment_status` | HDFC callback received | status (CHARGED/PENDING/etc.), pg_txn_id |
-| `payment_error` | HDFC session creation failed | error_code, message, retryable |
-| `confirm_sent` | `/confirm` sent | order_id, transaction_id, amount |
-| `confirm_error` | `/confirm` failed | error_code, message, retryable |
-| `on_confirm` | `/on_confirm` received | order_id, state, bpp_id |
-| `on_status` | `/on_status` received | fulfillment state, agent info, GPS |
-| `on_track` | `/on_track` received | fulfillment_id, GPS, status, tracking_url |
-| `on_cancel` | `/on_cancel` received | order_id, state, cancellation details |
+| Event            | Trigger                      | Contents                                   |
+| ---------------- | ---------------------------- | ------------------------------------------ |
+| `init_sent`      | `/init` sent to BPP          | transaction_id                             |
+| `on_init`        | `/on_init` received          | Full /on_init payload + payment_url        |
+| `payment_url`    | HDFC session created         | session_url, sdk_payload, order_id, amount |
+| `payment_status` | HDFC callback received       | status (CHARGED/PENDING/etc.), pg_txn_id   |
+| `payment_error`  | HDFC session creation failed | error_code, message, retryable             |
+| `confirm_sent`   | `/confirm` sent              | order_id, transaction_id, amount           |
+| `confirm_error`  | `/confirm` failed            | error_code, message, retryable             |
+| `on_confirm`     | `/on_confirm` received       | order_id, state, bpp_id                    |
+| `on_status`      | `/on_status` received        | fulfillment state, agent info, GPS         |
+| `on_track`       | `/on_track` received         | fulfillment_id, GPS, status, tracking_url  |
+| `on_cancel`      | `/on_cancel` received        | order_id, state, cancellation details      |
 
 ### 6.3 Architecture Details
 
@@ -944,14 +1000,15 @@ All outbound requests are signed using the BAP's Ed25519 private key:
 ```typescript
 // src/utils/crypto.ts
 await createAuthorizationHeader({
-  payload,                    // The full request body
-  privateKeyBase64,           // Base64-encoded Ed25519 private key
-  subscriberId,               // BAP's subscriber ID
-  uniqueKeyId,                // UK ID for the signing key
+  payload, // The full request body
+  privateKeyBase64, // Base64-encoded Ed25519 private key
+  subscriberId, // BAP's subscriber ID
+  uniqueKeyId, // UK ID for the signing key
 });
 ```
 
 The `Authorization` header format:
+
 ```
 Authorization: Signature keyId="<subscriberId>|<uniqueKeyId>|ed25519", algorithm="ed25519", headers="digest", signature="<base64_signature>"
 Digest: BLAKE2b-512(JSON.stringify(payload))
@@ -963,14 +1020,14 @@ All inbound BPP webhooks are verified against the BPP's public key from the ONDC
 
 ```typescript
 // 1. Parse keyId from BPP's Authorization header
-const keyId = "pramaan.ondc.org/beta/preprod/mock/seller|uk_id|ed25519"
-const [subscriberId, ukId] = keyId.split("|")
+const keyId = "pramaan.ondc.org/beta/preprod/mock/seller|uk_id|ed25519";
+const [subscriberId, ukId] = keyId.split("|");
 
 // 2. Look up BPP's public key from ONDC Registry (cached 30 min)
-const publicKey = await lookupBppPublicKey(authHeader)
+const publicKey = await lookupBppPublicKey(authHeader);
 
 // 3. Verify signature
-await verifyAuthorizationHeader(authHeader, payload, publicKey)
+await verifyAuthorizationHeader(authHeader, payload, publicKey);
 ```
 
 **Env suffix mismatch handling:** BPPs sometimes register under `staging` but send webhooks under `preprod` (or vice versa). The registry lookup tries both variants.
@@ -978,6 +1035,7 @@ await verifyAuthorizationHeader(authHeader, payload, publicKey)
 ### 7.3 JWT Authentication
 
 The `/select` endpoint requires JWT authentication:
+
 - Header: `Authorization: Bearer <token>`
 - Token must have `user.id` claim
 - If no token provided → proceeds unauthenticated (for testing)
@@ -1045,8 +1103,8 @@ sse:events  // Broadcasts events across all BFF instances
 // src/utils/track-timers.ts
 
 // Per-order polling cron
-startTrackCron(orderId)    // Polls every 5 minutes
-stopTrackCron(orderId)     // Stops on delivered/cancelled/NACK 40005
+startTrackCron(orderId); // Polls every 5 minutes
+stopTrackCron(orderId); // Stops on delivered/cancelled/NACK 40005
 ```
 
 ---
@@ -1055,23 +1113,23 @@ stopTrackCron(orderId)     // Stops on delivered/cancelled/NACK 40005
 
 ### 10.1 BPP NACK Codes
 
-| Code | Meaning | Action |
-|---|---|---|
-| `20001` | Invalid catalog | Stop catalog refresh for this BPP |
-| `30012` | Invalid cancellation reason | Remove from valid list |
-| `30014` | Cannot cancel at this stage | Don't retry; notify buyer |
-| `40005` | Tracking not available | Stop /track polling |
-| `31003` | Order processing | Retry once after 5s |
+| Code    | Meaning                     | Action                            |
+| ------- | --------------------------- | --------------------------------- |
+| `20001` | Invalid catalog             | Stop catalog refresh for this BPP |
+| `30012` | Invalid cancellation reason | Remove from valid list            |
+| `30014` | Cannot cancel at this stage | Don't retry; notify buyer         |
+| `40005` | Tracking not available      | Stop /track polling               |
+| `31003` | Order processing            | Retry once after 5s               |
 
 ### 10.2 Payment Error Codes
 
-| Code | Meaning | Retryable |
-|---|---|---|
-| `JUSPAY_API_ERROR` | Juspay API error | Yes (transient) |
-| `JUSPAY_NULL_RESPONSE` | Empty response | Yes |
-| `HDFC_SESSION_EXPIRED` | Clock skew (HDFC side) | No |
-| `MISSING_PAYMENT_URL` | No payment URL returned | Yes |
-| `SESSION_CREATE_ERROR` | Internal error | Yes |
+| Code                   | Meaning                 | Retryable       |
+| ---------------------- | ----------------------- | --------------- |
+| `JUSPAY_API_ERROR`     | Juspay API error        | Yes (transient) |
+| `JUSPAY_NULL_RESPONSE` | Empty response          | Yes             |
+| `HDFC_SESSION_EXPIRED` | Clock skew (HDFC side)  | No              |
+| `MISSING_PAYMENT_URL`  | No payment URL returned | Yes             |
+| `SESSION_CREATE_ERROR` | Internal error          | Yes             |
 
 ---
 
@@ -1079,15 +1137,15 @@ stopTrackCron(orderId)     // Stops on delivered/cancelled/NACK 40005
 
 ### 11.1 Strict Idempotency Rules
 
-| Action | Idempotency Key | Enforced Where | Notes |
-|---|---|---|---|
-| `pg_transaction` upsert | `transactionId` UNIQUE | `upsertPendingTransaction` raw SQL | One row per ONDC session |
-| `/init` outbound | `transactionId` exists in `ondc_on_init` | `sendInitRequest` (MUST ADD) | Currently no guard — duplicate `/init` can be sent |
-| `/init` inbound storage | `(bpp_id, transaction_id)` | `upsertOnInit` | |
-| `/confirm` outbound | `confirmSentAt` column | `performConfirm` + `autoSendConfirm` | |
-| `/confirm` inbound storage | `(bpp_id, transaction_id)` | `upsertOnConfirm` | Overwrites our outbound record |
-| `/on_status` event row | `(bpp_id, transaction_id, message_id)` | `upsertOnStatus` | New row per BPP callback |
-| HDFC callback | `transactionId` UNIQUE | `upsertPendingTransaction` | |
+| Action                     | Idempotency Key                          | Enforced Where                       | Notes                                              |
+| -------------------------- | ---------------------------------------- | ------------------------------------ | -------------------------------------------------- |
+| `pg_transaction` upsert    | `transactionId` UNIQUE                   | `upsertPendingTransaction` raw SQL   | One row per ONDC session                           |
+| `/init` outbound           | `transactionId` exists in `ondc_on_init` | `sendInitRequest` (MUST ADD)         | Currently no guard — duplicate `/init` can be sent |
+| `/init` inbound storage    | `(bpp_id, transaction_id)`               | `upsertOnInit`                       |                                                    |
+| `/confirm` outbound        | `confirmSentAt` column                   | `performConfirm` + `autoSendConfirm` |                                                    |
+| `/confirm` inbound storage | `(bpp_id, transaction_id)`               | `upsertOnConfirm`                    | Overwrites our outbound record                     |
+| `/on_status` event row     | `(bpp_id, transaction_id, message_id)`   | `upsertOnStatus`                     | New row per BPP callback                           |
+| HDFC callback              | `transactionId` UNIQUE                   | `upsertPendingTransaction`           |                                                    |
 
 **CRITICAL:** If during `/select` a `transaction_id` already exists for this user+provider, you MUST check whether `/on_init` already exists for it. If `/on_init` exists, generate a NEW `transaction_id` — the user must complete or abandon the existing order first.
 
@@ -1107,15 +1165,16 @@ It never changes from /select → /init → /confirm → /status → /track → 
 
 **Three different IDs must never be confused:**
 
-| ID | What it is | Where stored |
-|---|---|---|
-| ONDC `transaction_id` | UUID session key for the full BPP order cycle | `ondc_context.transactionId`, `pg_transaction.transactionId`, `sse:tx:{transactionId}` |
-| HDFC `hdfcOrderId` | HDFC's own order ID (returned in session response as `payload.orderId`) | `pg_transaction.hdfcOrderId` — used to look up row from HDFC callback |
-| HDFC `pgTxnId` | HDFC's transaction reference (returned in `juspay.order.status` as `content.order.txn_id`) | `pg_transaction.pgTxnId` — used as `payment.transaction_id` in `/confirm` |
+| ID                    | What it is                                                                                 | Where stored                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| ONDC `transaction_id` | UUID session key for the full BPP order cycle                                              | `ondc_context.transactionId`, `pg_transaction.transactionId`, `sse:tx:{transactionId}` |
+| HDFC `hdfcOrderId`    | HDFC's own order ID (returned in session response as `payload.orderId`)                    | `pg_transaction.hdfcOrderId` — used to look up row from HDFC callback                  |
+| HDFC `pgTxnId`        | HDFC's transaction reference (returned in `juspay.order.status` as `content.order.txn_id`) | `pg_transaction.pgTxnId` — used as `payment.transaction_id` in `/confirm`              |
 
 **RULE: `pg_transaction.pgTxnId` MUST be the HDFC `txn_id` (e.g., `"SG2991-aa2aebb4d2e3515b-1"`). It is NOT the ONDC `transaction_id`.**
 
 In `/confirm`, the payment block MUST use:
+
 ```typescript
 payment: {
   transaction_id: pgTxnId,   // ← HDFC's txn_id, NOT ONDC transaction_id
@@ -1136,6 +1195,7 @@ Redis keys:
 ```
 
 **Reconnect flow:**
+
 1. Frontend reconnects SSE with new `clientId`
 2. `bindClientToActiveOrder(userId, newClientId)` called
 3. `getUserActiveTransaction(userId)` → returns `transactionId`
@@ -1195,6 +1255,7 @@ quote: {
 ## 12. Known Bugs (Must Fix)
 
 ### Bug 1: `pgTxnId` stored as ONDC UUID instead of HDFC txn_id
+
 **File:** `src/services/payment.service.ts` — `checkPaymentStatusFromHdfc` (line ~924)
 
 ```typescript
@@ -1210,6 +1271,7 @@ pgTxnId: statusResponse?.content?.order?.txn_id,
 **Impact:** `/confirm` `payment.transaction_id` gets the ONDC UUID instead of HDFC's `pgTxnId`. ONDC contract violation.
 
 ### Bug 2: Payment gate commented out in `performConfirm`
+
 **File:** `src/controllers/confirm.controller.ts` — lines 130-140
 
 The check `pgRow.status !== "CHARGED"` is commented out with a TODO. Without it, `/confirm` can be sent even when payment failed.
@@ -1217,11 +1279,13 @@ The check `pgRow.status !== "CHARGED"` is commented out with a TODO. Without it,
 **Fix:** Uncomment the payment gate block.
 
 ### Bug 3: No idempotency guard in `sendInitRequest`
+
 **File:** `src/services/init.service.ts`
 
 If frontend calls `/init` twice with the same `transaction_id`, two outbound `/init` requests are sent to the BPP. `processOnInit` is idempotent (upserts on BPP callback), but the outbound request is not.
 
 **Fix:** Add check at top of `sendInitRequest`:
+
 ```typescript
 const existingInit = await findOnInitByTransactionId(transaction_id);
 if (existingInit) {
@@ -1230,6 +1294,7 @@ if (existingInit) {
 ```
 
 ### Bug 4: `processOnTrack` uses BPP `context.transaction_id` instead of resolved `transactionId`
+
 **File:** `src/services/track.service.ts` — line 293
 
 ```typescript
@@ -1241,6 +1306,7 @@ await pushSSEvent("on_status", { order_id: orderId, ... }, transactionId);
 ```
 
 ### Bug 5: `pushSSEvent` silently drops events when no clientId bound
+
 **File:** `src/utils/sse-manager.ts` — lines 231-243
 
 When `clientId` lookup fails, the event is returned with only a `logger.warn` — no broadcast. Events are silently lost if frontend disconnects and reconnects with a new `clientId` before rebinding completes.
@@ -1283,36 +1349,37 @@ ondc_items.id = 1
 
 ## 13. API Endpoints Summary
 
-| Method | Path | Purpose |
-|---|---|---|
-| POST | `/api/v1/search` | Search catalog (broadcasts to all BPPs) |
-| POST | `/api/v1/select` | Select items (creates order session) |
-| GET | `/api/v1/select/result/:transaction_id` | Get select result |
-| POST | `/api/v1/init` | Initialize order |
-| POST | `/api/v1/confirm` | Confirm order (after payment) |
-| GET | `/api/v1/confirm/status/:transaction_id` | Get confirm status |
-| POST | `/api/v1/status` | Poll fulfillment status |
-| GET | `/api/v1/status/:order_id` | Get status for order |
-| POST | `/api/v1/track` | Request live tracking |
-| POST | `/api/v1/cancel` | Cancel order |
-| POST | `/api/v1/on_cancel` | BPP cancellation webhook |
-| GET | `/api/v1/stream/:clientId` | SSE event stream |
-| POST | `/api/v1/payment/callback` | HDFC payment callback |
-| POST | `/api/v1/on_search` | BPP catalog webhook |
-| POST | `/api/v1/on_select` | BPP selection webhook |
-| POST | `/api/v1/on_init` | BPP init webhook |
-| POST | `/api/v1/on_confirm` | BPP confirm webhook |
-| POST | `/api/v1/on_status` | BPP status webhook |
-| POST | `/api/v1/on_track` | BPP tracking webhook |
-| POST | `/api/v1/onboarding/subscribe` | ONDC registry subscription |
-| GET | `/api/v1/registry/lookup` | BPP public key lookup |
-| GET | `/api/v1/catalog` | Frontend catalog API |
+| Method | Path                                     | Purpose                                 |
+| ------ | ---------------------------------------- | --------------------------------------- |
+| POST   | `/api/v1/search`                         | Search catalog (broadcasts to all BPPs) |
+| POST   | `/api/v1/select`                         | Select items (creates order session)    |
+| GET    | `/api/v1/select/result/:transaction_id`  | Get select result                       |
+| POST   | `/api/v1/init`                           | Initialize order                        |
+| POST   | `/api/v1/confirm`                        | Confirm order (after payment)           |
+| GET    | `/api/v1/confirm/status/:transaction_id` | Get confirm status                      |
+| POST   | `/api/v1/status`                         | Poll fulfillment status                 |
+| GET    | `/api/v1/status/:order_id`               | Get status for order                    |
+| POST   | `/api/v1/track`                          | Request live tracking                   |
+| POST   | `/api/v1/cancel`                         | Cancel order                            |
+| POST   | `/api/v1/on_cancel`                      | BPP cancellation webhook                |
+| GET    | `/api/v1/stream/:clientId`               | SSE event stream                        |
+| POST   | `/api/v1/payment/callback`               | HDFC payment callback                   |
+| POST   | `/api/v1/on_search`                      | BPP catalog webhook                     |
+| POST   | `/api/v1/on_select`                      | BPP selection webhook                   |
+| POST   | `/api/v1/on_init`                        | BPP init webhook                        |
+| POST   | `/api/v1/on_confirm`                     | BPP confirm webhook                     |
+| POST   | `/api/v1/on_status`                      | BPP status webhook                      |
+| POST   | `/api/v1/on_track`                       | BPP tracking webhook                    |
+| POST   | `/api/v1/onboarding/subscribe`           | ONDC registry subscription              |
+| GET    | `/api/v1/registry/lookup`                | BPP public key lookup                   |
+| GET    | `/api/v1/catalog`                        | Frontend catalog API                    |
 
 ---
 
 ## 14. When Working on This Codebase
 
 **Always load this skill when:**
+
 - Working on any ONDC-related code
 - Implementing new flows or modifying existing ones
 - Handling webhooks (`/on_search`, `/on_select`, etc.)
@@ -1325,6 +1392,7 @@ ondc_items.id = 1
 - Understanding cancellation, tracking, or status flows
 
 **Key files to reference:**
+
 - `src/db/schema/enums.ts` — All enum values
 - `src/services/confirm.service.ts` — Core confirm flow with quote handling
 - `src/services/payment.service.ts` — HDFC/Juspay integration (CRITICAL: pgTxnId must be HDFC txn_id, NOT ONDC transaction_id — see bugs)

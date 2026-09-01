@@ -42,8 +42,8 @@ const gracefulShutdown = async (signal: string) => {
   // instantiate and start the workers in this process).
 
   // Close Redis connection
-//   const { closeRedis } = await import("./utils/redis.js");
-//   closeRedis();
+  //   const { closeRedis } = await import("./utils/redis.js");
+  //   closeRedis();
   logger.info("server", "Redis connection closed.");
 
   // Close HTTP server (stops accepting new connections)
@@ -76,9 +76,13 @@ process.on("unhandledRejection", (reason: unknown) => {
   });
 });
 process.on("uncaughtException", (err: Error) => {
-  logger.error("server", "Uncaught exception — exiting for clean PM2 restart.", {
-    error: err.stack ?? err.message,
-  });
+  logger.error(
+    "server",
+    "Uncaught exception — exiting for clean PM2 restart.",
+    {
+      error: err.stack ?? err.message,
+    },
+  );
   // Sentry's OnUncaughtException integration already captured this error; flush
   // the async transport before exiting so the event is actually delivered (a
   // bare process.exit(1) would drop in-flight events). Exit regardless of the
@@ -89,18 +93,25 @@ process.on("uncaughtException", (err: Error) => {
 const startApp = async () => {
   try {
     if (process.env.NODE_ENV === "production") {
-    //   await connectPostgres();
+      //   await connectPostgres();
     } else {
-      logger.warn("server", "Skipping eager Postgres verification outside production.");
+      logger.warn(
+        "server",
+        "Skipping eager Postgres verification outside production.",
+      );
     }
     // startCronJobs();
     // startQuoteCleanupCron();
     // startStagingCleanupCron();
   } catch (err: any) {
-    logger.error("server", "Application startup failed due to database connection or migration error.", {
-      error: err.message,
-      stack: err.stack,
-    });
+    logger.error(
+      "server",
+      "Application startup failed due to database connection or migration error.",
+      {
+        error: err.message,
+        stack: err.stack,
+      },
+    );
     process.exit(1);
   }
 };
@@ -150,10 +161,7 @@ app.use(
 // Browser requests from other origins will be blocked by CORS.
 // Note: Server-to-server callbacks (Juspay/HDFC webhooks) do NOT go through CORS
 // since they are not browser requests — they bypass CORS entirely.
-const ALLOWED_ORIGINS = [
-  "https://calc.ustart.in",
-  "http://localhost:5173"
-];
+const ALLOWED_ORIGINS = ["https://calc.ustart.in", "http://localhost:5173"];
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello World!");

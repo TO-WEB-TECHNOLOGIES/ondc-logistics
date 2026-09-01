@@ -38,6 +38,7 @@ BPP → BAP : /on_select (serviceability check + quote + fulfillment options)
 ```
 
 **Rules**:
+
 - BAP must call `/select` again if the delivery address changes
 - BAP must call `/select` again if the cart changes in `/on_init` (BPP reduces quantity)
 - Quote from `/on_select` is **NOT frozen** — it only becomes frozen at `/on_init`
@@ -134,84 +135,137 @@ Context: buyer selects 2 dynamic items (DI1, DI2), each a Farmhouse Pizza with d
       },
       "items": [
         {
-          "id": "I1", "parent_item_id": "DI1", "location_id": "L1",
-          "quantity": { "count": 1 },
-          "tags": [{ "code": "type", "list": [{ "code": "type", "value": "item" }] }]
-        },
-        {
-          "id": "C1", "parent_item_id": "DI1", "location_id": "L1",
+          "id": "I1",
+          "parent_item_id": "DI1",
+          "location_id": "L1",
           "quantity": { "count": 1 },
           "tags": [
-            { "code": "type",   "list": [{ "code": "type", "value": "customization" }] },
-            { "code": "parent", "list": [{ "code": "id",   "value": "CG1" }] }
+            { "code": "type", "list": [{ "code": "type", "value": "item" }] }
           ]
         },
         {
-          "id": "C7", "parent_item_id": "DI1", "location_id": "L1",
+          "id": "C1",
+          "parent_item_id": "DI1",
+          "location_id": "L1",
           "quantity": { "count": 1 },
           "tags": [
-            { "code": "type",   "list": [{ "code": "type", "value": "customization" }] },
-            { "code": "parent", "list": [{ "code": "id",   "value": "CG2" }] }
+            {
+              "code": "type",
+              "list": [{ "code": "type", "value": "customization" }]
+            },
+            { "code": "parent", "list": [{ "code": "id", "value": "CG1" }] }
           ]
         },
         {
-          "id": "C14", "parent_item_id": "DI1", "location_id": "L1",
+          "id": "C7",
+          "parent_item_id": "DI1",
+          "location_id": "L1",
           "quantity": { "count": 1 },
           "tags": [
-            { "code": "type",   "list": [{ "code": "type", "value": "customization" }] },
-            { "code": "parent", "list": [{ "code": "id",   "value": "CG3" }] }
+            {
+              "code": "type",
+              "list": [{ "code": "type", "value": "customization" }]
+            },
+            { "code": "parent", "list": [{ "code": "id", "value": "CG2" }] }
           ]
         },
         {
-          "id": "C16", "parent_item_id": "DI1", "location_id": "L1",
+          "id": "C14",
+          "parent_item_id": "DI1",
+          "location_id": "L1",
           "quantity": { "count": 1 },
           "tags": [
-            { "code": "type",   "list": [{ "code": "type", "value": "customization" }] },
-            { "code": "parent", "list": [{ "code": "id",   "value": "CG3" }] }
+            {
+              "code": "type",
+              "list": [{ "code": "type", "value": "customization" }]
+            },
+            { "code": "parent", "list": [{ "code": "id", "value": "CG3" }] }
           ]
         },
         {
-          "id": "I1", "parent_item_id": "DI2", "location_id": "L1",
-          "quantity": { "count": 1 },
-          "tags": [{ "code": "type", "list": [{ "code": "type", "value": "item" }] }]
-        },
-        {
-          "id": "C2", "parent_item_id": "DI2", "location_id": "L1",
+          "id": "C16",
+          "parent_item_id": "DI1",
+          "location_id": "L1",
           "quantity": { "count": 1 },
           "tags": [
-            { "code": "type",   "list": [{ "code": "type", "value": "customization" }] },
-            { "code": "parent", "list": [{ "code": "id",   "value": "CG1" }] }
+            {
+              "code": "type",
+              "list": [{ "code": "type", "value": "customization" }]
+            },
+            { "code": "parent", "list": [{ "code": "id", "value": "CG3" }] }
           ]
         },
         {
-          "id": "C7", "parent_item_id": "DI2", "location_id": "L1",
+          "id": "I1",
+          "parent_item_id": "DI2",
+          "location_id": "L1",
           "quantity": { "count": 1 },
           "tags": [
-            { "code": "type",   "list": [{ "code": "type", "value": "customization" }] },
-            { "code": "parent", "list": [{ "code": "id",   "value": "CG2" }] }
+            { "code": "type", "list": [{ "code": "type", "value": "item" }] }
           ]
         },
         {
-          "id": "C14", "parent_item_id": "DI2", "location_id": "L1",
+          "id": "C2",
+          "parent_item_id": "DI2",
+          "location_id": "L1",
           "quantity": { "count": 1 },
           "tags": [
-            { "code": "type",   "list": [{ "code": "type", "value": "customization" }] },
-            { "code": "parent", "list": [{ "code": "id",   "value": "CG3" }] }
+            {
+              "code": "type",
+              "list": [{ "code": "type", "value": "customization" }]
+            },
+            { "code": "parent", "list": [{ "code": "id", "value": "CG1" }] }
           ]
         },
         {
-          "id": "C15", "parent_item_id": "DI2", "location_id": "L1",
+          "id": "C7",
+          "parent_item_id": "DI2",
+          "location_id": "L1",
           "quantity": { "count": 1 },
           "tags": [
-            { "code": "type",   "list": [{ "code": "type", "value": "customization" }] },
-            { "code": "parent", "list": [{ "code": "id",   "value": "CG3" }] }
+            {
+              "code": "type",
+              "list": [{ "code": "type", "value": "customization" }]
+            },
+            { "code": "parent", "list": [{ "code": "id", "value": "CG2" }] }
+          ]
+        },
+        {
+          "id": "C14",
+          "parent_item_id": "DI2",
+          "location_id": "L1",
+          "quantity": { "count": 1 },
+          "tags": [
+            {
+              "code": "type",
+              "list": [{ "code": "type", "value": "customization" }]
+            },
+            { "code": "parent", "list": [{ "code": "id", "value": "CG3" }] }
+          ]
+        },
+        {
+          "id": "C15",
+          "parent_item_id": "DI2",
+          "location_id": "L1",
+          "quantity": { "count": 1 },
+          "tags": [
+            {
+              "code": "type",
+              "list": [{ "code": "type", "value": "customization" }]
+            },
+            { "code": "parent", "list": [{ "code": "id", "value": "CG3" }] }
           ]
         }
       ],
       "offers": [
         {
           "id": "BUY2GET3",
-          "tags": [{ "code": "selection", "list": [{ "code": "apply", "value": "yes" }] }]
+          "tags": [
+            {
+              "code": "selection",
+              "list": [{ "code": "apply", "value": "yes" }]
+            }
+          ]
         }
       ],
       "fulfillments": [
@@ -231,6 +285,7 @@ Context: buyer selects 2 dynamic items (DI1, DI2), each a Farmhouse Pizza with d
 ```
 
 **Key rules for F&B customized /select**:
+
 - One `parent_item_id` per "dynamic item" groups ONE base item + ALL its chosen customizations
 - The same catalog item ID can appear multiple times with different `parent_item_id` (buyer ordered the same base item twice with different customizations)
 - The same customization ID (e.g. C7 = "Large") can appear under multiple `parent_item_id`
@@ -250,10 +305,25 @@ For items with no customization groups, omit `parent_item_id` and tags:
         { "id": "I1", "location_id": "L1", "quantity": { "count": 2 } }
       ],
       "offers": [
-        { "id": "BUY2GET3", "tags": [{ "code": "selection", "list": [{ "code": "apply", "value": "yes" }] }] }
+        {
+          "id": "BUY2GET3",
+          "tags": [
+            {
+              "code": "selection",
+              "list": [{ "code": "apply", "value": "yes" }]
+            }
+          ]
+        }
       ],
       "fulfillments": [
-        { "end": { "location": { "gps": "12.453544,77.928379", "address": { "area_code": "560001" } } } }
+        {
+          "end": {
+            "location": {
+              "gps": "12.453544,77.928379",
+              "address": { "area_code": "560001" }
+            }
+          }
+        }
       ],
       "payment": { "type": "ON-FULFILLMENT" }
     }
@@ -430,19 +500,31 @@ When item count = 0:
 {
   "message": {
     "order": {
-      "fulfillments": [{
-        "id": "F1", "type": "Delivery",
-        "@ondc/org/category": "", "@ondc/org/TAT": "",
-        "state": { "descriptor": { "code": "Non-serviceable" } }
-      }],
+      "fulfillments": [
+        {
+          "id": "F1",
+          "type": "Delivery",
+          "@ondc/org/category": "",
+          "@ondc/org/TAT": "",
+          "state": { "descriptor": { "code": "Non-serviceable" } }
+        }
+      ],
       "quote": {
         "price": { "currency": "INR", "value": "170.00" },
         "breakup": [
           {
-            "@ondc/org/item_id": "I1", "@ondc/org/item_quantity": { "count": 1 },
-            "title": "Item Name", "@ondc/org/title_type": "item",
+            "@ondc/org/item_id": "I1",
+            "@ondc/org/item_quantity": { "count": 1 },
+            "title": "Item Name",
+            "@ondc/org/title_type": "item",
             "price": { "currency": "INR", "value": "170.00" },
-            "item": { "quantity": { "available": { "count": "99" }, "maximum": { "count": "99" } }, "price": { "currency": "INR", "value": "170.00" } }
+            "item": {
+              "quantity": {
+                "available": { "count": "99" },
+                "maximum": { "count": "99" }
+              },
+              "price": { "currency": "INR", "value": "170.00" }
+            }
           }
         ],
         "ttl": "P1D"
@@ -458,6 +540,7 @@ When item count = 0:
 Response to the /select in §3.1 — 2 dynamic items, total 1955.65 INR.
 
 **Items array** (BPP echoes each item with `fulfillment_id` added):
+
 ```json
 "items": [
   { "id": "I1",  "fulfillment_id": "F1", "parent_item_id": "DI1", "tags": [{"code":"type","list":[{"code":"type","value":"item"}]}] },
@@ -474,6 +557,7 @@ Response to the /select in §3.1 — 2 dynamic items, total 1955.65 INR.
 ```
 
 **Fulfillment**:
+
 ```json
 "fulfillments": [{
   "id": "F1", "type": "Delivery",
@@ -486,6 +570,7 @@ Response to the /select in §3.1 — 2 dynamic items, total 1955.65 INR.
 ```
 
 **Quote breakup** (item price + tax for each item/customization per dynamic item, plus fulfillment costs):
+
 ```json
 "quote": {
   "price": { "currency": "INR", "value": "1955.65" },
@@ -529,6 +614,7 @@ Response to the /select in §3.1 — 2 dynamic items, total 1955.65 INR.
 Offers appear as breakup entries with `@ondc/org/title_type: "offer"`.
 
 **Order-level discount (auto-applied)**:
+
 ```json
 {
   "@ondc/org/item_id": "T2",
@@ -538,21 +624,25 @@ Offers appear as breakup entries with `@ondc/org/title_type: "offer"`.
   "item": {
     "tags": [
       { "code": "quote", "list": [{ "code": "type", "value": "order" }] },
-      { "code": "offer", "list": [
-        { "code": "id",         "value": "FLAT150" },
-        { "code": "type",       "value": "discount" },
-        { "code": "auto",       "value": "yes" },
-        { "code": "additive",   "value": "no" },
-        { "code": "item_id",    "value": "" },
-        { "code": "item_value", "value": "" },
-        { "code": "item_count", "value": "" }
-      ]}
+      {
+        "code": "offer",
+        "list": [
+          { "code": "id", "value": "FLAT150" },
+          { "code": "type", "value": "discount" },
+          { "code": "auto", "value": "yes" },
+          { "code": "additive", "value": "no" },
+          { "code": "item_id", "value": "" },
+          { "code": "item_value", "value": "" },
+          { "code": "item_count", "value": "" }
+        ]
+      }
     ]
   }
 }
 ```
 
 **Fulfillment-level offer (free delivery)**:
+
 ```json
 {
   "@ondc/org/item_id": "F1",
@@ -562,18 +652,22 @@ Offers appear as breakup entries with `@ondc/org/title_type: "offer"`.
   "item": {
     "tags": [
       { "code": "quote", "list": [{ "code": "type", "value": "fulfillment" }] },
-      { "code": "offer", "list": [
-        { "code": "id",       "value": "FREEDELIVERY" },
-        { "code": "type",     "value": "delivery" },
-        { "code": "auto",     "value": "yes" },
-        { "code": "additive", "value": "yes" }
-      ]}
+      {
+        "code": "offer",
+        "list": [
+          { "code": "id", "value": "FREEDELIVERY" },
+          { "code": "type", "value": "delivery" },
+          { "code": "auto", "value": "yes" },
+          { "code": "additive", "value": "yes" }
+        ]
+      }
     ]
   }
 }
 ```
 
 **Item-level freebie offer (Buy2Get3)**:
+
 ```json
 {
   "@ondc/org/item_id": "T2",
@@ -582,19 +676,25 @@ Offers appear as breakup entries with `@ondc/org/title_type: "offer"`.
   "@ondc/org/title_type": "offer",
   "price": { "currency": "INR", "value": "0.00" },
   "item": {
-    "quantity": { "available": { "count": "99" }, "maximum": { "count": "99" } },
+    "quantity": {
+      "available": { "count": "99" },
+      "maximum": { "count": "99" }
+    },
     "price": { "currency": "INR", "value": "0.00" },
     "tags": [
       { "code": "quote", "list": [{ "code": "type", "value": "item" }] },
-      { "code": "offer", "list": [
-        { "code": "id",         "value": "BUY2GET3" },
-        { "code": "type",       "value": "freebie" },
-        { "code": "auto",       "value": "yes" },
-        { "code": "additive",   "value": "no" },
-        { "code": "item_id",    "value": "I1" },
-        { "code": "item_value", "value": "600.00" },
-        { "code": "item_count", "value": "1" }
-      ]}
+      {
+        "code": "offer",
+        "list": [
+          { "code": "id", "value": "BUY2GET3" },
+          { "code": "type", "value": "freebie" },
+          { "code": "auto", "value": "yes" },
+          { "code": "additive", "value": "no" },
+          { "code": "item_id", "value": "I1" },
+          { "code": "item_value", "value": "600.00" },
+          { "code": "item_count", "value": "1" }
+        ]
+      }
     ]
   }
 }
@@ -678,63 +778,70 @@ BPP may return multiple fulfillment options with time slots:
 ## 6. Enum Reference Tables
 
 ### Fulfillment `state.descriptor.code`
-| Value | Meaning |
-|---|---|
-| `Serviceable` | Buyer location is serviceable, item available |
+
+| Value             | Meaning                                                       |
+| ----------------- | ------------------------------------------------------------- |
+| `Serviceable`     | Buyer location is serviceable, item available                 |
 | `Non-serviceable` | Buyer/seller location not serviceable or merchant unavailable |
 
 ### Fulfillment `type`
-| Value | Use |
-|---|---|
-| `Delivery` | Standard door delivery |
-| `Self-Pickup` | Customer collects from store |
-| `Buyer-Delivery` | BAP-arranged logistics |
+
+| Value                      | Use                                                          |
+| -------------------------- | ------------------------------------------------------------ |
+| `Delivery`                 | Standard door delivery                                       |
+| `Self-Pickup`              | Customer collects from store                                 |
+| `Buyer-Delivery`           | BAP-arranged logistics                                       |
 | `Delivery and Self-Pickup` | Used in catalog (`/on_search`) for provider-level definition |
 
 ### Fulfillment `@ondc/org/category`
-| Value | Description |
-|---|---|
-| `Immediate Delivery` | Express/on-demand delivery |
-| `Takeaway` | Self-pickup at store |
-| `Kerbside` | Kerbside pickup |
-| `""` (empty) | Non-serviceable, or Buyer-Delivery without category |
+
+| Value                | Description                                         |
+| -------------------- | --------------------------------------------------- |
+| `Immediate Delivery` | Express/on-demand delivery                          |
+| `Takeaway`           | Self-pickup at store                                |
+| `Kerbside`           | Kerbside pickup                                     |
+| `""` (empty)         | Non-serviceable, or Buyer-Delivery without category |
 
 ### Quote `@ondc/org/title_type`
-| Value | What it covers | Quote level (via `quote.type` tag) |
-|---|---|---|
-| `item` | Item / customization price | item |
-| `delivery` | Delivery charge | fulfillment |
-| `tax` | Tax on item or fulfillment | item, fulfillment |
-| `packing` | Packing charge | fulfillment |
-| `discount` | Discount amount (negative) | item, fulfillment, order |
-| `misc` | Misc fees (convenience fee, etc.) | fulfillment, order |
-| `offer` | Applied offer (may be negative) | item, fulfillment, order |
+
+| Value      | What it covers                    | Quote level (via `quote.type` tag) |
+| ---------- | --------------------------------- | ---------------------------------- |
+| `item`     | Item / customization price        | item                               |
+| `delivery` | Delivery charge                   | fulfillment                        |
+| `tax`      | Tax on item or fulfillment        | item, fulfillment                  |
+| `packing`  | Packing charge                    | fulfillment                        |
+| `discount` | Discount amount (negative)        | item, fulfillment, order           |
+| `misc`     | Misc fees (convenience fee, etc.) | fulfillment, order                 |
+| `offer`    | Applied offer (may be negative)   | item, fulfillment, order           |
 
 ### Quote level `type` tag (inside `item.tags[code="quote"]`)
-| Value | Meaning |
-|---|---|
-| `item` | Tax/offer applied at item level |
+
+| Value         | Meaning                                     |
+| ------------- | ------------------------------------------- |
+| `item`        | Tax/offer applied at item level             |
 | `fulfillment` | Tax/offer/cost applied at fulfillment level |
-| `order` | Offer/discount applied at order level |
+| `order`       | Offer/discount applied at order level       |
 
 ### Offer tag `code` values (inside `item.tags[code="offer"]`)
-| Sub-code | Values | Meaning |
-|---|---|---|
-| `id` | string | Offer ID from catalog |
-| `type` | `discount`, `delivery`, `freebie` | Offer type |
-| `auto` | `yes`, `no` | Auto-applied vs opt-in |
-| `additive` | `yes`, `no` | Whether additive with other offers |
-| `item_id` | string | Item ID for freebie (empty for non-freebie) |
-| `item_value` | string | Value of freebie item (empty for non-freebie) |
-| `item_count` | string | Count of freebie items (empty for non-freebie) |
+
+| Sub-code     | Values                            | Meaning                                        |
+| ------------ | --------------------------------- | ---------------------------------------------- |
+| `id`         | string                            | Offer ID from catalog                          |
+| `type`       | `discount`, `delivery`, `freebie` | Offer type                                     |
+| `auto`       | `yes`, `no`                       | Auto-applied vs opt-in                         |
+| `additive`   | `yes`, `no`                       | Whether additive with other offers             |
+| `item_id`    | string                            | Item ID for freebie (empty for non-freebie)    |
+| `item_value` | string                            | Value of freebie item (empty for non-freebie)  |
+| `item_count` | string                            | Count of freebie items (empty for non-freebie) |
 
 ### Payment `type` (in `/select` request)
-| Value | Meaning |
-|---|---|
-| `ON-FULFILLMENT` | Cash/card on delivery |
-| `ON-ORDER` | Prepaid (buyer pays before delivery) |
-| `PRE-FULFILLMENT` | Pay before fulfillment starts |
-| `POST-FULFILLMENT` | Pay after delivery |
+
+| Value              | Meaning                              |
+| ------------------ | ------------------------------------ |
+| `ON-FULFILLMENT`   | Cash/card on delivery                |
+| `ON-ORDER`         | Prepaid (buyer pays before delivery) |
+| `PRE-FULFILLMENT`  | Pay before fulfillment starts        |
+| `POST-FULFILLMENT` | Pay after delivery                   |
 
 ---
 
@@ -772,16 +879,17 @@ When processing an incoming `/on_select`:
 
 ## 8. Error Codes
 
-| Code | Direction | When |
-|---|---|---|
-| `30009` | BPP→BAP in `/on_select` | Buyer/seller location non-serviceable, or merchant unavailable |
-| `40002` | BPP→BAP in `/on_select` | Item out of stock (may appear with partial quote showing `count:0`) |
-| `30023` | BPP→BAP in `/on_select` | Cart value below minimum order value |
-| `22507` | BAP NACKs `/on_select` | `error.message` item list doesn't match zero-quantity items in breakup |
-| `30006` | BPP→BAP in `/on_init`/`/on_confirm` | Offer in cart is no longer valid |
-| `30007` | BPP→BAP | Offer valid but fulfillment impossible (e.g. freebie item unavailable) |
+| Code    | Direction                           | When                                                                   |
+| ------- | ----------------------------------- | ---------------------------------------------------------------------- |
+| `30009` | BPP→BAP in `/on_select`             | Buyer/seller location non-serviceable, or merchant unavailable         |
+| `40002` | BPP→BAP in `/on_select`             | Item out of stock (may appear with partial quote showing `count:0`)    |
+| `30023` | BPP→BAP in `/on_select`             | Cart value below minimum order value                                   |
+| `22507` | BAP NACKs `/on_select`              | `error.message` item list doesn't match zero-quantity items in breakup |
+| `30006` | BPP→BAP in `/on_init`/`/on_confirm` | Offer in cart is no longer valid                                       |
+| `30007` | BPP→BAP                             | Offer valid but fulfillment impossible (e.g. freebie item unavailable) |
 
 **Error message format for multi-item stock issues** (error.code=40002, error.message = stringified JSON):
+
 ```json
 "[{\"dynamic_item_id\":\"DI1\",\"item_id\":\"I1\",\"error\":\"40002\"}, {\"dynamic_item_id\":\"DI2\",\"customization_id\":\"C15\",\"customization_group_id\":\"CG3\",\"error\":\"40002\"}]"
 ```

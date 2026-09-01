@@ -157,6 +157,4 @@ export interface SearchCompletedEvent {
 }
 
 export type SearchSseEvent =
-  | SearchResultEvent
-  | SearchErrorEvent
-  | SearchCompletedEvent;
+  SearchResultEvent | SearchErrorEvent | SearchCompletedEvent;

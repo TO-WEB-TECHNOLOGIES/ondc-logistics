@@ -79,8 +79,8 @@ fulfillmentType = "Delivery"
         collectionAmount = "100"
         currency = "INR"
     }
-}
 
+}
 
 $search = Invoke-RestMethod `
     -Uri "https://ondc-logistics.onrender.com/logistics/search" `

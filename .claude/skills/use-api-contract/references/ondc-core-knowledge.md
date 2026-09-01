@@ -6,14 +6,15 @@ ONDC (Open Network for Digital Commerce) is an open, interoperable network for d
 
 ### Key Participants
 
-| Role | Full Name | Responsibility |
-|---|---|---|
-| **BAP** | Buyer App Platform | Consumer-facing app. Sends search/select/init/confirm requests |
-| **BPP** | Seller App Platform | Merchant-facing app. Responds with catalog, quotes, order confirmations |
-| **Gateway** | ONDC Gateway | Broadcasts BAP search requests to all relevant BPPs. Multicast router |
-| **Registry** | ONDC Registry | Stores network participant info, public keys, and endpoints. Used for lookup and subscription |
+| Role         | Full Name           | Responsibility                                                                                |
+| ------------ | ------------------- | --------------------------------------------------------------------------------------------- |
+| **BAP**      | Buyer App Platform  | Consumer-facing app. Sends search/select/init/confirm requests                                |
+| **BPP**      | Seller App Platform | Merchant-facing app. Responds with catalog, quotes, order confirmations                       |
+| **Gateway**  | ONDC Gateway        | Broadcasts BAP search requests to all relevant BPPs. Multicast router                         |
+| **Registry** | ONDC Registry       | Stores network participant info, public keys, and endpoints. Used for lookup and subscription |
 
 ### Network Flow
+
 ```
 BAP → Gateway → BPP(s)  (search broadcast)
 BPP → BAP               (on_search, on_select, on_init, on_confirm — async callbacks)
@@ -25,6 +26,7 @@ BAP ↔ Registry          (subscribe, lookup)
 ## 2. Full Transaction Flow
 
 ### Order Lifecycle
+
 ```
 search       → BAP asks for catalog
 on_search    ← BPP responds with catalog (async)
@@ -70,21 +72,21 @@ The `context` object is present in every ONDC API call. It identifies the transa
 }
 ```
 
-| Field | Purpose |
-|---|---|
-| `domain` | Domain code (e.g. ONDC:RET11 for F&B) |
-| `country` | ISO 3166-1 alpha-3 country code |
-| `city` | std:<STD_code> or `*` for all cities |
-| `action` | API action name (search, on_search, select, etc.) |
-| `core_version` | ONDC core spec version (currently 1.2.0) |
-| `bap_id` | Subscriber ID of the Buyer App (from registry) |
-| `bap_uri` | Base URL of the BAP's callback webhook |
-| `bpp_id` | Subscriber ID of the Seller App (filled by BPP on callbacks) |
-| `bpp_uri` | Base URL of the BPP's API |
-| `transaction_id` | Unique ID for the full order transaction (same across all steps) |
-| `message_id` | Unique ID for each individual request/response pair |
-| `timestamp` | ISO 8601 timestamp of the request |
-| `ttl` | ISO 8601 duration — how long this request is valid (e.g. PT30S = 30 seconds) |
+| Field            | Purpose                                                                      |
+| ---------------- | ---------------------------------------------------------------------------- |
+| `domain`         | Domain code (e.g. ONDC:RET11 for F&B)                                        |
+| `country`        | ISO 3166-1 alpha-3 country code                                              |
+| `city`           | std:<STD_code> or `*` for all cities                                         |
+| `action`         | API action name (search, on_search, select, etc.)                            |
+| `core_version`   | ONDC core spec version (currently 1.2.0)                                     |
+| `bap_id`         | Subscriber ID of the Buyer App (from registry)                               |
+| `bap_uri`        | Base URL of the BAP's callback webhook                                       |
+| `bpp_id`         | Subscriber ID of the Seller App (filled by BPP on callbacks)                 |
+| `bpp_uri`        | Base URL of the BPP's API                                                    |
+| `transaction_id` | Unique ID for the full order transaction (same across all steps)             |
+| `message_id`     | Unique ID for each individual request/response pair                          |
+| `timestamp`      | ISO 8601 timestamp of the request                                            |
+| `ttl`            | ISO 8601 duration — how long this request is valid (e.g. PT30S = 30 seconds) |
 
 **`transaction_id` vs `message_id`**: `transaction_id` links all actions in one order flow together; `message_id` is per request/response pair.
 
@@ -95,11 +97,13 @@ The `context` object is present in every ONDC API call. It identifies the transa
 ONDC uses **Ed25519** asymmetric signing to authenticate API calls.
 
 ### Signature Algorithm
+
 1. Hash the request body with **BLAKE2b-512** to get a digest
 2. Sign the digest with the sender's **Ed25519 private key**
 3. Base64-encode the signature
 
 ### Authorization Header Format
+
 ```
 Authorization: Signature keyId="subscriber_id|unique_key_id|ed25519",
   algorithm="ed25519",
@@ -110,6 +114,7 @@ Authorization: Signature keyId="subscriber_id|unique_key_id|ed25519",
 ```
 
 ### Key Setup
+
 - Generate an Ed25519 key pair
 - Register the **public key** with the ONDC Registry under your subscriber ID + unique key ID
 - Keep the **private key** secret on your server
@@ -120,7 +125,9 @@ Authorization: Signature keyId="subscriber_id|unique_key_id|ed25519",
 ## 5. ONDC Registry
 
 ### Subscribe Payload
+
 When onboarding, a network participant subscribes to the registry:
+
 ```json
 {
   "context": { "action": "subscribe", ... },
@@ -153,39 +160,42 @@ When onboarding, a network participant subscribes to the registry:
 ```
 
 ### Registry Lookup
+
 Used to find a participant's public key and callback URL:
+
 ```
 POST /lookup
 { "subscriber_id": "seller-app.example.com", "unique_key_id": "key-001" }
 ```
+
 Returns participant details including `signing_public_key`.
 
 ---
 
 ## 6. Domain Codes
 
-| Domain | Category |
-|---|---|
-| `ONDC:RET10` | Grocery |
+| Domain       | Category               |
+| ------------ | ---------------------- |
+| `ONDC:RET10` | Grocery                |
 | `ONDC:RET11` | F&B (Food & Beverages) |
-| `ONDC:RET12` | Fashion |
+| `ONDC:RET12` | Fashion                |
 | `ONDC:RET13` | Beauty & Personal Care |
-| `ONDC:RET14` | Electronics |
-| `ONDC:RET15` | Appliances |
-| `ONDC:RET16` | Home & Kitchen |
-| `ONDC:RET17` | Pharma |
-| `ONDC:RET18` | Health & Wellness |
-| `ONDC:RET19` | Toys |
-| `ONDC:RET20` | Books |
+| `ONDC:RET14` | Electronics            |
+| `ONDC:RET15` | Appliances             |
+| `ONDC:RET16` | Home & Kitchen         |
+| `ONDC:RET17` | Pharma                 |
+| `ONDC:RET18` | Health & Wellness      |
+| `ONDC:RET19` | Toys                   |
+| `ONDC:RET20` | Books                  |
 
 ---
 
 ## 7. Network Participant Types
 
-| Type | Description |
-|---|---|
-| `BAP` | Buyer App Platform |
-| `BPP` | Seller App Platform |
+| Type  | Description                                                   |
+| ----- | ------------------------------------------------------------- |
+| `BAP` | Buyer App Platform                                            |
+| `BPP` | Seller App Platform                                           |
 | `MSN` | Multi Seller Network — a BPP that aggregates multiple sellers |
 
 ---
@@ -194,11 +204,11 @@ Returns participant details including `signing_public_key`.
 
 TTL appears in multiple places with different meanings:
 
-| Location | Meaning |
-|---|---|
-| `context.ttl` | How long the network should wait for a response to this request (e.g. PT30S) |
-| `bpp/providers[].ttl` | How long this provider's catalog is valid before re-fetching |
-| Quote TTL (in `on_select`) | How long the price quote is valid before the buyer must confirm |
+| Location                   | Meaning                                                                      |
+| -------------------------- | ---------------------------------------------------------------------------- |
+| `context.ttl`              | How long the network should wait for a response to this request (e.g. PT30S) |
+| `bpp/providers[].ttl`      | How long this provider's catalog is valid before re-fetching                 |
+| Quote TTL (in `on_select`) | How long the price quote is valid before the buyer must confirm              |
 
 TTL is in **ISO 8601 duration** format: `PT30S` = 30 seconds, `PT15M` = 15 minutes, `P1D` = 1 day.
 
@@ -206,11 +216,11 @@ TTL is in **ISO 8601 duration** format: `PT30S` = 30 seconds, `PT15M` = 15 minut
 
 ## 9. Fulfillment Types
 
-| Type | Description |
-|---|---|
-| `Delivery` | BPP/seller delivers to buyer's address |
-| `Self-Pickup` | Buyer picks up from the seller's location |
-| `Buyer-Delivery` | Buyer arranges their own delivery |
+| Type             | Description                               |
+| ---------------- | ----------------------------------------- |
+| `Delivery`       | BPP/seller delivers to buyer's address    |
+| `Self-Pickup`    | Buyer picks up from the seller's location |
+| `Buyer-Delivery` | Buyer arranges their own delivery         |
 
 ---
 
@@ -228,32 +238,35 @@ City codes correspond to Indian STD (Subscriber Trunk Dialing) codes.
 Errors appear in NACK responses and error callbacks.
 
 ### Error Types
-| Type | Meaning |
-|---|---|
-| `CONTEXT-ERROR` | Invalid context fields |
-| `DOMAIN-ERROR` | Domain-specific validation failure |
-| `POLICY-ERROR` | Business rule violation |
+
+| Type                | Meaning                               |
+| ------------------- | ------------------------------------- |
+| `CONTEXT-ERROR`     | Invalid context fields                |
+| `DOMAIN-ERROR`      | Domain-specific validation failure    |
+| `POLICY-ERROR`      | Business rule violation               |
 | `JSON-SCHEMA-ERROR` | Request doesn't match expected schema |
 
 ### Common Error Codes
-| Code | Meaning |
-|---|---|
-| `10000` | Unexpected error |
-| `10001` | Invalid request |
-| `20000` | Invalid context |
-| `20001` | Invalid domain |
-| `20002` | Invalid action |
-| `20003` | Invalid core version |
-| `20004` | Invalid transaction ID |
-| `20005` | Invalid message ID |
-| `20006` | Invalid timestamp |
-| `25001` | Provider not found |
-| `30001` | Item not found |
+
+| Code    | Meaning                   |
+| ------- | ------------------------- |
+| `10000` | Unexpected error          |
+| `10001` | Invalid request           |
+| `20000` | Invalid context           |
+| `20001` | Invalid domain            |
+| `20002` | Invalid action            |
+| `20003` | Invalid core version      |
+| `20004` | Invalid transaction ID    |
+| `20005` | Invalid message ID        |
+| `20006` | Invalid timestamp         |
+| `25001` | Provider not found        |
+| `30001` | Item not found            |
 | `30004` | Item quantity unavailable |
-| `30009` | No Items Available |
-| `40000` | Business error |
+| `30009` | No Items Available        |
+| `40000` | Business error            |
 
 ### NACK Response Shape
+
 ```json
 {
   "message": { "ack": { "status": "NACK" } },
@@ -270,6 +283,7 @@ Errors appear in NACK responses and error callbacks.
 ## 12. Incremental Catalog Updates
 
 BPPs can push incremental updates (deltas) when their catalog changes:
+
 - BAP sends `catalog_inc` tag with `mode: start` to subscribe to incremental updates
 - BPP sends `on_search` callbacks with only the changed providers/items
 - Upsert logic ensures changed data replaces old data without full catalog duplication
@@ -279,6 +293,7 @@ BPPs can push incremental updates (deltas) when their catalog changes:
 ## 13. Signing Verification Flow (Incoming Requests)
 
 When the BAP receives a callback from a BPP:
+
 1. Parse the `Authorization` header to extract `keyId`, `signature`, `created`, `expires`
 2. `keyId` = `subscriber_id|unique_key_id|algorithm`
 3. Look up the BPP's public key from ONDC Registry using `subscriber_id` + `unique_key_id`

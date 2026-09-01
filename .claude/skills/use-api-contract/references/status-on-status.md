@@ -34,12 +34,14 @@ BAP MUST poll `/status` as a fallback — if the SSE stream drops or BPP never s
 callback, polling ensures the buyer always sees current tracking status.
 
 **When to poll**:
+
 - After `/on_confirm` with `state: "Pending"` — poll every 30 s until `Accepted` or `Cancelled`
 - After TAT breach — verify actual state before force-cancelling
 - After SSE disconnection — resume polling to catch missed updates
 - Optional (reduces latency): Poll every 60 s during active delivery even if SSE is connected
 
 **When NOT to poll**:
+
 - After `state: "Delivered"` — terminal state, no more updates possible
 - After `state: "Cancelled"` — terminal state
 
@@ -68,18 +70,18 @@ callback, polling ensures the buyer always sees current tracking status.
 
 ### Field Requirements
 
-| Field | Rule |
-|---|---|
+| Field      | Rule                                                                            |
+| ---------- | ------------------------------------------------------------------------------- |
 | `order_id` | Must be the BAP-generated UUID from `/confirm`, NOT the BPP's internal order ID |
 
 ### Polling Intervals (Recommended)
 
-| Scenario | Interval | Stop When |
-|---|---|---|
-| `Pending` after `/on_confirm` | Every 30 s | `Accepted` or `Cancelled` |
-| `Accepted`, no `/on_status` yet | Every 60 s | First `/on_status` received |
-| Active delivery (`Pending`/`Packed`/`Order-picked-up`/`Out-for-delivery`) | Every 60 s | `Delivered` or `Cancelled` |
-| TAT breach (confirmed) | Every 60 s until response | Any state change or force-cancel decision |
+| Scenario                                                                  | Interval                  | Stop When                                 |
+| ------------------------------------------------------------------------- | ------------------------- | ----------------------------------------- |
+| `Pending` after `/on_confirm`                                             | Every 30 s                | `Accepted` or `Cancelled`                 |
+| `Accepted`, no `/on_status` yet                                           | Every 60 s                | First `/on_status` received               |
+| Active delivery (`Pending`/`Packed`/`Order-picked-up`/`Out-for-delivery`) | Every 60 s                | `Delivered` or `Cancelled`                |
+| TAT breach (confirmed)                                                    | Every 60 s until response | Any state change or force-cancel decision |
 
 ---
 
@@ -193,14 +195,14 @@ stage of that fulfillment's journey.
 
 ### Key Field Rules
 
-| Field | Rule |
-|---|---|
-| `order.id` | Must echo the BAP-generated UUID from `/confirm` |
-| `order.state` | BPP sets to `"Accepted"` once merchant accepts; stays there for duration |
-| `fulfillments[].state.descriptor.code` | The primary state update field; see §4 |
-| `fulfillments[].agent` | Present once delivery agent is assigned; may be absent in early states |
-| `fulfillments[].end` | Buyer address + contact; required for delivery fulfillment |
-| `fulfillments[].tags` | Optional timeline tags — `ready_for_pickup_time`, `pickup_time`, `delivery_time` |
+| Field                                  | Rule                                                                             |
+| -------------------------------------- | -------------------------------------------------------------------------------- |
+| `order.id`                             | Must echo the BAP-generated UUID from `/confirm`                                 |
+| `order.state`                          | BPP sets to `"Accepted"` once merchant accepts; stays there for duration         |
+| `fulfillments[].state.descriptor.code` | The primary state update field; see §4                                           |
+| `fulfillments[].agent`                 | Present once delivery agent is assigned; may be absent in early states           |
+| `fulfillments[].end`                   | Buyer address + contact; required for delivery fulfillment                       |
+| `fulfillments[].tags`                  | Optional timeline tags — `ready_for_pickup_time`, `pickup_time`, `delivery_time` |
 
 ---
 
@@ -215,15 +217,15 @@ Pending → Packed → Order-picked-up → Out-for-delivery → Order-delivered
 
 ### State Code Reference
 
-| Code | Meaning | When It Occurs |
-|---|---|---|
-| `"Pending"` | Order received; food being prepared in kitchen | After BPP.Accepted; kitchen starts prep |
-| `"Packed"` | Food is ready and packed; waiting for delivery agent | Kitchen done; agent not yet assigned/arrived |
-| `"Agent-assigned"` | Delivery agent assigned but food not yet picked (optional state) | Agent found; en route to restaurant |
-| `"Order-picked-up"` | Agent has collected food from restaurant | Agent at restaurant; food handed over |
-| `"Out-for-delivery"` | Agent is en route to buyer | Agent left restaurant; heading to delivery address |
-| `"Order-delivered"` | Food delivered to buyer | Agent completed delivery |
-| `"Cancelled"` | Fulfillment cancelled (partial or full) | Buyer/BPP cancelled; see §7 |
+| Code                 | Meaning                                                          | When It Occurs                                     |
+| -------------------- | ---------------------------------------------------------------- | -------------------------------------------------- |
+| `"Pending"`          | Order received; food being prepared in kitchen                   | After BPP.Accepted; kitchen starts prep            |
+| `"Packed"`           | Food is ready and packed; waiting for delivery agent             | Kitchen done; agent not yet assigned/arrived       |
+| `"Agent-assigned"`   | Delivery agent assigned but food not yet picked (optional state) | Agent found; en route to restaurant                |
+| `"Order-picked-up"`  | Agent has collected food from restaurant                         | Agent at restaurant; food handed over              |
+| `"Out-for-delivery"` | Agent is en route to buyer                                       | Agent left restaurant; heading to delivery address |
+| `"Order-delivered"`  | Food delivered to buyer                                          | Agent completed delivery                           |
+| `"Cancelled"`        | Fulfillment cancelled (partial or full)                          | Buyer/BPP cancelled; see §7                        |
 
 ### Item-Level Fulfillment Tracking
 
@@ -246,8 +248,16 @@ referencing the correct fulfillment.
     }
   ],
   "fulfillments": [
-    { "id": "F1", "type": "Delivery", "state": { "descriptor": { "code": "Order-delivered" } } },
-    { "id": "F2", "type": "Delivery", "state": { "descriptor": { "code": "Packed" } } }
+    {
+      "id": "F1",
+      "type": "Delivery",
+      "state": { "descriptor": { "code": "Order-delivered" } }
+    },
+    {
+      "id": "F2",
+      "type": "Delivery",
+      "state": { "descriptor": { "code": "Packed" } }
+    }
   ]
 }
 ```
@@ -308,6 +318,7 @@ it to determine when to alert the buyer or trigger force-cancellation procedures
 ### Where TAT Comes From
 
 TAT is set by the BPP in two ways:
+
 1. **` fulfillments[].start.time.range.end`** — absolute delivery window end time
 2. **` fulfillments[].end.time.range`** — when the delivery must complete
 
@@ -336,12 +347,12 @@ TAT expired (current_time > TAT + 15min buffer)
 
 ### Buyer-Facing TAT Messaging
 
-| Scenario | Message |
-|---|---|
-| Within TAT | "Estimated delivery by [time]" |
-| TAT + 0–15 min | "Your order is taking longer than expected. We're checking with the restaurant." |
-| TAT + 15–30 min | "Significant delay detected. Contact support for updates or cancellation." |
-| TAT + 30+ min | "We've initiated an inquiry. You can cancel without cancellation fee." |
+| Scenario        | Message                                                                          |
+| --------------- | -------------------------------------------------------------------------------- |
+| Within TAT      | "Estimated delivery by [time]"                                                   |
+| TAT + 0–15 min  | "Your order is taking longer than expected. We're checking with the restaurant." |
+| TAT + 15–30 min | "Significant delay detected. Contact support for updates or cancellation."       |
+| TAT + 30+ min   | "We've initiated an inquiry. You can cancel without cancellation fee."           |
 
 ---
 
@@ -351,17 +362,18 @@ Cancellation rules change after the order enters fulfillment (`Pending` or later
 
 ### Cancellation Validity by State
 
-| Order State | Buyer-Initiated Cancel | BPP-Initiated Cancel |
-|---|---|---|
-| `"Created"` | Always allowed | Always allowed |
-| `"Accepted"` | Allowed; no cancellation fee if TAT breached | Allowed |
-| `"Pending"` (fulfillment) | Item-level only if state is `"Pending"` | Allowed |
-| `"Packed"` or later | NOT allowed via `/cancel` | Allowed (with fee per cancellation_terms) |
-| `"Order-picked-up"` or later | NOT allowed | NOT allowed |
+| Order State                  | Buyer-Initiated Cancel                       | BPP-Initiated Cancel                      |
+| ---------------------------- | -------------------------------------------- | ----------------------------------------- |
+| `"Created"`                  | Always allowed                               | Always allowed                            |
+| `"Accepted"`                 | Allowed; no cancellation fee if TAT breached | Allowed                                   |
+| `"Pending"` (fulfillment)    | Item-level only if state is `"Pending"`      | Allowed                                   |
+| `"Packed"` or later          | NOT allowed via `/cancel`                    | Allowed (with fee per cancellation_terms) |
+| `"Order-picked-up"` or later | NOT allowed                                  | NOT allowed                               |
 
 ### When BPP Sends Cancellation During Fulfillment
 
 BPP may send `/on_cancel` (seller-initiated) even after fulfillment begins. This happens when:
+
 - Restaurant cannot complete the order after accepting it
 - Delivery agent unavailable for the route
 - Item out of stock mid-fulfillment
@@ -421,12 +433,14 @@ delivery update mechanism. BAP must accept and process these callbacks the same 
 to `/status` polls.
 
 **BAP requirements for unsolicited callbacks**:
+
 1. Webhook endpoint must accept `action: "on_status"` without a matching BAP request record
 2. Signature must be verified (Ed25519) — reject with 401 if invalid
 3. Process state update and push to frontend immediately
 4. Do NOT require a matching `/status` request in the DB to accept the callback
 
 **Race condition handling**:
+
 - If BAP polls `/status` at the same time BPP sends an unsolicited `/on_status`, both may arrive.
   BAP should deduplicate by `message_id` — if already processed, ACK with 200 but skip processing.
 - If SSE push and poll result both arrive, prefer the SSE push (faster); discard the redundant poll
@@ -480,30 +494,30 @@ receive /on_status webhook
 
 ### /status Error Codes (BPP → BAP)
 
-| Code | Message | BAP Action |
-|---|---|---|
-| `40001` | Order not found | Order ID may be wrong; verify from /confirm response |
-| `40002` | Item not available | Notify buyer; offer replacement or cancellation |
-| `40003` | Invalid order state for requested action | Order may have been cancelled; stop polling |
-| `40004` | BPP not reachable | Retry with backoff; alert if persistent |
-| `40005` | Invalid transaction_id | Log error; transaction_id may be stale |
+| Code    | Message                                  | BAP Action                                           |
+| ------- | ---------------------------------------- | ---------------------------------------------------- |
+| `40001` | Order not found                          | Order ID may be wrong; verify from /confirm response |
+| `40002` | Item not available                       | Notify buyer; offer replacement or cancellation      |
+| `40003` | Invalid order state for requested action | Order may have been cancelled; stop polling          |
+| `40004` | BPP not reachable                        | Retry with backoff; alert if persistent              |
+| `40005` | Invalid transaction_id                   | Log error; transaction_id may be stale               |
 
 ### /on_status NACK Codes (BPP → BAP via IGM)
 
-| Code | Message | BAP Action |
-|---|---|---|
-| `23001` | Invalid order state | Order may have changed; re-fetch with /status |
-| `23002` | Order cancelled by SNP | Process refund; notify buyer |
-| `23003` | Invalid provider | Escalate to engineering |
-| `31003` | SNP retry in progress | Do NOT cancel; wait for retry to complete |
+| Code    | Message                | BAP Action                                    |
+| ------- | ---------------------- | --------------------------------------------- |
+| `23001` | Invalid order state    | Order may have changed; re-fetch with /status |
+| `23002` | Order cancelled by SNP | Process refund; notify buyer                  |
+| `23003` | Invalid provider       | Escalate to engineering                       |
+| `31003` | SNP retry in progress  | Do NOT cancel; wait for retry to complete     |
 
 ### BAP Status Poll Timeout
 
-| Scenario | Action |
-|---|---|
-| `/status` times out (no response in 30 s) | Retry up to 3× with exponential backoff |
-| After 3 failures | Stop polling; alert buyer; mark as "status unavailable" |
-| Persistent failure after `Accepted` | Log incident; consider force cancel if TAT breached |
+| Scenario                                  | Action                                                  |
+| ----------------------------------------- | ------------------------------------------------------- |
+| `/status` times out (no response in 30 s) | Retry up to 3× with exponential backoff                 |
+| After 3 failures                          | Stop polling; alert buyer; mark as "status unavailable" |
+| Persistent failure after `Accepted`       | Log incident; consider force cancel if TAT breached     |
 
 ---
 
@@ -555,7 +569,14 @@ receive /on_status webhook
       ],
       "billing": {
         "name": "string",
-        "address": { "street": "string", "locality": "string", "city": "string", "state": "string", "country": "string", "area_code": "string" },
+        "address": {
+          "street": "string",
+          "locality": "string",
+          "city": "string",
+          "state": "string",
+          "country": "string",
+          "area_code": "string"
+        },
         "phone": "string",
         "email": "string"
       },
@@ -578,7 +599,14 @@ receive /on_status webhook
             "location": {
               "descriptor": { "name": "string" },
               "gps": "string",
-              "address": { "street": "string", "locality": "string", "city": "string", "state": "string", "country": "string", "area_code": "string" }
+              "address": {
+                "street": "string",
+                "locality": "string",
+                "city": "string",
+                "state": "string",
+                "country": "string",
+                "area_code": "string"
+              }
             },
             "contact": { "phone": "string", "email": "string" },
             "person": { "name": "string" }
@@ -591,9 +619,7 @@ receive /on_status webhook
           "tags": [
             {
               "code": "string (timeline|metadata)",
-              "list": [
-                { "code": "string", "value": "string" }
-              ]
+              "list": [{ "code": "string", "value": "string" }]
             }
           ]
         }
@@ -631,24 +657,24 @@ receive /on_status webhook
 
 ### Fulfillment State Summary Table
 
-| `code` | Order Phase | Buyer Message |
-|---|---|---|
-| `Pending` | Kitchen preparing | "Your order is being prepared" |
-| `Packed` | Ready; waiting for agent | "Food is ready, waiting for delivery agent" |
-| `Agent-assigned` | Agent found; en route to restaurant | "Delivery agent assigned" |
-| `Order-picked-up` | Agent collected food | "Food picked up by delivery agent" |
-| `Out-for-delivery` | Agent traveling to buyer | "Out for delivery" |
-| `Order-delivered` | Buyer received food | "Delivered! Enjoy your meal" |
-| `Cancelled` | Fulfillment cancelled | "Order cancelled — see details" |
+| `code`             | Order Phase                         | Buyer Message                               |
+| ------------------ | ----------------------------------- | ------------------------------------------- |
+| `Pending`          | Kitchen preparing                   | "Your order is being prepared"              |
+| `Packed`           | Ready; waiting for agent            | "Food is ready, waiting for delivery agent" |
+| `Agent-assigned`   | Agent found; en route to restaurant | "Delivery agent assigned"                   |
+| `Order-picked-up`  | Agent collected food                | "Food picked up by delivery agent"          |
+| `Out-for-delivery` | Agent traveling to buyer            | "Out for delivery"                          |
+| `Order-delivered`  | Buyer received food                 | "Delivered! Enjoy your meal"                |
+| `Cancelled`        | Fulfillment cancelled               | "Order cancelled — see details"             |
 
 ### BAP Internal State Machine
 
-| Internal State | Trigger | SSE Event |
-|---|---|---|
-| `payment_charged` | PG confirmed | `payment_charged` |
-| `confirm_sent` | /confirm sent to BPP | `confirm_sent` |
-| `confirmed` | /on_confirm received: state=Accepted | `confirmed` |
-| `fulfillment_pending` | /on_status: fulfillment code=Pending | `fulfillment_pending` |
-| `in_delivery` | /on_status: fulfillment code=Packed or later | `in_delivery` |
-| `delivered` | /on_status: fulfillment code=Order-delivered | `delivered` |
-| `cancelled` | /on_cancel received | `cancelled` |
+| Internal State        | Trigger                                      | SSE Event             |
+| --------------------- | -------------------------------------------- | --------------------- |
+| `payment_charged`     | PG confirmed                                 | `payment_charged`     |
+| `confirm_sent`        | /confirm sent to BPP                         | `confirm_sent`        |
+| `confirmed`           | /on_confirm received: state=Accepted         | `confirmed`           |
+| `fulfillment_pending` | /on_status: fulfillment code=Pending         | `fulfillment_pending` |
+| `in_delivery`         | /on_status: fulfillment code=Packed or later | `in_delivery`         |
+| `delivered`           | /on_status: fulfillment code=Order-delivered | `delivered`           |
+| `cancelled`           | /on_cancel received                          | `cancelled`           |

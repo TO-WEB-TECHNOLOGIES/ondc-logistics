@@ -16,12 +16,12 @@ order still follows its normal fulfillment lifecycle. IGM handles the complaint 
 
 ## IGM API Summary
 
-| Action | Direction | Purpose |
-|--------|-----------|---------|
-| `issue` | BAP ↔ BPP | Either party raises/updates a complaint |
-| `on_issue` | BPP ↔ BAP | Respondent acknowledges, requests info, or offers resolution |
-| `issue_status` | BAP → BPP | Either party checks complaint status |
-| `on_issue_status` | BPP → BAP | Respondent returns current issue state |
+| Action            | Direction | Purpose                                                      |
+| ----------------- | --------- | ------------------------------------------------------------ |
+| `issue`           | BAP ↔ BPP | Either party raises/updates a complaint                      |
+| `on_issue`        | BPP ↔ BAP | Respondent acknowledges, requests info, or offers resolution |
+| `issue_status`    | BAP → BPP | Either party checks complaint status                         |
+| `on_issue_status` | BPP → BAP | Respondent returns current issue state                       |
 
 **Bi-directional**: Both buyer apps AND seller apps can raise complaints. All NPs must
 **send AND consume** all 4 APIs.
@@ -33,6 +33,7 @@ All four APIs share the **same context object** as core ONDC APIs and use ACK/NA
 ## When to Use IGM (Buyer NP Perspective)
 
 IGM is the escalation path when:
+
 - BPP does not respond to a `/cancel` request within TAT → force cancel → still no response → issue
 - Order has a problem that cannot be resolved through cancellation (e.g., quality issue, wrong item delivered)
 - Buyer needs a refund or replacement for an order that is in-flight or already delivered
@@ -71,13 +72,13 @@ Same structure as core ONDC context, with `core_version` specific to IGM:
 }
 ```
 
-| Field | Value |
-|-------|-------|
-| `domain` | `"ONDC:RET10"` for RET flows; `"ONDC:TRV10"` for travel |
-| `action` | `"issue"`, `"on_issue"`, `"issue_status"`, or `"on_issue_status"` |
-| `core_version` | `"1.2.0"` for RET10/RET11; `"2.0.1"` for TRV10 |
-| `ttl` | Always `"PT30S"` — IGM TTL is fixed |
-| `location` object | Used with `core_version` 2.x; `country`/`city` used with 1.x |
+| Field             | Value                                                             |
+| ----------------- | ----------------------------------------------------------------- |
+| `domain`          | `"ONDC:RET10"` for RET flows; `"ONDC:TRV10"` for travel           |
+| `action`          | `"issue"`, `"on_issue"`, `"issue_status"`, or `"on_issue_status"` |
+| `core_version`    | `"1.2.0"` for RET10/RET11; `"2.0.1"` for TRV10                    |
+| `ttl`             | Always `"PT30S"` — IGM TTL is fixed                               |
+| `location` object | Used with `core_version` 2.x; `country`/`city` used with 1.x      |
 
 ---
 
@@ -175,58 +176,58 @@ Same structure as core ONDC context, with `core_version` specific to IGM:
 
 ### Issue Status Values
 
-| Status | Description |
-|--------|-------------|
-| `OPEN` | New complaint, awaiting respondent action |
+| Status       | Description                                         |
+| ------------ | --------------------------------------------------- |
+| `OPEN`       | New complaint, awaiting respondent action           |
 | `PROCESSING` | Respondent is looking into it / has taken ownership |
-| `RESOLVED` | Respondent has executed the resolution |
-| `CLOSED` | Complaint is closed |
+| `RESOLVED`   | Respondent has executed the resolution              |
+| `CLOSED`     | Complaint is closed                                 |
 
 ### Issue Level Values
 
-| Level | Description |
-|-------|-------------|
-| `ISSUE` | Standard complaint (Level 1) |
+| Level       | Description                                               |
+| ----------- | --------------------------------------------------------- |
+| `ISSUE`     | Standard complaint (Level 1)                              |
 | `GRIEVANCE` | Escalated complaint — GRO officers are involved (Level 2) |
-| `DISPUTE` | Escalated to ODR (Level 3) — **not yet implemented** |
+| `DISPUTE`   | Escalated to ODR (Level 3) — **not yet implemented**      |
 
 **Level 3 (ODR/arbitration) is not yet live.** If resolution is not achieved at Level 2,
 complainants can use the **manual ODR process** via ONDC Web.
 
 ### Actor Type Values
 
-| Type | Description |
-|------|-------------|
-| `CONSUMER` | The end buyer who placed the order |
-| `INTERFACING_NP` | The NP that is the complainants interface (e.g., buyer app for buyer complaints) |
-| `COUNTERPARTY_NP` | The NP that is the transaction counterparty |
-| `INTERFACING_NP_GRO` | GRO of the interfacing NP (appears when issue escalates to GRIEVANCE) |
-| `COUNTERPARTY_NP_GRO` | GRO of the counterparty NP (appears when issue escalates to GRIEVANCE) |
+| Type                  | Description                                                                      |
+| --------------------- | -------------------------------------------------------------------------------- |
+| `CONSUMER`            | The end buyer who placed the order                                               |
+| `INTERFACING_NP`      | The NP that is the complainants interface (e.g., buyer app for buyer complaints) |
+| `COUNTERPARTY_NP`     | The NP that is the transaction counterparty                                      |
+| `INTERFACING_NP_GRO`  | GRO of the interfacing NP (appears when issue escalates to GRIEVANCE)            |
+| `COUNTERPARTY_NP_GRO` | GRO of the counterparty NP (appears when issue escalates to GRIEVANCE)           |
 
 ### Action `descriptor.code` Values (Action Codes)
 
-| Code | Used By | Description |
-|------|---------|-------------|
-| `OPEN` | Complainant (buyer or seller app) | New complaint created |
-| `PROCESSING` | Respondent | Acknowledged and working on it |
-| `INFO_REQUESTED` | Respondent | Requesting more information from complainant |
-| `INFO_PROVIDED` | Complainant | Providing requested information |
-| `INFO_NOT_AVAILABLE` | Complainant | Requested information not available |
-| `RESOLUTION_PROPOSED` | Respondent | Proposed resolution options to complainant |
-| `RESOLUTION_ACCEPTED` | Complainant | Complainant accepted a proposed resolution |
-| `RESOLUTION_REJECTED` | Complainant | Complainant rejected the proposed resolution (TRV Flow 5) |
-| `RESOLUTION_CASCADED` | Respondent | Resolution cascaded to another party (e.g., LSP) |
-| `RESOLVED` | Respondent | Resolution has been executed |
-| `CLOSED` | Complainant or Respondent | Complaint closed |
+| Code                  | Used By                           | Description                                               |
+| --------------------- | --------------------------------- | --------------------------------------------------------- |
+| `OPEN`                | Complainant (buyer or seller app) | New complaint created                                     |
+| `PROCESSING`          | Respondent                        | Acknowledged and working on it                            |
+| `INFO_REQUESTED`      | Respondent                        | Requesting more information from complainant              |
+| `INFO_PROVIDED`       | Complainant                       | Providing requested information                           |
+| `INFO_NOT_AVAILABLE`  | Complainant                       | Requested information not available                       |
+| `RESOLUTION_PROPOSED` | Respondent                        | Proposed resolution options to complainant                |
+| `RESOLUTION_ACCEPTED` | Complainant                       | Complainant accepted a proposed resolution                |
+| `RESOLUTION_REJECTED` | Complainant                       | Complainant rejected the proposed resolution (TRV Flow 5) |
+| `RESOLUTION_CASCADED` | Respondent                        | Resolution cascaded to another party (e.g., LSP)          |
+| `RESOLVED`            | Respondent                        | Resolution has been executed                              |
+| `CLOSED`              | Complainant or Respondent         | Complaint closed                                          |
 
 ### Issue Status → Valid Actions Mapping
 
-| Status | Valid Actions |
-|--------|--------------|
-| `OPEN` | `OPEN` |
+| Status       | Valid Actions                                                                                                                                                     |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPEN`       | `OPEN`                                                                                                                                                            |
 | `PROCESSING` | `PROCESSING`, `INFO_REQUESTED`, `INFO_PROVIDED`, `INFO_NOT_AVAILABLE`, `RESOLUTION_PROPOSED`, `RESOLUTION_ACCEPTED`, `RESOLUTION_REJECTED`, `RESOLUTION_CASCADED` |
-| `RESOLVED` | `RESOLVED` |
-| `CLOSED` | `CLOSED` |
+| `RESOLVED`   | `RESOLVED`                                                                                                                                                        |
+| `CLOSED`     | `CLOSED`                                                                                                                                                          |
 
 ### Issue `status` Lifecycle
 
@@ -237,6 +238,7 @@ OPEN → PROCESSING → RESOLVED → CLOSED
 ```
 
 If resolution is not executed satisfactorily after acceptance:
+
 - Buyer escalates to GRIEVANCE level → GRO officers from both NPs get involved
 - If still unresolved → dispute via ODR (manual process, not yet on-protocol)
 
@@ -249,19 +251,19 @@ In a buyer complaint: `source_id = CUST1`, `complainant_id = NP1` (buyer app tha
 
 ### Ref Type Values
 
-| Ref Type | Description |
-|----------|-------------|
-| `ORDER` | References the parent order |
-| `PROVIDER` | References the seller/provider |
-| `FULFILLMENT` | References the delivery fulfillment |
-| `ITEM` | References the specific item(s) in the order |
+| Ref Type      | Description                                  |
+| ------------- | -------------------------------------------- |
+| `ORDER`       | References the parent order                  |
+| `PROVIDER`    | References the seller/provider               |
+| `FULFILLMENT` | References the delivery fulfillment          |
+| `ITEM`        | References the specific item(s) in the order |
 
 ### Timing Fields
 
-| Field | Duration | Meaning |
-|-------|----------|---------|
-| `expected_response_time` | `PT2H` | Respondent must acknowledge within 2 hours |
-| `expected_resolution_time` | `P1D` | Resolution expected within 1 day |
+| Field                      | Duration | Meaning                                    |
+| -------------------------- | -------- | ------------------------------------------ |
+| `expected_response_time`   | `PT2H`   | Respondent must acknowledge within 2 hours |
+| `expected_resolution_time` | `P1D`    | Resolution expected within 1 day           |
 
 ---
 
@@ -370,17 +372,17 @@ Resolutions appear **nested within the action** (`action.descriptor`) when code 
 
 ### Resolution `descriptor.code` Values
 
-| Code | Description |
-|------|-------------|
-| `REFUND` | Monetary refund |
-| `REPLACEMENT` | Replacement item |
-| `RETURN` | Return item (domain-specific) |
+| Code          | Description                   |
+| ------------- | ----------------------------- |
+| `REFUND`      | Monetary refund               |
+| `REPLACEMENT` | Replacement item              |
+| `RETURN`      | Return item (domain-specific) |
 
 ### RESOLUTION_DETAILS Tag Codes
 
-| Tag Code | Description |
-|----------|-------------|
-| `ITEM` | The item ID(s) covered by the resolution |
+| Tag Code        | Description                                                  |
+| --------------- | ------------------------------------------------------------ |
+| `ITEM`          | The item ID(s) covered by the resolution                     |
 | `REFUND_AMOUNT` | The refund amount (required when resolution involves refund) |
 
 ### Buyer Acceptance Flow
@@ -396,6 +398,7 @@ If buyer is not satisfied with execution, they escalate to GRIEVANCE level (GRO 
 ### Resolution Rejection (TRV Flow 5)
 
 If buyer rejects a resolution:
+
 1. Buyer sends `issue` with action `RESOLUTION_REJECTED`
 2. Seller must propose a **new** resolution (not just repeat the same one)
 
@@ -436,11 +439,11 @@ all updates that have happened since the issue was opened.
 
 ## TTL and Timing Rules
 
-| Field | Value |
-|-------|-------|
-| TTL on all IGM calls | `PT30S` |
-| Expected response time | `PT2H` (2 hours) |
-| Expected resolution time | `P1D` (1 day) |
+| Field                    | Value            |
+| ------------------------ | ---------------- |
+| TTL on all IGM calls     | `PT30S`          |
+| Expected response time   | `PT2H` (2 hours) |
+| Expected resolution time | `P1D` (1 day)    |
 
 IGM TTL is fixed at `PT30S` — unlike core ONDC where TTL can vary per API.
 
@@ -448,20 +451,20 @@ IGM TTL is fixed at `PT30S` — unlike core ONDC where TTL can vary per API.
 
 ## Error Codes (IGM)
 
-| Code | API | Description |
-|------|-----|-------------|
-| *(domain errors)* | All (NACK) | Bad Request Error / Signature failure |
-| `IGM001` | All (NACK) | Required fields not updated in API request / Schema failure |
-| `IGM002` | `/on_issue` (error) | `order_id` does not exist or mismatched |
-| `IGM003` | `/on_issue` (error) | `fulfillment_id` does not exist or mismatched |
-| `IGM004` | `/on_issue` (error) | `item_id` does not exist or mismatched |
-| `IGM005` | `/on_issue_status` (error) | Specified network issue id does not exist |
-| `IGM006` | `/on_issue_status` (error) | NP subscriber id is not correct (`bap_id` / `bpp_id`) |
-| `IGM007` | `/on_issue` (error) | Wrong escalation — issue must be escalated to GRO before going to ODR |
-| `IGM008` | `/on_issue` (error) | Duplicate complaint (an OPEN complaint already exists with same item/fulfillment + same category + same sub-category) |
-| `IGM009` | `/on_issue` (error) | Invalid `context.transaction_id` |
-| `31001` | `issue` / `issue_status` (NACK) | Failed due to internal errors — retry per retrial mechanism |
-| `23001` | `on_issue` / `on_issue_status` (NACK) | Failed due to internal errors — retry per retrial mechanism |
+| Code              | API                                   | Description                                                                                                           |
+| ----------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| _(domain errors)_ | All (NACK)                            | Bad Request Error / Signature failure                                                                                 |
+| `IGM001`          | All (NACK)                            | Required fields not updated in API request / Schema failure                                                           |
+| `IGM002`          | `/on_issue` (error)                   | `order_id` does not exist or mismatched                                                                               |
+| `IGM003`          | `/on_issue` (error)                   | `fulfillment_id` does not exist or mismatched                                                                         |
+| `IGM004`          | `/on_issue` (error)                   | `item_id` does not exist or mismatched                                                                                |
+| `IGM005`          | `/on_issue_status` (error)            | Specified network issue id does not exist                                                                             |
+| `IGM006`          | `/on_issue_status` (error)            | NP subscriber id is not correct (`bap_id` / `bpp_id`)                                                                 |
+| `IGM007`          | `/on_issue` (error)                   | Wrong escalation — issue must be escalated to GRO before going to ODR                                                 |
+| `IGM008`          | `/on_issue` (error)                   | Duplicate complaint (an OPEN complaint already exists with same item/fulfillment + same category + same sub-category) |
+| `IGM009`          | `/on_issue` (error)                   | Invalid `context.transaction_id`                                                                                      |
+| `31001`           | `issue` / `issue_status` (NACK)       | Failed due to internal errors — retry per retrial mechanism                                                           |
+| `23001`           | `on_issue` / `on_issue_status` (NACK) | Failed due to internal errors — retry per retrial mechanism                                                           |
 
 **Note**: `31001` and `23001` are **NACK** errors (signature/auth failures and internal errors),
 not error objects within the response payload. The distinction is important for retry logic.

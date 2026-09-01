@@ -2,6 +2,7 @@
 
 > **Scope**: This reference covers the complete payment lifecycle for this project's single
 > supported payment model:
+>
 > - **Collected by**: BAP (Buyer App Platform) — always **mandatory**
 > - **Type**: `ON-ORDER` (prepaid) — buyer pays before delivery
 > - **Domain**: F&B (ONDC:RET11), Delivery fulfillment
@@ -36,15 +37,15 @@
 
 The payment object evolves across the order flow. Here is how it looks at each stage:
 
-| API Step | `type` | `collected_by` | `status` | `transaction_id` | `paid_amount` |
-|---|---|---|---|---|---|
-| `/search` | — | — | — | — | — (finder fee in intent.payment) |
-| `/select` | `ON-ORDER` | — | — | — | — |
-| `/init` | `ON-ORDER` | `BAP` | — | — | — |
-| `/on_init` | `ON-ORDER` | `BAP` (confirmed) | — | — | — |
-| *[BAP triggers PG]* | — | — | — | — | — |
-| `/confirm` | `ON-ORDER` | `BAP` | `PAID` | PG reference | `quote.price.value` from /on_init |
-| `/on_confirm` | `ON-ORDER` | `BAP` | `PAID` | (echoed) | (echoed) |
+| API Step            | `type`     | `collected_by`    | `status` | `transaction_id` | `paid_amount`                     |
+| ------------------- | ---------- | ----------------- | -------- | ---------------- | --------------------------------- |
+| `/search`           | —          | —                 | —        | —                | — (finder fee in intent.payment)  |
+| `/select`           | `ON-ORDER` | —                 | —        | —                | —                                 |
+| `/init`             | `ON-ORDER` | `BAP`             | —        | —                | —                                 |
+| `/on_init`          | `ON-ORDER` | `BAP` (confirmed) | —        | —                | —                                 |
+| _[BAP triggers PG]_ | —          | —                 | —        | —                | —                                 |
+| `/confirm`          | `ON-ORDER` | `BAP`             | `PAID`   | PG reference     | `quote.price.value` from /on_init |
+| `/on_confirm`       | `ON-ORDER` | `BAP`             | `PAID`   | (echoed)         | (echoed)                          |
 
 The key invariant: **`paid_amount` in `/confirm` must exactly equal `quote.price.value` from `/on_init`**.
 
@@ -67,12 +68,12 @@ BAP declares its intent to collect prepaid, with the buyer app finder fee.
 
 ### Field reference
 
-| Field | Value | Mandatory | Notes |
-|---|---|---|---|
-| `@ondc/org/buyer_app_finder_fee_type` | `"percent"` | Yes | Always percent in this project |
-| `@ondc/org/buyer_app_finder_fee_amount` | `"3"` | Yes | 3% of order value; string format |
-| `type` | `"ON-ORDER"` | Yes | Prepaid — buyer pays before delivery |
-| `collected_by` | `"BAP"` | Yes | BAP handles PG; BPP does not collect |
+| Field                                   | Value        | Mandatory | Notes                                |
+| --------------------------------------- | ------------ | --------- | ------------------------------------ |
+| `@ondc/org/buyer_app_finder_fee_type`   | `"percent"`  | Yes       | Always percent in this project       |
+| `@ondc/org/buyer_app_finder_fee_amount` | `"3"`        | Yes       | 3% of order value; string format     |
+| `type`                                  | `"ON-ORDER"` | Yes       | Prepaid — buyer pays before delivery |
+| `collected_by`                          | `"BAP"`      | Yes       | BAP handles PG; BPP does not collect |
 
 ---
 
@@ -92,6 +93,7 @@ BPP echoes and confirms the payment terms. No payment link (URI) is ever sent in
 ```
 
 **What BAP must check**:
+
 - `collected_by == "BAP"` — if BPP ever returns `"BPP"` here, it is unexpected; log and alert
 - `type == "ON-ORDER"` — must match what BAP sent in /init
 - Finder fee fields are echoed correctly
@@ -111,12 +113,12 @@ acknowledged by the BPP throughout the transaction.
 
 ### Where it appears
 
-| Location | Purpose |
-|---|---|
+| Location                             | Purpose                                                      |
+| ------------------------------------ | ------------------------------------------------------------ |
 | `/search` → `message.intent.payment` | BAP declares its fee to the network during catalog discovery |
-| `/init` → `message.order.payment` | BAP re-declares fee when initiating the order |
-| `/on_init` → `message.order.payment` | BPP echoes the fee (confirming acceptance) |
-| `/confirm` → `message.order.payment` | BAP echoes the fee one final time in the order record |
+| `/init` → `message.order.payment`    | BAP re-declares fee when initiating the order                |
+| `/on_init` → `message.order.payment` | BPP echoes the fee (confirming acceptance)                   |
+| `/confirm` → `message.order.payment` | BAP echoes the fee one final time in the order record        |
 
 ### Format
 
@@ -233,10 +235,10 @@ The `payment.transaction_id` in `/confirm` is the PG's own transaction/payment r
 (e.g., Razorpay's `payment_id`, Cashfree's `cf_payment_id`). This is not the ONDC
 `context.transaction_id`. They are two different IDs:
 
-| ID | Scope | Example |
-|---|---|---|
-| `context.transaction_id` | ONDC order session — links /select→/init→/confirm | `"T2"` |
-| `payment.transaction_id` (in /confirm) | PG payment reference — proof of collection | `"pay_PJrvFX2nZ8gQjU"` |
+| ID                                     | Scope                                             | Example                |
+| -------------------------------------- | ------------------------------------------------- | ---------------------- |
+| `context.transaction_id`               | ONDC order session — links /select→/init→/confirm | `"T2"`                 |
+| `payment.transaction_id` (in /confirm) | PG payment reference — proof of collection        | `"pay_PJrvFX2nZ8gQjU"` |
 
 ---
 
@@ -257,15 +259,15 @@ payment (required)
 
 ### Field reference
 
-| Field | Value | Mandatory | Notes |
-|---|---|---|---|
-| `@ondc/org/buyer_app_finder_fee_type` | `"percent"` | Yes | Echo from /init |
-| `@ondc/org/buyer_app_finder_fee_amount` | `"3"` | Yes | Echo from /init |
-| `type` | `"ON-ORDER"` | Yes | Echo from /init |
-| `paid_amount` | string decimal | Yes | Exact value from on_init.quote.price.value (e.g. `"264.00"`) |
-| `status` | `"PAID"` | Yes | BAP collected payment successfully via PG |
-| `transaction_id` | string | Yes | PG's payment reference ID — proof of collection |
-| `collected_by` | `"BAP"` | Yes | Echo from /init |
+| Field                                   | Value          | Mandatory | Notes                                                        |
+| --------------------------------------- | -------------- | --------- | ------------------------------------------------------------ |
+| `@ondc/org/buyer_app_finder_fee_type`   | `"percent"`    | Yes       | Echo from /init                                              |
+| `@ondc/org/buyer_app_finder_fee_amount` | `"3"`          | Yes       | Echo from /init                                              |
+| `type`                                  | `"ON-ORDER"`   | Yes       | Echo from /init                                              |
+| `paid_amount`                           | string decimal | Yes       | Exact value from on_init.quote.price.value (e.g. `"264.00"`) |
+| `status`                                | `"PAID"`       | Yes       | BAP collected payment successfully via PG                    |
+| `transaction_id`                        | string         | Yes       | PG's payment reference ID — proof of collection              |
+| `collected_by`                          | `"BAP"`        | Yes       | Echo from /init                                              |
 
 ---
 
@@ -296,14 +298,23 @@ Full `/confirm` request showing the payment object in context:
       "state": "Created",
       "provider": { "id": "P1", "locations": [{ "id": "L1" }] },
       "items": [
-        { "id": "I1", "fulfillment_id": "F1", "location_id": "L1", "quantity": { "count": 1 } }
+        {
+          "id": "I1",
+          "fulfillment_id": "F1",
+          "location_id": "L1",
+          "quantity": { "count": 1 }
+        }
       ],
       "billing": {
         "name": "Buyer Name",
         "address": {
-          "name": "My Apartment", "building": "Tower A",
-          "locality": "Koramangala", "city": "Bengaluru",
-          "state": "Karnataka", "country": "IND", "area_code": "560034"
+          "name": "My Apartment",
+          "building": "Tower A",
+          "locality": "Koramangala",
+          "city": "Bengaluru",
+          "state": "Karnataka",
+          "country": "IND",
+          "area_code": "560034"
         },
         "email": "buyer@example.com",
         "phone": "9886098860",
@@ -318,9 +329,13 @@ Full `/confirm` request showing the payment object in context:
             "location": {
               "gps": "12.453544,77.928379",
               "address": {
-                "name": "My Apartment", "building": "Tower A",
-                "locality": "Koramangala", "city": "Bengaluru",
-                "state": "Karnataka", "country": "IND", "area_code": "560034"
+                "name": "My Apartment",
+                "building": "Tower A",
+                "locality": "Koramangala",
+                "city": "Bengaluru",
+                "state": "Karnataka",
+                "country": "IND",
+                "area_code": "560034"
               }
             },
             "contact": { "phone": "9886098860", "email": "buyer@example.com" }
@@ -331,18 +346,43 @@ Full `/confirm` request showing the payment object in context:
         "price": { "currency": "INR", "value": "264.00" },
         "breakup": [
           {
-            "@ondc/org/item_id": "I1", "@ondc/org/item_quantity": { "count": 1 },
-            "title": "Farm House Pizza", "@ondc/org/title_type": "item",
+            "@ondc/org/item_id": "I1",
+            "@ondc/org/item_quantity": { "count": 1 },
+            "title": "Farm House Pizza",
+            "@ondc/org/title_type": "item",
             "price": { "currency": "INR", "value": "170.00" },
             "item": {
-              "quantity": { "available": { "count": "99" }, "maximum": { "count": "99" } },
+              "quantity": {
+                "available": { "count": "99" },
+                "maximum": { "count": "99" }
+              },
               "price": { "currency": "INR", "value": "170.00" }
             }
           },
-          { "@ondc/org/item_id": "F1", "title": "Delivery charges", "@ondc/org/title_type": "delivery", "price": { "currency": "INR", "value": "50.00" } },
-          { "@ondc/org/item_id": "F1", "title": "Packing charges",  "@ondc/org/title_type": "packing",  "price": { "currency": "INR", "value": "25.00" } },
-          { "@ondc/org/item_id": "F1", "title": "Convenience fee",  "@ondc/org/title_type": "misc",     "price": { "currency": "INR", "value": "10.00" } },
-          { "@ondc/org/item_id": "I1", "title": "Tax",              "@ondc/org/title_type": "tax",      "price": { "currency": "INR", "value": "9.00" } }
+          {
+            "@ondc/org/item_id": "F1",
+            "title": "Delivery charges",
+            "@ondc/org/title_type": "delivery",
+            "price": { "currency": "INR", "value": "50.00" }
+          },
+          {
+            "@ondc/org/item_id": "F1",
+            "title": "Packing charges",
+            "@ondc/org/title_type": "packing",
+            "price": { "currency": "INR", "value": "25.00" }
+          },
+          {
+            "@ondc/org/item_id": "F1",
+            "title": "Convenience fee",
+            "@ondc/org/title_type": "misc",
+            "price": { "currency": "INR", "value": "10.00" }
+          },
+          {
+            "@ondc/org/item_id": "I1",
+            "title": "Tax",
+            "@ondc/org/title_type": "tax",
+            "price": { "currency": "INR", "value": "9.00" }
+          }
         ]
       },
       "payment": {
@@ -360,6 +400,7 @@ Full `/confirm` request showing the payment object in context:
 ```
 
 **Key observations**:
+
 - `order.id` = BAP-generated unique order ID (e.g. UUID) — first appears in `/confirm`
 - `order.state = "Created"` — always "Created" in /confirm; BPP will set "Accepted" in /on_confirm
 - `quote` is echoed in full from `/on_init` — same breakup structure, same values
@@ -373,6 +414,7 @@ Full `/confirm` request showing the payment object in context:
 ### Retrying the payment gateway
 
 If the buyer's PG attempt fails and they retry:
+
 - Do **NOT** re-call `/init` — the session is still valid
 - Do **NOT** re-call `/select` — the quote is frozen
 - Re-present the payment UI with the **same amount** from the stored `/on_init` quote
@@ -385,6 +427,7 @@ restart from cart or contact support).
 ### Retrying /confirm
 
 If `/confirm` is NACKed by BPP (rare — BPP had a transient error):
+
 - Payment has already been collected → do NOT re-trigger PG
 - Retry `/confirm` with the **same** `message_id` (idempotent retry) or a new one
 - Store PG `transaction_id` and `paid_amount` so they are consistent across retries
@@ -453,6 +496,7 @@ PG: PAID → payment collected
 ## Quick Reference — Payment
 
 **The only payment mode for this project**:
+
 ```
 type:         "ON-ORDER"
 collected_by: "BAP"
@@ -461,6 +505,7 @@ collected_by: "BAP"
 **Amount to charge buyer**: `on_init.quote.price.value` (frozen quote — always this, never /on_select)
 
 **After PG success, send in /confirm**:
+
 ```json
 {
   "payment": {

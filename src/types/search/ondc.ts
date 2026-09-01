@@ -86,8 +86,14 @@ export interface OndcDescriptor {
   long_desc?: string;
 }
 
-export interface OndcTagListItem { code: string; value: string }
-export interface OndcTag { code: string; list?: OndcTagListItem[] }
+export interface OndcTagListItem {
+  code: string;
+  value: string;
+}
+export interface OndcTag {
+  code: string;
+  list?: OndcTagListItem[];
+}
 
 export interface OndcCategory {
   id: string;

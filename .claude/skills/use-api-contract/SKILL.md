@@ -34,6 +34,7 @@ rules from the ONDC API Contract for Retail v1.2.0, extracted and organized for 
 ```
 references/ondc-core-knowledge.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/ondc-core-knowledge.md`
 
 Covers: BAP/BPP/Gateway/Registry roles, full order lifecycle, context object, Ed25519 signing,
@@ -44,6 +45,7 @@ registry lookup, domain codes, TTL semantics, error codes, NACK shape, increment
 ```
 references/fnb-buyer-np.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/fnb-buyer-np.md`
 
 Covers: F&B-specific catalog structure, customization groups, make-to-order `/select` payload,
@@ -55,9 +57,11 @@ cancellation rules, force cancellation, fulfillment states, seller NP behavior, 
 ```
 references/search-on-search.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/search-on-search.md`
 
 Read this when implementing or debugging anything related to:
+
 - Sending `/search` (full catalog, incremental push/pull, stop, search by item/location)
 - Ingesting `/on_search` catalog (providers, locations, categories, items, customizations, offers)
 - Validating incoming `/on_search` payloads — field presence, enum values, CG integrity
@@ -73,9 +77,11 @@ step-by-step ingestion algorithms.
 ```
 references/select-on-select.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/select-on-select.md`
 
 Read this when implementing or debugging anything related to:
+
 - Building the `/select` request (F&B customized items with dynamic IDs, plain items, offers, fulfillment location, payment type)
 - Processing `/on_select` responses — serviceability, quote structure, fulfillment options, offer breakup
 - Validating incoming `/on_select` quotes — price integrity, quantity reductions, out-of-stock customizations
@@ -92,11 +98,13 @@ validation rules BAP must enforce, and step-by-step BAP processing algorithm for
 ```
 references/init-on-init.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/init-on-init.md`
 
 **Scope**: Delivery fulfillment only. BAP-collected prepaid (ON-ORDER) only. No COD, no BPP payment.
 
 Read this when implementing or debugging anything related to:
+
 - Sending `/init` — billing address, delivery address, fulfillment_id on items, time slots
 - Processing `/on_init` — validating frozen quote, storing cancellation terms
 - Deciding when to re-call `/select` vs advance to `/init` vs re-call `/init`
@@ -114,11 +122,13 @@ reason codes from Reason Codes doc, and step-by-step BAP processing algorithm.
 ```
 references/payment-bap-prepaid.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/payment-bap-prepaid.md`
 
 **Scope**: BAP-collected prepaid (ON-ORDER) only. Covers /init → PG → /confirm payment lifecycle.
 
 Read this when implementing or debugging anything related to:
+
 - Payment gateway integration — triggering PG after `/on_init`, handling success/failure/timeout
 - Building the `/confirm` payment object — `paid_amount`, `status`, `transaction_id`, `collected_by`
 - Buyer app finder fee — what it is, where it appears, how to calculate, what it means for settlement
@@ -135,11 +145,13 @@ rules, full PG flow decision tree, all error/retry scenarios with correct BAP re
 ```
 references/confirm-on-confirm.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/confirm-on-confirm.md`
 
 **Scope**: BAP-collected prepaid (ON-ORDER) only. Delivery fulfillment only.
 
 Read this when implementing or debugging anything related to:
+
 - Sending `/confirm` — building the full order payload with payment proof, order.id generation
 - Processing `/on_confirm` — BPP acknowledgment, state transitions, error handling
 - Unsolicited `/on_status` — BPP-initiated state updates at any time
@@ -156,11 +168,13 @@ algorithm, complete example with full order payload, enum reference tables.
 ```
 references/status-on-status.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/status-on-status.md`
 
 **Scope**: BAP-collected prepaid (ON-ORDER) only. Delivery fulfillment only.
 
 Read this when implementing or debugging anything related to:
+
 - Polling `/status` — intervals, TAT tracking, when to stop
 - Processing `/on_status` — fulfillment state progression (Pending → Packed → Order-picked-up → Out-for-delivery → Delivered)
 - Unsolicited BPP callbacks — accepting and processing unprompted /on_status
@@ -177,11 +191,13 @@ rules, unsolicited callback processing algorithm, full BAP internal state machin
 ```
 references/track-on-track.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/track-on-track.md`
 
 **Scope**: BAP-collected prepaid (ON-ORDER) only. Delivery fulfillment only.
 
 Read this when implementing or debugging anything related to:
+
 - Requesting live GPS coordinates for a delivery rider (`/track`)
 - Processing tracking response payloads from BPP (`/on_track`)
 - Hyperlocal tracking (`gps_enabled`) vs non-hyperlocal tracking (`url_enabled`)
@@ -198,11 +214,13 @@ BAP polling strategy, quick lookup table.
 ```
 references/cancel-on-cancel.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/cancel-on-cancel.md
 
 **Scope**: BAP-collected prepaid (ON-ORDER) only. Delivery fulfillment only.
 
 Read this when implementing or debugging anything related to:
+
 - Sending `/cancel` — buyer-initiated cancellation with reason codes 001–006
 - Processing `/on_cancel` — BPP acknowledgment or BPP/seller-initiated unsolicited cancel
 - Cancellation reason codes — which are buyer-usable vs. seller-only
@@ -220,11 +238,13 @@ cancellation_terms structure, cancellation decision tree, error codes, force can
 ```
 references/returns-replacements.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/returns-replacements.md
 
 **Scope**: BAP-collected prepaid (ON-ORDER) only. F&B items are non-returnable by default.
 
 Read this when implementing or debugging anything related to:
+
 - Buyer-initiated returns — `/update` with `update_target = "item"`, reverse QC fulfillment
 - Buyer-initiated replacements — `/update` with two fulfillments (forward Delivery + reverse QC)
 - Seller App rejection — policy error codes 50001 (cancel) and 50002 (replace)
@@ -239,11 +259,13 @@ fulfillment structure, LSP cancellation reason codes, settlement field definitio
 ```
 references/update-on-update.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/update-on-update.md
 
 **Scope**: BAP-collected prepaid (ON-ORDER) only. Delivery fulfillment only.
 
 Read this when implementing or debugging anything related to:
+
 - Sending `/update` — `update_target` values: `"item"` (returns/replacements), `"payment"` (settlement trail), `"fulfillment"` (LSP/agent updates), `"order"` (order-level)
 - Processing `/on_update` — BPP acknowledgment of buyer-initiated or unsolicited seller-initiated
 - Return flow — 6-step state machine: Interim → Approved → Return_Picked → Return_Delivered/Liquidated → settlement
@@ -261,6 +283,7 @@ state machine, fulfillment tag reference table, error codes (22508, 40003, 40004
 ```
 documentation/ONDC - API Contract for Retail (v1.2.0).docx
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/documentation/ONDC - API Contract for Retail (v1.2.0).docx`
 
 Read this when you need the exact JSON payload for a specific action, field-level constraints,
@@ -271,12 +294,14 @@ enumeration values, or to verify something not covered in the reference files.
 ```
 references/issue-igm-apis.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/issue-igm-apis.md`
 
 **Scope**: All IGM APIs: `/issue`, `/on_issue`, `/issue_status`, `/on_issue_status`.
 Both Flow 1 and Flow 2 must be implemented.
 
 Read this when implementing or debugging anything related to:
+
 - Raising a complaint via `/issue` — `status: OPEN`, `level: ISSUE/GRIEVANCE/DISPUTE`, refs to ORDER/PROVIDER/FULFILLMENT/ITEM
 - Processing seller responses via `/on_issue` — `PROCESSING`, `RESOLVED`, info requests
 - Resolution flow — REFUND/REPLACEMENT via `resolutions[]`, `RESOLUTION_ACCEPTED` action
@@ -294,12 +319,14 @@ and force cancel → IGM escalation flow.
 ```
 references/rsf-2.0.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/rsf-2.0.md`
 
 **Scope**: RSF 2.0 APIs: `/settle`, `/on_settle`, `/report`, `/on_report`, `/recon`, `/on_recon`.
 Domain: `ONDC:NTS10`. RSF 1.0.0 is deprecated.
 
 Read this when implementing or debugging anything related to:
+
 - Sending `/settle` — collector vs receiver perspective, amount fields (inter_participant, collector, self, provider)
 - Processing `/on_settle` — success with settlement_ref_no, or error codes 70000–70027
 - `/report` + `/on_report` — querying settlement status when on_settle not received
@@ -318,6 +345,7 @@ and illustrative examples for retail prepaid, retail PoD, and logistics transact
 ```
 references/network-observability.md
 ```
+
 Absolute: `/Users/professor/Desktop/ondc-api/.claude/skills/use-api-contract/references/network-observability.md`
 
 **Scope**: ONDC Network Observability API for pushing transaction logs to ONDC analytics.
@@ -325,6 +353,7 @@ Pre-prod endpoint: `https://analytics-api-pre-prod.aws.ondc.org/v1/api/push-txn-
 Bearer token auth from NP portal (valid 10 days for pre-prod).
 
 Read this when implementing or debugging anything related to:
+
 - Pushing transaction logs to the NO API after any ONDC API call (core, IGM, or RSF)
 - Building the NO API payload with correct `type` field naming (e.g., `recon`, `recon_response`)
 - Understanding NO API response codes (200 success, 2001 warning, 4001/4002/4003 errors)
@@ -340,6 +369,7 @@ error code table, response codes, anonymization requirements, and dashboard info
 ## This Project's Role: Buyer NP (BAP)
 
 The BAP owns:
+
 - **Outbound requests**: `/search` (via Gateway), `/select`, `/init`, `/confirm`, `/status`, `/cancel`, `/track`
 - **Inbound webhook**: receives `on_search`, `on_select`, `on_init`, `on_confirm`, `on_status`, `on_cancel`, `on_track`
 - **Catalog storage**: ingests and caches BPP catalogs (full + incremental refresh)
@@ -567,6 +597,7 @@ documentation/
 **Auth**: Bearer token from NP portal (valid 10 days for pre-prod)
 
 **NO `type` field pattern**:
+
 - Outbound request: `<action>` (e.g., `recon`, `on_recon`, `settle`)
 - Sync ACK/NACK response: `<action>_response` (e.g., `recon_response`, `on_recon_response`)
 

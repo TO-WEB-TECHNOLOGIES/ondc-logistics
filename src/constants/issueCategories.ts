@@ -31,18 +31,18 @@
 /** BAP-internal category code — used in frontend dropdown and API requests */
 export type IssueCategoryCode =
   // ── ITEM issues (ITM) — all sourced from IGM 2.0 spec CSV ──────────────────
-  | "ITEM_MISSING"             // ITM001 — Item(s) not present in delivery
-  | "ITEM_QUANTITY"            // ITM002 — Quantity less than ordered (images required)
-  | "WRONG_ITEM"               // ITM003 — Item mismatch / wrong variant (images required)
-  | "ITEM_QUALITY"             // ITM004 — Stale/damaged/poor-quality item (images required)
-  | "ITEM_EXPIRED"             // ITM005 — Item delivered beyond expiry date (images required)
-  | "ITEM_WRONGLY_RETURNED"    // ITM006 — Marked as returned but never picked up
+  | "ITEM_MISSING" // ITM001 — Item(s) not present in delivery
+  | "ITEM_QUANTITY" // ITM002 — Quantity less than ordered (images required)
+  | "WRONG_ITEM" // ITM003 — Item mismatch / wrong variant (images required)
+  | "ITEM_QUALITY" // ITM004 — Stale/damaged/poor-quality item (images required)
+  | "ITEM_EXPIRED" // ITM005 — Item delivered beyond expiry date (images required)
+  | "ITEM_WRONGLY_RETURNED" // ITM006 — Marked as returned but never picked up
   // ── Fulfillment issues (FLM) ────────────────────────────────────────────────
-  | "PACKAGING_ISSUE"          // FLM005 — Spillage / improper packaging (images required)
+  | "PACKAGING_ISSUE" // FLM005 — Spillage / improper packaging (images required)
   // ── Order issues (ORD) ──────────────────────────────────────────────────────
-  | "DELIVERY_DELAY"           // ORD003 — Order delivered late
+  | "DELIVERY_DELAY" // ORD003 — Order delivered late
   // ── Internal-only (not in user-facing dropdown) ─────────────────────────────
-  | "CANCEL_NO_RESPONSE";      // CNR001 — Auto-raised by force-cancel flow only
+  | "CANCEL_NO_RESPONSE"; // CNR001 — Auto-raised by force-cancel flow only
 
 export interface IssueCategory {
   /** BAP-internal code — frontend uses this in API requests */
@@ -75,14 +75,14 @@ export interface IssueCategory {
  * Frontend dropdown: filter to entries where internalOnly is not true.
  */
 export const ISSUE_CATEGORIES: Record<IssueCategoryCode, IssueCategory> = {
-
   // ─── ITEM issues (ITM) ────────────────────────────────────────────────────
 
   ITEM_MISSING: {
     categoryCode: "ITEM_MISSING",
     descriptorCode: "ITM001",
     shortDesc: "Missing items",
-    longDesc: "One or more items that were ordered are not present in the delivery.",
+    longDesc:
+      "One or more items that were ordered are not present in the delivery.",
     applicableRefs: ["ORDER", "ITEM"],
     supportsResolutions: true,
   },

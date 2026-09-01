@@ -1,14 +1,206 @@
-import type { OndcInitRequest, OndcOnInitResponse } from "../types/init/ondc.js";
-export class InitValidationError extends Error { constructor(message: string, public readonly path?: string) { super(message); this.name = "InitValidationError"; } }
-const record=(v:unknown,p:string):Record<string,any>=>{if(!v||typeof v!=="object"||Array.isArray(v))throw new InitValidationError("must be an object",p);return v as Record<string,any>};
-const str=(v:unknown,p:string)=>{if(typeof v!=="string"||!v.trim())throw new InitValidationError("must be a non-empty string",p);return v};
-const arr=(v:unknown,p:string)=>{if(!Array.isArray(v)||v.length===0)throw new InitValidationError("must be a non-empty array",p);return v};
-const address=(v:unknown,p:string)=>{const x=record(v,p);str(x.area_code,`${p}.area_code`);return x};
-const context=(v:unknown,action:"init"|"on_init")=>{const c=record(v,"context"); if(c.action!==action)throw new InitValidationError(`must be ${action}`,"context.action"); for(const k of ["domain","country","city","core_version","bap_id","bap_uri","transaction_id","message_id","timestamp"])str(c[k],`context.${k}`); if(action==="init"){str(c.bpp_id,"context.bpp_id");str(c.bpp_uri,"context.bpp_uri");} if(c.ttl!==undefined)str(c.ttl,"context.ttl"); if(Number.isNaN(new Date(c.timestamp).getTime()))throw new InitValidationError("must be a valid timestamp","context.timestamp"); return c;};
-const contact=(v:unknown,p:string)=>{const x=record(v,p); if(x.phone===undefined&&x.email===undefined)throw new InitValidationError("phone or email is required",p); if(x.phone!==undefined)str(x.phone,`${p}.phone`);if(x.email!==undefined)str(x.email,`${p}.email`);return x;};
-const fulfillment=(v:unknown,p:string)=>{const x=record(v,p);str(x.id,`${p}.id`);str(x.type,`${p}.type`);for(const side of ["start","end"]){const z=record(x[side],`${p}.${side}`);const loc=record(z.location,`${p}.${side}.location`);str(loc.gps,`${p}.${side}.location.gps`);address(loc.address,`${p}.${side}.location.address`);contact(z.contact,`${p}.${side}.contact`);}return x;};
-const order=(v:unknown,p="message.order",requireBilling=true)=>{const o=record(v,p);const provider=record(o.provider,`${p}.provider`);str(provider.id,`${p}.provider.id`);const locations=arr(provider.locations,`${p}.provider.locations`);locations.forEach((l,i)=>str(record(l,`${p}.provider.locations[${i}]`).id,`${p}.provider.locations[${i}].id`));const items=arr(o.items,`${p}.items`);items.forEach((i,n)=>{const x=record(i,`${p}.items[${n}]`);str(x.id,`${p}.items[${n}].id`);if(x.fulfillment_id!==undefined)str(x.fulfillment_id,`${p}.items[${n}].fulfillment_id`);if(x.category_id!==undefined)str(x.category_id,`${p}.items[${n}].category_id`);});const fs=arr(o.fulfillments,`${p}.fulfillments`);fs.forEach((f,n)=>fulfillment(f,`${p}.fulfillments[${n}]`));if(requireBilling || o.billing!==undefined){const billing=record(o.billing,`${p}.billing`);str(billing.name,`${p}.billing.name`);address(billing.address,`${p}.billing.address`);for(const k of ["phone","email"]){if(billing[k]!==undefined)str(billing[k],`${p}.billing.${k}`);}}const payment=record(o.payment,`${p}.payment`);str(payment.type,`${p}.payment.type`);if(!["ON-ORDER","ON-FULFILLMENT","POST-FULFILLMENT"].includes(payment.type))throw new InitValidationError("must be ON-ORDER, ON-FULFILLMENT, or POST-FULFILLMENT",`${p}.payment.type`);str(payment.collected_by,`${p}.payment.collected_by`);str(payment["@ondc/org/collection_amount"],`${p}.payment.@ondc/org/collection_amount`);const settlements=arr(payment["@ondc/org/settlement_details"],`${p}.payment.@ondc/org/settlement_details`);settlements.forEach((s,n)=>{const x=record(s,`${p}.payment.@ondc/org/settlement_details[${n}]`);str(x.settlement_counterparty,`${p}.payment.@ondc/org/settlement_details[${n}].settlement_counterparty`);str(x.settlement_type,`${p}.payment.@ondc/org/settlement_details[${n}].settlement_type`);});return o;};
-export const parseInitRequest=(value:unknown):OndcInitRequest=>{const x=record(value,"request body");context(x.context,"init");const m=record(x.message,"message");order(m.order);return value as OndcInitRequest;};
-const quote=(v:unknown)=>{const q=record(v,"message.order.quote");const price=record(q.price,"message.order.quote.price");str(price.currency,"message.order.quote.price.currency");str(price.value,"message.order.quote.price.value");const b=arr(q.breakup,"message.order.quote.breakup");b.forEach((x,n)=>{const z=record(x,`message.order.quote.breakup[${n}]`);str(z["@ondc/org/item_id"],`message.order.quote.breakup[${n}].@ondc/org/item_id`);const title=z["@ondc/org/title_type"];str(title,`message.order.quote.breakup[${n}].@ondc/org/title_type`);if(!["delivery","rto","reverseqc","tax","diff","tax_diff","discount"].includes(title))throw new InitValidationError("invalid quote title type",`message.order.quote.breakup[${n}].@ondc/org/title_type`);const bp=record(z.price,`message.order.quote.breakup[${n}].price`);str(bp.currency,`message.order.quote.breakup[${n}].price.currency`);str(bp.value,`message.order.quote.breakup[${n}].price.value`);});};
-export const parseOnInitResponse=(value:unknown):OndcOnInitResponse=>{const x=record(value,"callback body");context(x.context,"on_init");if(x.error!==undefined){const e=record(x.error,"error");str(e.code,"error.code");str(e.message,"error.message");return value as OndcOnInitResponse;}const m=record(x.message,"message");const o=order(m.order,"message.order",false);if(o.quote===undefined)throw new InitValidationError("is required for successful on_init","message.order.quote");quote(o.quote);if(o.cancellation_terms!==undefined){arr(o.cancellation_terms,"message.order.cancellation_terms");}return value as OndcOnInitResponse;};
-
+import type {
+  OndcInitRequest,
+  OndcOnInitResponse,
+} from "../types/init/ondc.js";
+export class InitValidationError extends Error {
+  constructor(
+    message: string,
+    public readonly path?: string,
+  ) {
+    super(message);
+    this.name = "InitValidationError";
+  }
+}
+const record = (v: unknown, p: string): Record<string, any> => {
+  if (!v || typeof v !== "object" || Array.isArray(v))
+    throw new InitValidationError("must be an object", p);
+  return v as Record<string, any>;
+};
+const str = (v: unknown, p: string) => {
+  if (typeof v !== "string" || !v.trim())
+    throw new InitValidationError("must be a non-empty string", p);
+  return v;
+};
+const arr = (v: unknown, p: string) => {
+  if (!Array.isArray(v) || v.length === 0)
+    throw new InitValidationError("must be a non-empty array", p);
+  return v;
+};
+const address = (v: unknown, p: string) => {
+  const x = record(v, p);
+  str(x.area_code, `${p}.area_code`);
+  return x;
+};
+const context = (v: unknown, action: "init" | "on_init") => {
+  const c = record(v, "context");
+  if (c.action !== action)
+    throw new InitValidationError(`must be ${action}`, "context.action");
+  for (const k of [
+    "domain",
+    "country",
+    "city",
+    "core_version",
+    "bap_id",
+    "bap_uri",
+    "transaction_id",
+    "message_id",
+    "timestamp",
+  ])
+    str(c[k], `context.${k}`);
+  if (action === "init") {
+    str(c.bpp_id, "context.bpp_id");
+    str(c.bpp_uri, "context.bpp_uri");
+  }
+  if (c.ttl !== undefined) str(c.ttl, "context.ttl");
+  if (Number.isNaN(new Date(c.timestamp).getTime()))
+    throw new InitValidationError(
+      "must be a valid timestamp",
+      "context.timestamp",
+    );
+  return c;
+};
+const contact = (v: unknown, p: string) => {
+  const x = record(v, p);
+  if (x.phone === undefined && x.email === undefined)
+    throw new InitValidationError("phone or email is required", p);
+  if (x.phone !== undefined) str(x.phone, `${p}.phone`);
+  if (x.email !== undefined) str(x.email, `${p}.email`);
+  return x;
+};
+const fulfillment = (v: unknown, p: string) => {
+  const x = record(v, p);
+  str(x.id, `${p}.id`);
+  str(x.type, `${p}.type`);
+  for (const side of ["start", "end"]) {
+    const z = record(x[side], `${p}.${side}`);
+    const loc = record(z.location, `${p}.${side}.location`);
+    str(loc.gps, `${p}.${side}.location.gps`);
+    address(loc.address, `${p}.${side}.location.address`);
+    contact(z.contact, `${p}.${side}.contact`);
+  }
+  return x;
+};
+const order = (v: unknown, p = "message.order", requireBilling = true) => {
+  const o = record(v, p);
+  const provider = record(o.provider, `${p}.provider`);
+  str(provider.id, `${p}.provider.id`);
+  const locations = arr(provider.locations, `${p}.provider.locations`);
+  locations.forEach((l, i) =>
+    str(
+      record(l, `${p}.provider.locations[${i}]`).id,
+      `${p}.provider.locations[${i}].id`,
+    ),
+  );
+  const items = arr(o.items, `${p}.items`);
+  items.forEach((i, n) => {
+    const x = record(i, `${p}.items[${n}]`);
+    str(x.id, `${p}.items[${n}].id`);
+    if (x.fulfillment_id !== undefined)
+      str(x.fulfillment_id, `${p}.items[${n}].fulfillment_id`);
+    if (x.category_id !== undefined)
+      str(x.category_id, `${p}.items[${n}].category_id`);
+  });
+  const fs = arr(o.fulfillments, `${p}.fulfillments`);
+  fs.forEach((f, n) => fulfillment(f, `${p}.fulfillments[${n}]`));
+  if (requireBilling || o.billing !== undefined) {
+    const billing = record(o.billing, `${p}.billing`);
+    str(billing.name, `${p}.billing.name`);
+    address(billing.address, `${p}.billing.address`);
+    for (const k of ["phone", "email"]) {
+      if (billing[k] !== undefined) str(billing[k], `${p}.billing.${k}`);
+    }
+  }
+  const payment = record(o.payment, `${p}.payment`);
+  str(payment.type, `${p}.payment.type`);
+  if (
+    !["ON-ORDER", "ON-FULFILLMENT", "POST-FULFILLMENT"].includes(payment.type)
+  )
+    throw new InitValidationError(
+      "must be ON-ORDER, ON-FULFILLMENT, or POST-FULFILLMENT",
+      `${p}.payment.type`,
+    );
+  str(payment.collected_by, `${p}.payment.collected_by`);
+  str(
+    payment["@ondc/org/collection_amount"],
+    `${p}.payment.@ondc/org/collection_amount`,
+  );
+  const settlements = arr(
+    payment["@ondc/org/settlement_details"],
+    `${p}.payment.@ondc/org/settlement_details`,
+  );
+  settlements.forEach((s, n) => {
+    const x = record(s, `${p}.payment.@ondc/org/settlement_details[${n}]`);
+    str(
+      x.settlement_counterparty,
+      `${p}.payment.@ondc/org/settlement_details[${n}].settlement_counterparty`,
+    );
+    str(
+      x.settlement_type,
+      `${p}.payment.@ondc/org/settlement_details[${n}].settlement_type`,
+    );
+  });
+  return o;
+};
+export const parseInitRequest = (value: unknown): OndcInitRequest => {
+  const x = record(value, "request body");
+  context(x.context, "init");
+  const m = record(x.message, "message");
+  order(m.order);
+  return value as OndcInitRequest;
+};
+const quote = (v: unknown) => {
+  const q = record(v, "message.order.quote");
+  const price = record(q.price, "message.order.quote.price");
+  str(price.currency, "message.order.quote.price.currency");
+  str(price.value, "message.order.quote.price.value");
+  const b = arr(q.breakup, "message.order.quote.breakup");
+  b.forEach((x, n) => {
+    const z = record(x, `message.order.quote.breakup[${n}]`);
+    str(
+      z["@ondc/org/item_id"],
+      `message.order.quote.breakup[${n}].@ondc/org/item_id`,
+    );
+    const title = z["@ondc/org/title_type"];
+    str(title, `message.order.quote.breakup[${n}].@ondc/org/title_type`);
+    if (
+      ![
+        "delivery",
+        "rto",
+        "reverseqc",
+        "tax",
+        "diff",
+        "tax_diff",
+        "discount",
+      ].includes(title)
+    )
+      throw new InitValidationError(
+        "invalid quote title type",
+        `message.order.quote.breakup[${n}].@ondc/org/title_type`,
+      );
+    const bp = record(z.price, `message.order.quote.breakup[${n}].price`);
+    str(bp.currency, `message.order.quote.breakup[${n}].price.currency`);
+    str(bp.value, `message.order.quote.breakup[${n}].price.value`);
+  });
+};
+export const parseOnInitResponse = (value: unknown): OndcOnInitResponse => {
+  const x = record(value, "callback body");
+  context(x.context, "on_init");
+  if (x.error !== undefined) {
+    const e = record(x.error, "error");
+    str(e.code, "error.code");
+    str(e.message, "error.message");
+    return value as OndcOnInitResponse;
+  }
+  const m = record(x.message, "message");
+  const o = order(m.order, "message.order", false);
+  if (o.quote === undefined)
+    throw new InitValidationError(
+      "is required for successful on_init",
+      "message.order.quote",
+    );
+  quote(o.quote);
+  if (o.cancellation_terms !== undefined) {
+    arr(o.cancellation_terms, "message.order.cancellation_terms");
+  }
+  return value as OndcOnInitResponse;
+};

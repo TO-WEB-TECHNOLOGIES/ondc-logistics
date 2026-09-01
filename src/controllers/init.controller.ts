@@ -30,14 +30,12 @@ export const createInitController =
           console.log("[init.controller] /init failed", {
             error: error instanceof Error ? error.message : error,
           });
-          response
-            .status(502)
-            .json({
-              error: {
-                code: "INIT_SUBMISSION_FAILED",
-                message: "Unable to submit ONDC init request",
-              },
-            });
+          response.status(502).json({
+            error: {
+              code: "INIT_SUBMISSION_FAILED",
+              message: "Unable to submit ONDC init request",
+            },
+          });
         });
     } catch (error) {
       if (error instanceof InitValidationError) {
@@ -45,26 +43,22 @@ export const createInitController =
           "[init.controller] /init validation failed",
           validation(error),
         );
-        response
-          .status(400)
-          .json({
-            error: {
-              code: "INVALID_INIT_REQUEST",
-              message: "Invalid ONDC init request",
-              details: [validation(error)],
-            },
-          });
+        response.status(400).json({
+          error: {
+            code: "INVALID_INIT_REQUEST",
+            message: "Invalid ONDC init request",
+            details: [validation(error)],
+          },
+        });
         return;
       }
       console.log("[init.controller] /init unexpected failure", error);
-      response
-        .status(500)
-        .json({
-          error: {
-            code: "INIT_FAILED",
-            message: "Unable to process init request",
-          },
-        });
+      response.status(500).json({
+        error: {
+          code: "INIT_FAILED",
+          message: "Unable to process init request",
+        },
+      });
     }
   };
 export const createOnInitController =
@@ -87,16 +81,14 @@ export const createOnInitController =
             console.log("[on-init.controller] unknown transaction", {
               transactionId: callback.context.transaction_id,
             });
-            response
-              .status(200)
-              .json({
-                message: { ack: { status: "NACK" } },
-                error: {
-                  type: "CONTEXT-ERROR",
-                  code: "20004",
-                  message: "init transaction not found",
-                },
-              });
+            response.status(200).json({
+              message: { ack: { status: "NACK" } },
+              error: {
+                type: "CONTEXT-ERROR",
+                code: "20004",
+                message: "init transaction not found",
+              },
+            });
             return;
           }
           console.log("[on-init.controller] /on_init acknowledged", {
@@ -109,14 +101,12 @@ export const createOnInitController =
           console.log("[on-init.controller] processing failed", {
             error: error instanceof Error ? error.message : error,
           });
-          response
-            .status(500)
-            .json({
-              error: {
-                code: "ON_INIT_FAILED",
-                message: "Unable to process callback",
-              },
-            });
+          response.status(500).json({
+            error: {
+              code: "ON_INIT_FAILED",
+              message: "Unable to process callback",
+            },
+          });
         });
     } catch (error) {
       if (error instanceof InitValidationError) {
@@ -124,27 +114,23 @@ export const createOnInitController =
           "[on-init.controller] validation failed",
           validation(error),
         );
-        response
-          .status(200)
-          .json({
-            message: { ack: { status: "NACK" } },
-            error: {
-              type: "JSON-SCHEMA-ERROR",
-              code: "20001",
-              path: error.path,
-              message: error.message,
-            },
-          });
+        response.status(200).json({
+          message: { ack: { status: "NACK" } },
+          error: {
+            type: "JSON-SCHEMA-ERROR",
+            code: "20001",
+            path: error.path,
+            message: error.message,
+          },
+        });
         return;
       }
       console.log("[on-init.controller] unexpected failure", error);
-      response
-        .status(500)
-        .json({
-          error: {
-            code: "ON_INIT_FAILED",
-            message: "Unable to process callback",
-          },
-        });
+      response.status(500).json({
+        error: {
+          code: "ON_INIT_FAILED",
+          message: "Unable to process callback",
+        },
+      });
     }
   };

@@ -1,4 +1,8 @@
-import { SIGNING_PRIVATE_KEY, SUBSCRIBER_ID, UNIQUE_KEY_ID } from "../constants/v1/appConstants.js";
+import {
+  SIGNING_PRIVATE_KEY,
+  SUBSCRIBER_ID,
+  UNIQUE_KEY_ID,
+} from "../constants/v1/appConstants.js";
 import _sodium from "libsodium-wrappers";
 
 export const initializeCrypto = async () => {

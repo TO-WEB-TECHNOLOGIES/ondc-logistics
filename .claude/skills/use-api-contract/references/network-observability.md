@@ -11,6 +11,7 @@ The NO API lets Network Participants (NPs) push transaction logs to ONDC's analy
 ## When to Push
 
 Push logs for **every** ONDC API request and response, including:
+
 - Core retail/logistics APIs: `/search`, `/on_search`, `/select`, `/on_select`, `/init`, `/on_init`, `/confirm`, `/on_confirm`, `/status`, `/on_status`, `/cancel`, `/on_cancel`, `/update`, `/on_update`, `/track`, `/on_track`, `/info`, `/on_info`
 - IGM APIs: `/issue`, `/on_issue`, `/issue_status`, `/on_issue_status`
 - RSF APIs: `/recon`, `/on_recon`, `/settle`, `/on_settle`, `/report`, `/on_report`
@@ -56,64 +57,64 @@ The `type` field indicates the action and whether it's an ACK/NACK response.
 
 ### RSF APIs
 
-| API Call | type value | Is ACK/NACK? |
-|----------|-------------|--------------|
-| `/recon` (request) | `recon` | No |
-| `/recon` (sync response) | `recon_response` | Yes (ACK/NACK) |
-| `/on_recon` (request) | `on_recon` | No |
-| `/on_recon` (sync response) | `on_recon_response` | Yes (ACK/NACK) |
-| `/settle` (request) | `settle` | No |
-| `/settle` (sync response) | `settle_response` | Yes (ACK/NACK) |
-| `/on_settle` (request) | `on_settle` | No |
+| API Call                     | type value           | Is ACK/NACK?   |
+| ---------------------------- | -------------------- | -------------- |
+| `/recon` (request)           | `recon`              | No             |
+| `/recon` (sync response)     | `recon_response`     | Yes (ACK/NACK) |
+| `/on_recon` (request)        | `on_recon`           | No             |
+| `/on_recon` (sync response)  | `on_recon_response`  | Yes (ACK/NACK) |
+| `/settle` (request)          | `settle`             | No             |
+| `/settle` (sync response)    | `settle_response`    | Yes (ACK/NACK) |
+| `/on_settle` (request)       | `on_settle`          | No             |
 | `/on_settle` (sync response) | `on_settle_response` | Yes (ACK/NACK) |
-| `/report` (request) | `report` | No |
-| `/report` (sync response) | `report_response` | Yes (ACK/NACK) |
-| `/on_report` (request) | `on_report` | No |
+| `/report` (request)          | `report`             | No             |
+| `/report` (sync response)    | `report_response`    | Yes (ACK/NACK) |
+| `/on_report` (request)       | `on_report`          | No             |
 | `/on_report` (sync response) | `on_report_response` | Yes (ACK/NACK) |
 
 ### Core Retail/Logistics APIs
 
-| API Call | type value | Is ACK/NACK? |
-|----------|-------------|--------------|
-| `/init` (request) | `init` | No |
-| `/init` (sync response) | `init_response` | Yes (ACK/NACK) |
-| `/on_init` (request) | `on_init` | No |
-| `/on_init` (sync response) | `on_init_response` | Yes (ACK/NACK) |
-| `/confirm` (request) | `confirm` | No |
-| `/confirm` (sync response) | `confirm_response` | Yes (ACK/NACK) |
-| `/on_confirm` (request) | `on_confirm` | No |
-| `/on_confirm` (sync response) | `on_confirm_response` | Yes (ACK/NACK) |
-| `/select` (request) | `select` | No |
-| `/select` (sync response) | `select_response` | Yes (ACK/NACK) |
-| `/on_select` (request) | `on_select` | No |
-| `/on_select` (sync response) | `on_select_response` | Yes (ACK/NACK) |
-| `/search` (request) | `search` | No |
-| `/search` (sync response) | `search_response` | Yes (ACK/NACK) |
-| `/on_search` (request) | `on_search` | No |
-| `/on_search` (sync response) | `on_search_response` | Yes (ACK/NACK) |
-| `/status` (request) | `status` | No |
-| `/status` (sync response) | `status_response` | Yes (ACK/NACK) |
-| `/on_status` (request) | `on_status` | No |
-| `/on_status` (sync response) | `on_status_response` | Yes (ACK/NACK) |
-| `/cancel` (request) | `cancel` | No |
-| `/cancel` (sync response) | `cancel_response` | Yes (ACK/NACK) |
-| `/on_cancel` (request) | `on_cancel` | No |
-| `/on_cancel` (sync response) | `on_cancel_response` | Yes (ACK/NACK) |
-| `/update` (request) | `update` | No |
-| `/update` (sync response) | `update_response` | Yes (ACK/NACK) |
-| `/on_update` (request) | `on_update` | No |
-| `/on_update` (sync response) | `on_update_response` | Yes (ACK/NACK) |
-| `/track` (request) | `track` | No |
-| `/track` (sync response) | `track_response` | Yes (ACK/NACK) |
-| `/on_track` (request) | `on_track` | No |
-| `/on_track` (sync response) | `on_track_response` | Yes (ACK/NACK) |
-| `/issue` (request) | `issue` | No |
-| `/issue` (sync response) | `issue_response` | Yes (ACK/NACK) |
-| `/on_issue` (request) | `on_issue` | No |
-| `/on_issue` (sync response) | `on_issue_response` | Yes (ACK/NACK) |
-| `/issue_status` (request) | `issue_status` | No |
-| `/issue_status` (sync response) | `issue_status_response` | Yes (ACK/NACK) |
-| `/on_issue_status` (request) | `on_issue_status` | No |
+| API Call                           | type value                 | Is ACK/NACK?   |
+| ---------------------------------- | -------------------------- | -------------- |
+| `/init` (request)                  | `init`                     | No             |
+| `/init` (sync response)            | `init_response`            | Yes (ACK/NACK) |
+| `/on_init` (request)               | `on_init`                  | No             |
+| `/on_init` (sync response)         | `on_init_response`         | Yes (ACK/NACK) |
+| `/confirm` (request)               | `confirm`                  | No             |
+| `/confirm` (sync response)         | `confirm_response`         | Yes (ACK/NACK) |
+| `/on_confirm` (request)            | `on_confirm`               | No             |
+| `/on_confirm` (sync response)      | `on_confirm_response`      | Yes (ACK/NACK) |
+| `/select` (request)                | `select`                   | No             |
+| `/select` (sync response)          | `select_response`          | Yes (ACK/NACK) |
+| `/on_select` (request)             | `on_select`                | No             |
+| `/on_select` (sync response)       | `on_select_response`       | Yes (ACK/NACK) |
+| `/search` (request)                | `search`                   | No             |
+| `/search` (sync response)          | `search_response`          | Yes (ACK/NACK) |
+| `/on_search` (request)             | `on_search`                | No             |
+| `/on_search` (sync response)       | `on_search_response`       | Yes (ACK/NACK) |
+| `/status` (request)                | `status`                   | No             |
+| `/status` (sync response)          | `status_response`          | Yes (ACK/NACK) |
+| `/on_status` (request)             | `on_status`                | No             |
+| `/on_status` (sync response)       | `on_status_response`       | Yes (ACK/NACK) |
+| `/cancel` (request)                | `cancel`                   | No             |
+| `/cancel` (sync response)          | `cancel_response`          | Yes (ACK/NACK) |
+| `/on_cancel` (request)             | `on_cancel`                | No             |
+| `/on_cancel` (sync response)       | `on_cancel_response`       | Yes (ACK/NACK) |
+| `/update` (request)                | `update`                   | No             |
+| `/update` (sync response)          | `update_response`          | Yes (ACK/NACK) |
+| `/on_update` (request)             | `on_update`                | No             |
+| `/on_update` (sync response)       | `on_update_response`       | Yes (ACK/NACK) |
+| `/track` (request)                 | `track`                    | No             |
+| `/track` (sync response)           | `track_response`           | Yes (ACK/NACK) |
+| `/on_track` (request)              | `on_track`                 | No             |
+| `/on_track` (sync response)        | `on_track_response`        | Yes (ACK/NACK) |
+| `/issue` (request)                 | `issue`                    | No             |
+| `/issue` (sync response)           | `issue_response`           | Yes (ACK/NACK) |
+| `/on_issue` (request)              | `on_issue`                 | No             |
+| `/on_issue` (sync response)        | `on_issue_response`        | Yes (ACK/NACK) |
+| `/issue_status` (request)          | `issue_status`             | No             |
+| `/issue_status` (sync response)    | `issue_status_response`    | Yes (ACK/NACK) |
+| `/on_issue_status` (request)       | `on_issue_status`          | No             |
 | `/on_issue_status` (sync response) | `on_issue_status_response` | Yes (ACK/NACK) |
 
 ### Pattern for type naming
@@ -254,11 +255,31 @@ The `type` field indicates the action and whether it's an ACK/NACK response.
               "id": "settlement-id-456",
               "payment_id": "pymnt-1",
               "status": "PENDING",
-              "amount": { "currency": "INR", "value": "120.00", "diff_value": "20.00" },
-              "commission": { "currency": "INR", "value": "10.00", "diff_value": "0.00" },
-              "withholding_amount": { "currency": "INR", "value": "10.00", "diff_value": "0.00" },
-              "tcs": { "currency": "INR", "value": "10.00", "diff_value": "0.00" },
-              "tds": { "currency": "INR", "value": "10.00", "diff_value": "0.00" },
+              "amount": {
+                "currency": "INR",
+                "value": "120.00",
+                "diff_value": "20.00"
+              },
+              "commission": {
+                "currency": "INR",
+                "value": "10.00",
+                "diff_value": "0.00"
+              },
+              "withholding_amount": {
+                "currency": "INR",
+                "value": "10.00",
+                "diff_value": "0.00"
+              },
+              "tcs": {
+                "currency": "INR",
+                "value": "10.00",
+                "diff_value": "0.00"
+              },
+              "tds": {
+                "currency": "INR",
+                "value": "10.00",
+                "diff_value": "0.00"
+              },
               "updated_at": "2024-05-07T07:36:51.897Z"
             }
           ]
@@ -351,12 +372,12 @@ When extra fields are present in the payload:
 
 ## Error Codes
 
-| Code | Type | Message | Description |
-|------|------|---------|-------------|
-| 4001 | `REQUIRED_FIELD` | Invalid value: missing required key | A mandatory field is not present |
-| 4002 | `INVALID_DATA_TYPE` | Invalid value: invalid type | Field value doesn't match expected type |
-| 4003 | `INVALID_ENUM_VALUE` | Invalid value: \<value\>, Allowed values are: \<valid_enums\> | Field value not in allowed enumeration |
-| 2001 | `EXTRA_FIELD` | Payload contains an extra field: \<field_name\> | Warning only (request still succeeds) |
+| Code | Type                 | Message                                                       | Description                             |
+| ---- | -------------------- | ------------------------------------------------------------- | --------------------------------------- |
+| 4001 | `REQUIRED_FIELD`     | Invalid value: missing required key                           | A mandatory field is not present        |
+| 4002 | `INVALID_DATA_TYPE`  | Invalid value: invalid type                                   | Field value doesn't match expected type |
+| 4003 | `INVALID_ENUM_VALUE` | Invalid value: \<value\>, Allowed values are: \<valid_enums\> | Field value not in allowed enumeration  |
+| 2001 | `EXTRA_FIELD`        | Payload contains an extra field: \<field_name\>               | Warning only (request still succeeds)   |
 
 ---
 
@@ -371,7 +392,7 @@ When extra fields are present in the payload:
 
 ## Dashboard
 
- NPs can verify pushed transaction IDs at:  
+NPs can verify pushed transaction IDs at:  
 **https://analytics-dashboard.ondc.org/public/dashboard/83a560f2-cc19-4b9c-a2a3-95047b775ea8**
 
 Data appears on the dashboard approximately **20 minutes** after push.

@@ -55,16 +55,16 @@ collected by BAP before `/confirm` is sent. The BPP acknowledges the order and b
 
 **Critical invariants for BAP-collected prepaid**:
 
-| Invariant | Rule |
-|---|---|
-| `order.id` | BAP generates a new unique order ID (UUID) — NOT the same as `transaction_id` |
-| `order.state` | Always `"Created"` in `/confirm` — BPP transitions to `"Accepted"` |
-| `payment.status` | Always `"PAID"` — payment already collected by BAP's PG |
-| `payment.transaction_id` | PG's own reference ID (e.g. HDFC txn ref) — NOT ONDC `transaction_id` |
-| `payment.collected_by` | Always `"BAP"` |
-| `payment.paid_amount` | Must exactly equal `on_init.quote.price.value` |
-| `quote` | Echoed verbatim from `/on_init` — do NOT modify after /init |
-| `fulfillments` | Echoed from `/on_init` (or `/init` if BPP didn't change) |
+| Invariant                | Rule                                                                          |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| `order.id`               | BAP generates a new unique order ID (UUID) — NOT the same as `transaction_id` |
+| `order.state`            | Always `"Created"` in `/confirm` — BPP transitions to `"Accepted"`            |
+| `payment.status`         | Always `"PAID"` — payment already collected by BAP's PG                       |
+| `payment.transaction_id` | PG's own reference ID (e.g. HDFC txn ref) — NOT ONDC `transaction_id`         |
+| `payment.collected_by`   | Always `"BAP"`                                                                |
+| `payment.paid_amount`    | Must exactly equal `on_init.quote.price.value`                                |
+| `quote`                  | Echoed verbatim from `/on_init` — do NOT modify after /init                   |
+| `fulfillments`           | Echoed from `/on_init` (or `/init` if BPP didn't change)                      |
 
 ---
 
@@ -229,14 +229,23 @@ Most common F&B order: single item, prepaid via HDFC, delivery to buyer address.
       "state": "Created",
       "provider": { "id": "P1", "locations": [{ "id": "L1" }] },
       "items": [
-        { "id": "I1", "fulfillment_id": "F1", "location_id": "L1", "quantity": { "count": 1 } }
+        {
+          "id": "I1",
+          "fulfillment_id": "F1",
+          "location_id": "L1",
+          "quantity": { "count": 1 }
+        }
       ],
       "billing": {
         "name": "Buyer Name",
         "address": {
-          "name": "My Apartment", "building": "Tower A",
-          "locality": "Koramangala", "city": "Bengaluru",
-          "state": "Karnataka", "country": "IND", "area_code": "560034"
+          "name": "My Apartment",
+          "building": "Tower A",
+          "locality": "Koramangala",
+          "city": "Bengaluru",
+          "state": "Karnataka",
+          "country": "IND",
+          "area_code": "560034"
         },
         "email": "buyer@example.com",
         "phone": "9886098860",
@@ -256,9 +265,13 @@ Most common F&B order: single item, prepaid via HDFC, delivery to buyer address.
             "location": {
               "gps": "12.453544,77.928379",
               "address": {
-                "name": "My Apartment", "building": "Tower A",
-                "locality": "Koramangala", "city": "Bengaluru",
-                "state": "Karnataka", "country": "IND", "area_code": "560034"
+                "name": "My Apartment",
+                "building": "Tower A",
+                "locality": "Koramangala",
+                "city": "Bengaluru",
+                "state": "Karnataka",
+                "country": "IND",
+                "area_code": "560034"
               }
             },
             "contact": { "phone": "9886098860", "email": "buyer@example.com" }
@@ -269,31 +282,40 @@ Most common F&B order: single item, prepaid via HDFC, delivery to buyer address.
         "price": { "currency": "INR", "value": "264.00" },
         "breakup": [
           {
-            "@ondc/org/item_id": "I1", "@ondc/org/item_quantity": { "count": 1 },
-            "title": "Farm House Pizza", "@ondc/org/title_type": "item",
+            "@ondc/org/item_id": "I1",
+            "@ondc/org/item_quantity": { "count": 1 },
+            "title": "Farm House Pizza",
+            "@ondc/org/title_type": "item",
             "price": { "currency": "INR", "value": "170.00" },
             "item": {
-              "quantity": { "available": { "count": "99" }, "maximum": { "count": "99" } },
+              "quantity": {
+                "available": { "count": "99" },
+                "maximum": { "count": "99" }
+              },
               "price": { "currency": "INR", "value": "170.00" }
             }
           },
           {
-            "@ondc/org/item_id": "F1", "title": "Delivery charges",
+            "@ondc/org/item_id": "F1",
+            "title": "Delivery charges",
             "@ondc/org/title_type": "delivery",
             "price": { "currency": "INR", "value": "50.00" }
           },
           {
-            "@ondc/org/item_id": "F1", "title": "Packing charges",
+            "@ondc/org/item_id": "F1",
+            "title": "Packing charges",
             "@ondc/org/title_type": "packing",
             "price": { "currency": "INR", "value": "25.00" }
           },
           {
-            "@ondc/org/item_id": "F1", "title": "Convenience fee",
+            "@ondc/org/item_id": "F1",
+            "title": "Convenience fee",
             "@ondc/org/title_type": "misc",
             "price": { "currency": "INR", "value": "10.00" }
           },
           {
-            "@ondc/org/item_id": "I1", "title": "Tax",
+            "@ondc/org/item_id": "I1",
+            "title": "Tax",
             "@ondc/org/title_type": "tax",
             "price": { "currency": "INR", "value": "9.00" }
           }
@@ -305,7 +327,7 @@ Most common F&B order: single item, prepaid via HDFC, delivery to buyer address.
         "type": "ON-ORDER",
         "collected_by": "BAP",
         "status": "PAID",
-        "transaction_id": "hdfc_txn_abc123",   // HDFC's PG reference, NOT ONDC transaction_id
+        "transaction_id": "hdfc_txn_abc123", // HDFC's PG reference, NOT ONDC transaction_id
         "paid_amount": "264.00"
       }
     }
@@ -516,7 +538,7 @@ TAT. BAP should poll `/status` until state transitions to `"Accepted"`.
           "id": "F1",
           "type": "Delivery",
           "state": { "descriptor": { "code": "Pending" } },
-          "@ondc/org/TAT": "PT2H"   // deferred — check back in 2 hours
+          "@ondc/org/TAT": "PT2H" // deferred — check back in 2 hours
         }
       ]
     }
@@ -534,7 +556,7 @@ internal systems have an issue after `/on_init`.
   "message": { "ack": { "status": "NACK" } },
   "error": {
     "type": "DOMAIN-ERROR",
-    "code": "40001",    // BPP-specific error
+    "code": "40001", // BPP-specific error
     "message": "Order could not be accepted due to a technical issue"
   }
 }
@@ -581,27 +603,27 @@ BPP /on_confirm received
 
 ### Fulfillment State Progression
 
-| BPP /on_status `code` | Meaning | Who sends |
-|---|---|---|
-| `Pending` | Order accepted; food being prepared | BPP |
-| `Packed` | Food ready; waiting for delivery agent | BPP |
-| `Order-picked-up` | Delivery agent collected the order | BPP |
-| `Out-for-delivery` | En route to buyer | BPP |
-| `Order-delivered` | Successfully delivered | BPP |
-| `Cancelled` | Order cancelled | BPP (unsolicited) |
+| BPP /on_status `code` | Meaning                                | Who sends         |
+| --------------------- | -------------------------------------- | ----------------- |
+| `Pending`             | Order accepted; food being prepared    | BPP               |
+| `Packed`              | Food ready; waiting for delivery agent | BPP               |
+| `Order-picked-up`     | Delivery agent collected the order     | BPP               |
+| `Out-for-delivery`    | En route to buyer                      | BPP               |
+| `Order-delivered`     | Successfully delivered                 | BPP               |
+| `Cancelled`           | Order cancelled                        | BPP (unsolicited) |
 
 ### BAP Order State (internal tracking)
 
-| Internal State | Meaning |
-|---|---|
-| `payment_pending` | Waiting for PG callback |
-| `payment_charged` | PG confirmed; ready to send /confirm |
-| `confirm_sent` | /confirm sent; awaiting /on_confirm |
-| `confirmed` | /on_confirm received with state=Accepted |
+| Internal State        | Meaning                                   |
+| --------------------- | ----------------------------------------- |
+| `payment_pending`     | Waiting for PG callback                   |
+| `payment_charged`     | PG confirmed; ready to send /confirm      |
+| `confirm_sent`        | /confirm sent; awaiting /on_confirm       |
+| `confirmed`           | /on_confirm received with state=Accepted  |
 | `fulfillment_pending` | Order accepted; awaiting first /on_status |
-| `in_delivery` | /on_status received: Packed or later |
-| `delivered` | /on_status received: Order-delivered |
-| `cancelled` | /on_cancel received from BPP |
+| `in_delivery`         | /on_status received: Packed or later      |
+| `delivered`           | /on_status received: Order-delivered      |
+| `cancelled`           | /on_cancel received from BPP              |
 
 ---
 
@@ -627,14 +649,14 @@ request was sent.
   "message": {
     "order": {
       "id": "O1-uuid",
-      "state": "Accepted",         // or any fulfillment state
+      "state": "Accepted", // or any fulfillment state
       "fulfillments": [
         {
           "id": "F1",
           "type": "Delivery",
           "state": {
             "descriptor": {
-              "code": "Packed",    // fulfillment state update
+              "code": "Packed", // fulfillment state update
               "name": "Packed"
             }
           },
@@ -683,35 +705,35 @@ receive unsolicited /on_status
 
 ### Order `state` values
 
-| Value | Where | Meaning |
-|---|---|---|
-| `"Created"` | `/confirm` (BAP sets) | Order committed by BAP with payment proof |
-| `"Accepted"` | `/on_confirm` (BPP sets) | BPP accepted; fulfillment begins |
-| `"Pending"` | `/on_confirm` / `/on_status` | Deferred acceptance; BAP should poll |
-| `"Cancelled"` | `/on_cancel` (BPP sets) | Order cancelled (buyer or BPP-initiated) |
+| Value         | Where                        | Meaning                                   |
+| ------------- | ---------------------------- | ----------------------------------------- |
+| `"Created"`   | `/confirm` (BAP sets)        | Order committed by BAP with payment proof |
+| `"Accepted"`  | `/on_confirm` (BPP sets)     | BPP accepted; fulfillment begins          |
+| `"Pending"`   | `/on_confirm` / `/on_status` | Deferred acceptance; BAP should poll      |
+| `"Cancelled"` | `/on_cancel` (BPP sets)      | Order cancelled (buyer or BPP-initiated)  |
 
 ### Fulfillment `state.descriptor.code` values
 
-| Value | Meaning |
-|---|---|
-| `"Pending"` | Order received; food being prepared |
-| `"Packed"` | Food ready; awaiting delivery agent |
-| `"Agent-assigned"` | Delivery agent assigned (optional state) |
-| `"Order-picked-up"` | Delivery agent collected the order |
-| `"Out-for-delivery"` | En route to buyer |
-| `"Order-delivered"` | Successfully delivered |
-| `"Cancelled"` | Fulfillment cancelled |
+| Value                | Meaning                                  |
+| -------------------- | ---------------------------------------- |
+| `"Pending"`          | Order received; food being prepared      |
+| `"Packed"`           | Food ready; awaiting delivery agent      |
+| `"Agent-assigned"`   | Delivery agent assigned (optional state) |
+| `"Order-picked-up"`  | Delivery agent collected the order       |
+| `"Out-for-delivery"` | En route to buyer                        |
+| `"Order-delivered"`  | Successfully delivered                   |
+| `"Cancelled"`        | Fulfillment cancelled                    |
 
 ### Payment `status` in /confirm (BAP-collected prepaid)
 
-| Value | When |
-|---|---|
+| Value    | When                                              |
+| -------- | ------------------------------------------------- |
 | `"PAID"` | Always — BAP has already collected payment via PG |
 
 ### Payment `collected_by` in /confirm
 
-| Value | When |
-|---|---|
+| Value   | When                                                  |
+| ------- | ----------------------------------------------------- |
 | `"BAP"` | Always — this project does not support BPP collection |
 
 ---
@@ -761,11 +783,11 @@ When BPP receives `/confirm`:
 
 ### BPP Error Codes on `/confirm` (SNP → BNP)
 
-| Code | Type | Meaning | BNP/BAP Action |
-|---|---|---|---|
-| `31002` | ORDER-VALIDATION-FAILURE | Order validation failed (items, qty, price, fulfillment, billing — any mismatch) | Do NOT retry; cancel with reason `999` |
-| `31001` | RETRYABLE | Internal error or gateway timeout — safe to retry | Retry `/confirm` with same `order.id` (idempotent) |
-| `30018` | ORDER-NOT-FOUND | `order.id` not found at SNP — already cancelled or expired | Cancel with reason `999`; do not retry |
+| Code    | Type                     | Meaning                                                                          | BNP/BAP Action                                     |
+| ------- | ------------------------ | -------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `31002` | ORDER-VALIDATION-FAILURE | Order validation failed (items, qty, price, fulfillment, billing — any mismatch) | Do NOT retry; cancel with reason `999`             |
+| `31001` | RETRYABLE                | Internal error or gateway timeout — safe to retry                                | Retry `/confirm` with same `order.id` (idempotent) |
+| `30018` | ORDER-NOT-FOUND          | `order.id` not found at SNP — already cancelled or expired                       | Cancel with reason `999`; do not retry             |
 
 ### BNP/BAP Escalation When `/confirm` NACKs or Times Out
 
@@ -798,9 +820,9 @@ When BPP receives `/confirm`:
 
 Used when BAP must cancel after `/confirm` failure:
 
-| Reason Code | Phase | When Used |
-|---|---|---|
-| `999` | Order Confirmation Failure | BNP receives NACK with 31002, or timeout after retry exhaustion |
+| Reason Code | Phase                      | When Used                                                       |
+| ----------- | -------------------------- | --------------------------------------------------------------- |
+| `999`       | Order Confirmation Failure | BNP receives NACK with 31002, or timeout after retry exhaustion |
 
 > See `init-on-init.md` §10 for the full cancellation reason code table.
 
@@ -856,11 +878,12 @@ SNP sends /on_confirm
 
 Used when SNP cancels due to receiving NACK on `/on_confirm` or exhausting its retry interval:
 
-| Reason Code | Phase | When Used |
-|---|---|---|
-| `998` | Order Confirmation Failure (BPP-initiated) | SNP received NACK (23002) from BNP on `/on_confirm`, or SNP exhausted retry interval |
+| Reason Code | Phase                                      | When Used                                                                            |
+| ----------- | ------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `998`       | Order Confirmation Failure (BPP-initiated) | SNP received NACK (23002) from BNP on `/on_confirm`, or SNP exhausted retry interval |
 
 When BAP receives `/on_cancel` with reason `998`:
+
 - Order was cancelled during confirmation phase
 - No fulfillment was ever started
 - BAP should process PG refund if payment was collected
@@ -896,18 +919,18 @@ BAP ── /confirm ──→ BPP
 
 ### Errors in /on_confirm (BPP → BAP)
 
-| Code | Type | Meaning | BAP Action |
-|---|---|---|---|
-| `23002` | ORDER-VALIDATION-FAILURE | BNP (BAP) returned NACK because `/on_confirm` validation failed at BNP side | SNP cancels with reason `998`; BAP processes refund |
-| `23001` | RETRYABLE | SNP internal error on `/on_confirm` — SNP retries | Wait; SNP will resend `/on_confirm` |
-| `31003` | ORDER-PROCESSING-IN-PROGRESS | Order passed in subsequent calls within SNP retry window | SNP responding with current state + this code; do not cancel |
-| `40001` | DOMAIN-ERROR | Order could not be accepted (BPP internal error) | Retry /confirm up to 3×; escalate to IGM if persistent |
-| `40002` | DOMAIN-ERROR | Item out of stock (post-init, rare) | Abort; refund via PG |
-| `30023` | DOMAIN-ERROR | Minimum order value not met | Inform buyer; abort |
-| `30018` | ORDER-NOT-FOUND | `order.id` not found — already cancelled or expired at BPP | Cancel with reason `999`; do not retry |
-| `31001` | RETRYABLE | SNP internal error on `/confirm` — safe to retry | Retry `/confirm` with same `order.id` |
-| `31002` | ORDER-VALIDATION-FAILURE | `/confirm` validation failed at BPP side | Do NOT retry; cancel with reason `999` |
-| `22502` | DOMAIN-ERROR | Invalid cancellation reason | N/A for confirm |
+| Code    | Type                         | Meaning                                                                     | BAP Action                                                   |
+| ------- | ---------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `23002` | ORDER-VALIDATION-FAILURE     | BNP (BAP) returned NACK because `/on_confirm` validation failed at BNP side | SNP cancels with reason `998`; BAP processes refund          |
+| `23001` | RETRYABLE                    | SNP internal error on `/on_confirm` — SNP retries                           | Wait; SNP will resend `/on_confirm`                          |
+| `31003` | ORDER-PROCESSING-IN-PROGRESS | Order passed in subsequent calls within SNP retry window                    | SNP responding with current state + this code; do not cancel |
+| `40001` | DOMAIN-ERROR                 | Order could not be accepted (BPP internal error)                            | Retry /confirm up to 3×; escalate to IGM if persistent       |
+| `40002` | DOMAIN-ERROR                 | Item out of stock (post-init, rare)                                         | Abort; refund via PG                                         |
+| `30023` | DOMAIN-ERROR                 | Minimum order value not met                                                 | Inform buyer; abort                                          |
+| `30018` | ORDER-NOT-FOUND              | `order.id` not found — already cancelled or expired at BPP                  | Cancel with reason `999`; do not retry                       |
+| `31001` | RETRYABLE                    | SNP internal error on `/confirm` — safe to retry                            | Retry `/confirm` with same `order.id`                        |
+| `31002` | ORDER-VALIDATION-FAILURE     | `/confirm` validation failed at BPP side                                    | Do NOT retry; cancel with reason `999`                       |
+| `22502` | DOMAIN-ERROR                 | Invalid cancellation reason                                                 | N/A for confirm                                              |
 
 ### NACK response shape
 
@@ -1012,14 +1035,23 @@ receive /on_confirm webhook
       "state": "Created",
       "provider": { "id": "P1", "locations": [{ "id": "L1" }] },
       "items": [
-        { "id": "I1", "fulfillment_id": "F1", "location_id": "L1", "quantity": { "count": 1 } }
+        {
+          "id": "I1",
+          "fulfillment_id": "F1",
+          "location_id": "L1",
+          "quantity": { "count": 1 }
+        }
       ],
       "billing": {
         "name": "Buyer Name",
         "address": {
-          "name": "My Apartment", "building": "Tower A",
-          "locality": "Koramangala", "city": "Bengaluru",
-          "state": "Karnataka", "country": "IND", "area_code": "560034"
+          "name": "My Apartment",
+          "building": "Tower A",
+          "locality": "Koramangala",
+          "city": "Bengaluru",
+          "state": "Karnataka",
+          "country": "IND",
+          "area_code": "560034"
         },
         "email": "buyer@example.com",
         "phone": "9886098860",
@@ -1039,9 +1071,13 @@ receive /on_confirm webhook
             "location": {
               "gps": "12.453544,77.928379",
               "address": {
-                "name": "My Apartment", "building": "Tower A",
-                "locality": "Koramangala", "city": "Bengaluru",
-                "state": "Karnataka", "country": "IND", "area_code": "560034"
+                "name": "My Apartment",
+                "building": "Tower A",
+                "locality": "Koramangala",
+                "city": "Bengaluru",
+                "state": "Karnataka",
+                "country": "IND",
+                "area_code": "560034"
               }
             },
             "contact": { "phone": "9886098860", "email": "buyer@example.com" }
@@ -1058,7 +1094,10 @@ receive /on_confirm webhook
             "@ondc/org/title_type": "item",
             "price": { "currency": "INR", "value": "170.00" },
             "item": {
-              "quantity": { "available": { "count": "99" }, "maximum": { "count": "99" } },
+              "quantity": {
+                "available": { "count": "99" },
+                "maximum": { "count": "99" }
+              },
               "price": { "currency": "INR", "value": "170.00" }
             }
           },

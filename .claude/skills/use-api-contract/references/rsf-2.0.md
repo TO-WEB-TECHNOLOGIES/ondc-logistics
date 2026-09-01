@@ -9,14 +9,14 @@ The **Settlement Agency** (NBBL) acts as the central counterparty for all settle
 
 ## RSF API Summary
 
-| Action | Direction | Purpose |
-|--------|-----------|---------|
-| `/settle` | NP → SA | Submit settlement instruction (collector or receiver side) |
-| `/on_settle` | SA → NP | Settlement result (success with ref number OR error code) |
-| `/report` | NP → SA | Query status of a prior `/settle` call |
-| `/on_report` | SA → NP | Status response for a settlement |
-| `/recon` | NP ↔ NP | Bi-directional orderbook reconciliation |
-| `/on_recon` | NP ↔ NP | Reconciliation response (accord or dispute) |
+| Action       | Direction | Purpose                                                    |
+| ------------ | --------- | ---------------------------------------------------------- |
+| `/settle`    | NP → SA   | Submit settlement instruction (collector or receiver side) |
+| `/on_settle` | SA → NP   | Settlement result (success with ref number OR error code)  |
+| `/report`    | NP → SA   | Query status of a prior `/settle` call                     |
+| `/on_report` | SA → NP   | Status response for a settlement                           |
+| `/recon`     | NP ↔ NP   | Bi-directional orderbook reconciliation                    |
+| `/on_recon`  | NP ↔ NP   | Reconciliation response (accord or dispute)                |
 
 **6 APIs total** for RSF 2.0 compliance. Recon/On_Recon tested with ONDC mock server or another NP.
 
@@ -26,22 +26,23 @@ The **Settlement Agency** (NBBL) acts as the central counterparty for all settle
 
 ### Settlement Types
 
-| Type | Description | Use |
-|------|-------------|-----|
-| `NP-NP` | Inter-NP order settlement | Normal buyer↔seller settlement |
-| `MISC` | Move funds from NOCA to operative account | Pre-funded money extraction, seller self-settlement |
-| `NIL` | No settlement required for the cycle | Notify SA of zero activity |
+| Type    | Description                               | Use                                                 |
+| ------- | ----------------------------------------- | --------------------------------------------------- |
+| `NP-NP` | Inter-NP order settlement                 | Normal buyer↔seller settlement                      |
+| `MISC`  | Move funds from NOCA to operative account | Pre-funded money extraction, seller self-settlement |
+| `NIL`   | No settlement required for the cycle      | Notify SA of zero activity                          |
 
 ### Amount Fields (per order in `/settle`)
 
-| Field | Who sets it | Meaning |
-|-------|-------------|---------|
-| `inter_participant_amount` | Both collector & receiver | Amount to move from collector to receiver |
-| `collector_amount` | Collector side only | Amount collector keeps for themselves (finder fee) |
-| `self.amount` | Both | Amount moved to the API caller's own operative account |
-| `provider.amount` | Receiver side (optional) | Amount transferred to the provider's account |
+| Field                      | Who sets it               | Meaning                                                |
+| -------------------------- | ------------------------- | ------------------------------------------------------ |
+| `inter_participant_amount` | Both collector & receiver | Amount to move from collector to receiver              |
+| `collector_amount`         | Collector side only       | Amount collector keeps for themselves (finder fee)     |
+| `self.amount`              | Both                      | Amount moved to the API caller's own operative account |
+| `provider.amount`          | Receiver side (optional)  | Amount transferred to the provider's account           |
 
 **Self amount depends on caller:**
+
 - Buyer app calling `/settle` → `self` = buyer app's finder fee portion
 - Seller app calling `/settle` → `self` = seller app's margin or inter-NP amount
 
@@ -138,12 +139,12 @@ Example: `settlement_basis: "delivery"` + `settlement_window: "P3D"` = settle on
 
 ### Settlement Amount Rules (Retail Prepaid: ₹1050 order, buyer commission ₹50, seller commission ₹200)
 
-| Field | Collector (/settle) | Receiver (/settle) |
-|-------|---------------------|---------------------|
-| inter_participant | 1000 | 1000 |
-| collector | 50 | 50 |
-| self | 50 | 200 |
-| provider | — | 800 |
+| Field             | Collector (/settle) | Receiver (/settle) |
+| ----------------- | ------------------- | ------------------ |
+| inter_participant | 1000                | 1000               |
+| collector         | 50                  | 50                 |
+| self              | 50                  | 200                |
+| provider          | —                   | 800                |
 
 - `inter_participant` and `collector` amounts must **match exactly** (₹ to ₹) between collector and receiver sides
 - Collector amount = buyer app's finder fee commission
@@ -208,10 +209,10 @@ Example: `settlement_basis: "delivery"` + `settlement_window: "P3D"` = settle on
 
 ### Order-Level Settlement States
 
-| State | Meaning |
-|-------|---------|
-| `SETTLED` | Order settled successfully, `settlement_ref_no` provided |
-| `NOT_SETTLED` | Settlement not executed, check `error.code` |
+| State             | Meaning                                                        |
+| ----------------- | -------------------------------------------------------------- |
+| `SETTLED`         | Order settled successfully, `settlement_ref_no` provided       |
+| `NOT_SETTLED`     | Settlement not executed, check `error.code`                    |
 | `TO_BE_INITIATED` | Recon called before settlement was initiated — not yet settled |
 
 ### ACK/NACK Rule on `/on_settle`
@@ -328,14 +329,14 @@ Used when NP doesn't receive `/on_settle` and wants to check settlement status.
 
 ### Field Meanings in `/recon`
 
-| Field | Meaning |
-|-------|---------|
-| `order.amount` | Total order value |
-| `settlements[].amount` | Amount to be settled from collector to receiver |
-| `settlements[].commission` | Buyer app's commission on the transaction |
-| `settlements[].withholding_amount` | Not applicable currently |
-| `settlements[].tds` | TDS deduction (calculate on order.amount or settlements.amount per legal guidance) |
-| `settlements[].tcs` | TCS deduction (calculate on order.amount or settlements.amount per legal guidance) |
+| Field                              | Meaning                                                                            |
+| ---------------------------------- | ---------------------------------------------------------------------------------- |
+| `order.amount`                     | Total order value                                                                  |
+| `settlements[].amount`             | Amount to be settled from collector to receiver                                    |
+| `settlements[].commission`         | Buyer app's commission on the transaction                                          |
+| `settlements[].withholding_amount` | Not applicable currently                                                           |
+| `settlements[].tds`                | TDS deduction (calculate on order.amount or settlements.amount per legal guidance) |
+| `settlements[].tcs`                | TCS deduction (calculate on order.amount or settlements.amount per legal guidance) |
 
 **`settlement_id` in recon**: Independent identifier for the NP's own settlement instruction tracking — not the same as payment/fund settlement ID.
 
@@ -436,6 +437,7 @@ Used when NP doesn't receive `/on_settle` and wants to check settlement status.
 **Initiator**: Receiver NP
 
 **Step 1 — Receiver sends `/recon`** with:
+
 - `order.amount` (total order value)
 - `settlements[].amount` (amount receiver believes is correct)
 - `settlements[].commission` (buyer app's commission)
@@ -443,10 +445,10 @@ Used when NP doesn't receive `/on_settle` and wants to check settlement status.
 
 **Step 2 — Collector responds with `/on_recon`**:
 
-| Scenario | `recon_accord` | `settlement_date` | `diff_value` | Next step |
-|----------|-----------------|-------------------|--------------|-----------|
-| Collector agrees | `true` | Provided (YYYY-MM-DD) | Not present | Both NPs send `/settle` on that date |
-| Collector disagrees | `false` | Not present | Provided (positive) | Receiver re-initiates `/recon` with updated values |
+| Scenario            | `recon_accord` | `settlement_date`     | `diff_value`        | Next step                                          |
+| ------------------- | -------------- | --------------------- | ------------------- | -------------------------------------------------- |
+| Collector agrees    | `true`         | Provided (YYYY-MM-DD) | Not present         | Both NPs send `/settle` on that date               |
+| Collector disagrees | `false`        | Not present           | Provided (positive) | Receiver re-initiates `/recon` with updated values |
 
 **Case 2.1** (collector agrees with updated values): Receiver sends new `/recon` → settlement proceeds.
 
@@ -490,59 +492,59 @@ When a buyer requests refund/return **after settlement** has already occurred:
 
 ### NACK Errors (any RSF API)
 
-| Code | Description |
-|------|-------------|
-| `70000` | Invalid Signature |
+| Code    | Description                                    |
+| ------- | ---------------------------------------------- |
+| `70000` | Invalid Signature                              |
 | `70001` | Missing mandatory 'Authorization' header param |
-| `70002` | Invalid schema |
+| `70002` | Invalid schema                                 |
 
 ### `/on_settle` Error Codes (order-level)
 
-| Code | Description |
-|------|-------------|
-| `70003` | Invalid bap id |
-| `70004` | Inactive bap id |
-| `70005` | Invalid bpp id |
-| `70006` | Duplicate transaction id |
-| `70007` | Duplicate message id |
-| `70008` | Duplicate settlement id |
+| Code    | Description                                       |
+| ------- | ------------------------------------------------- |
+| `70003` | Invalid bap id                                    |
+| `70004` | Inactive bap id                                   |
+| `70005` | Invalid bpp id                                    |
+| `70006` | Duplicate transaction id                          |
+| `70007` | Duplicate message id                              |
+| `70008` | Duplicate settlement id                           |
 | `70009` | Bap id doesn't match collector or receiver app id |
-| `70010` | Collector account not available |
-| `70011` | Invalid collector app id |
-| `70012` | Inactive collector app id |
-| `70013` | Invalid receiver app id |
-| `70014` | Inactive receiver app id |
-| `70015` | Receiver app id same as Collector app id |
-| `70016` | Duplicate order id |
-| `70017` | Collector account inoperable |
-| `70018` | Receiver account inoperable |
-| `70019` | No response from bank for collector account |
-| `70020` | No response from bank for receiver account |
-| `70021` | No file shared by counterparty |
-| `70022` | Order id not shared by counterparty |
-| `70023` | Collector value mismatch |
-| `70024` | Interparticipant value mismatch |
-| `70025` | Insufficient balance in collector account |
-| `70026` | Collector NDC breach |
-| `70027` | Collector bank NDC breach |
+| `70010` | Collector account not available                   |
+| `70011` | Invalid collector app id                          |
+| `70012` | Inactive collector app id                         |
+| `70013` | Invalid receiver app id                           |
+| `70014` | Inactive receiver app id                          |
+| `70015` | Receiver app id same as Collector app id          |
+| `70016` | Duplicate order id                                |
+| `70017` | Collector account inoperable                      |
+| `70018` | Receiver account inoperable                       |
+| `70019` | No response from bank for collector account       |
+| `70020` | No response from bank for receiver account        |
+| `70021` | No file shared by counterparty                    |
+| `70022` | Order id not shared by counterparty               |
+| `70023` | Collector value mismatch                          |
+| `70024` | Interparticipant value mismatch                   |
+| `70025` | Insufficient balance in collector account         |
+| `70026` | Collector NDC breach                              |
+| `70027` | Collector bank NDC breach                         |
 
 ### `/on_report` Error Codes
 
-| Code | Description |
-|------|-------------|
+| Code    | Description            |
+| ------- | ---------------------- |
 | `70028` | Invalid transaction_id |
-| `70029` | Invalid message_id |
+| `70029` | Invalid message_id     |
 
 ### `/on_recon` Error Codes
 
-| Code | Description |
-|------|-------------|
+| Code    | Description      |
+| ------- | ---------------- |
 | `70030` | Invalid Order id |
 
 ### HTTP Error
 
-| Code | Description |
-|------|-------------|
+| Code  | Description           |
+| ----- | --------------------- |
 | `503` | Internal server error |
 
 ---
@@ -550,6 +552,7 @@ When a buyer requests refund/return **after settlement** has already occurred:
 ## NOCA / Bank Account Requirements
 
 **NOCA (Non-Operative Current Account)** — mandatory for:
+
 1. NPs collecting money (collector role) who need to settle to counterparties
 2. MSN Seller NPs opting in for direct provider settlement
 
@@ -561,11 +564,11 @@ When a buyer requests refund/return **after settlement** has already occurred:
 
 ## Testing
 
-| API Pair | Testing Environment |
-|----------|--------------------|
-| `/settle` + `/on_settle` | NBBL pre-prod environment |
-| `/report` + `/on_report` | NBBL pre-prod environment |
-| `/recon` + `/on_recon` | ONDC mock server or another NP |
+| API Pair                 | Testing Environment            |
+| ------------------------ | ------------------------------ |
+| `/settle` + `/on_settle` | NBBL pre-prod environment      |
+| `/report` + `/on_report` | NBBL pre-prod environment      |
+| `/recon` + `/on_recon`   | ONDC mock server or another NP |
 
 **Mock server**: https://rsf-mock-service.ondc.org/mock_ui (staging)
 
@@ -581,57 +584,61 @@ When a buyer requests refund/return **after settlement** has already occurred:
 
 Order value: ₹1050, Buyer app commission: ₹50, Seller app commission: ₹200
 
-| Field | Collector (/settle) | Receiver (/settle) |
-|-------|---------------------|---------------------|
-| inter_participant | 1000 | 1000 |
-| collector | 50 | 50 |
-| self | 50 | 200 |
-| provider | — | 800 |
+| Field             | Collector (/settle) | Receiver (/settle) |
+| ----------------- | ------------------- | ------------------ |
+| inter_participant | 1000                | 1000               |
+| collector         | 50                  | 50                 |
+| self              | 50                  | 200                |
+| provider          | —                   | 800                |
 
 ### Example 2: Retail PoD — Buyer App is Receiver
 
 Order value: ₹1050, Buyer app commission: ₹50, Seller app commission: ₹200
 
-| Field | Collector (/settle) | Receiver (/settle) |
-|-------|---------------------|---------------------|
-| inter_participant | 50 | 50 |
-| collector | 1000 | 1000 |
-| self | 200 | 50 |
-| provider | 800 | — |
+| Field             | Collector (/settle) | Receiver (/settle) |
+| ----------------- | ------------------- | ------------------ |
+| inter_participant | 50                  | 50                 |
+| collector         | 1000                | 1000               |
+| self              | 200                 | 50                 |
+| provider          | 800                 | —                  |
 
 ### Example 3: Logistics — Retail Seller App is Collector, LSP is Receiver
 
 Order value: ₹105, Buyer app commission: ₹5
 
-| Field | Collector (/settle) | Receiver (/settle) |
-|-------|---------------------|---------------------|
-| inter_participant | 100 | 100 |
-| collector | 5 | 5 |
-| self | 5 | 100 |
-| provider | — | — |
+| Field             | Collector (/settle) | Receiver (/settle) |
+| ----------------- | ------------------- | ------------------ |
+| inter_participant | 100                 | 100                |
+| collector         | 5                   | 5                  |
+| self              | 5                   | 100                |
+| provider          | —                   | —                  |
 
 ### Example 4: Metro — Buyer App is Collector, Metro Authority is Receiver
 
 Order value: ₹100, Buyer app commission: ₹0, Seller app commission: ₹0
 
-| Field | Collector (/settle) | Receiver (/settle) |
-|-------|---------------------|---------------------|
-| inter_participant | 100 | 100 |
-| collector | 0 | 0 |
-| self | 0 | 0 |
-| provider | — | 100 |
+| Field             | Collector (/settle) | Receiver (/settle) |
+| ----------------- | ------------------- | ------------------ |
+| inter_participant | 100                 | 100                |
+| collector         | 0                   | 0                  |
+| self              | 0                   | 0                  |
+| provider          | —                   | 100                |
 
 ---
 
 ## `/settle` Settlement Type Details
 
 ### NP-NP (Inter-NP Order Settlement)
+
 All inter-NP order-level settlements must use `settlement_type: "NP-NP"`.
 
 ### MISC (Miscellaneous Settlement)
+
 Used for:
+
 - Moving pre-funded money from NP's NOCA to operative account
 - MSN Seller NP transferring money from NOCA to seller's operative account
 
 ### NIL (Null Settlement)
+
 Sent when no settlements are required for the settlement cycle. Notifies SA of zero activity.

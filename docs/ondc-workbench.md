@@ -1,24 +1,23 @@
 Your frontend should own the SSE connection as part of the search request lifecycle.
 
-  Current flow:
+Current flow:
 
-  Frontend
-    ├─ POST /logistics/search
-    ├─ receive searchId
-    ├─ open GET /logistics/search/:searchId/events
-    ├─ receive search_result events
-    └─ user selects provider/item/fulfillment
-         └─ POST /logistics/init
+Frontend
+├─ POST /logistics/search
+├─ receive searchId
+├─ open GET /logistics/search/:searchId/events
+├─ receive search_result events
+└─ user selects provider/item/fulfillment
+└─ POST /logistics/init
 
-  Example React hook:
+Example React hook:
 
+import { useEffect, useState } from "react";
 
-  import { useEffect, useState } from "react";
-
-  export function useSearchEvents(searchId?: string) {
-    const [providers, setProviders] = useState<any[]>([]);
-    const [status, setStatus] = useState("connecting");
-    const [error, setError] = useState<string | null>(null);
+export function useSearchEvents(searchId?: string) {
+const [providers, setProviders] = useState<any[]>([]);
+const [status, setStatus] = useState("connecting");
+const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
       if (!searchId) return;
@@ -58,98 +57,100 @@ Your frontend should own the SSE connection as part of the search request lifecy
     }, [searchId]);
 
     return { providers, status, error };
-  }
 
-  Use it in the search page:
+}
 
-  const [searchId, setSearchId] = useState<string>();
+Use it in the search page:
 
-  const startSearch = async () => {
-    const response = await fetch(
-      "http://localhost:3000/logistics/search",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(searchRequest),
-      }
-    );
+const [searchId, setSearchId] = useState<string>();
+
+const startSearch = async () => {
+const response = await fetch(
+"http://localhost:3000/logistics/search",
+{
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify(searchRequest),
+}
+);
 
     const result = await response.json();
     setSearchId(result.searchId);
-  };
 
-  const { providers, status, error } = useSearchEvents(searchId);
+};
 
-  The important issue with the current backend is that SSE events are stored only in memory and are not replayed. If /on_search
-  arrives before the frontend opens SSE, the frontend can miss that result. Also, restarting the API loses all active
-  subscribers.
+const { providers, status, error } = useSearchEvents(searchId);
 
-  For development, opening SSE immediately after receiving searchId is acceptable. For production, add one of these:
+The important issue with the current backend is that SSE events are stored only in memory and are not replayed. If /on_search
+arrives before the frontend opens SSE, the frontend can miss that result. Also, restarting the API loses all active
+subscribers.
 
-  - Store recent events by searchId and replay them when SSE connects.
-  - Add a GET /logistics/search/:searchId/results endpoint and let the frontend fetch existing results after opening SSE.
-  - Add a search status/results endpoint and use SSE only for live updates.
+For development, opening SSE immediately after receiving searchId is acceptable. For production, add one of these:
 
-  The second option is the simplest safety net.
+- Store recent events by searchId and replay them when SSE connects.
+- Add a GET /logistics/search/:searchId/results endpoint and let the frontend fetch existing results after opening SSE.
+- Add a search status/results endpoint and use SSE only for live updates.
 
-  Your /on_init callback currently acknowledges the BPP, but it does not notify the frontend. Add either:
+The second option is the simplest safety net.
 
-  GET /logistics/init/:transactionId/events
+Your /on_init callback currently acknowledges the BPP, but it does not notify the frontend. Add either:
 
-  or:
+GET /logistics/init/:transactionId/events
 
-  GET /logistics/init/:transactionId
+or:
 
-  Then the frontend can display:
+GET /logistics/init/:transactionId
 
-  INIT_SENT
-  INIT_RECEIVED
-  INIT_COMPLETED
-  INIT_FAILED
+Then the frontend can display:
 
-  For ONDC Workbench:
+INIT_SENT
+INIT_RECEIVED
+INIT_COMPLETED
+INIT_FAILED
 
-  1. Deploy the API to a public HTTPS URL. Workbench cannot call localhost.
-  2. Ensure these callback routes are publicly reachable:
+For ONDC Workbench:
 
-  POST https://your-domain.com/on_search
-  POST https://your-domain.com/on_init
+1. Deploy the API to a public HTTPS URL. Workbench cannot call localhost.
+2. Ensure these callback routes are publicly reachable:
 
-  3. Configure your environment values correctly:
+POST https://your-domain.com/on_search
+POST https://your-domain.com/on_init
 
-  BAP_ID=your-public-bap-domain
-  BAP_URI=https://your-domain.com
-  ONDC_DOMAIN=nic2004:60232
-  ONDC_CORE_VERSION=1.2.0
+3. Configure your environment values correctly:
 
-  4. Open the official Workbench portal:
+BAP_ID=your-public-bap-domain
+BAP_URI=https://your-domain.com
+ONDC_DOMAIN=nic2004:60232
+ONDC_CORE_VERSION=1.2.0
 
-  https://workbench.ondc.tech/home (https://workbench.ondc.tech/home)
+4. Open the official Workbench portal:
 
-  5. Use schema validation first. Validate each protocol payload independently:
+https://workbench.ondc.tech/home (https://workbench.ondc.tech/home)
 
-  /search
-  /on_search
-  /init
-  /on_init
+5. Use schema validation first. Validate each protocol payload independently:
 
-  6. Then use scenario testing. Select the logistics domain and the relevant search/init scenario. Workbench will simulate the
-     protocol interaction and send callbacks to your public BAP endpoints.
+/search
+/on_search
+/init
+/on_init
 
-  7. Inspect your API logs and database records:
+6. Then use scenario testing. Select the logistics domain and the relevant search/init scenario. Workbench will simulate the
+   protocol interaction and send callbacks to your public BAP endpoints.
 
-  /search sent
-  /on_search received
-  provider catalog stored
-  /init sent
-  /on_init received
-  init transaction completed
+7. Inspect your API logs and database records:
 
-  Workbench validates ONDC protocol behavior; it does not replace your frontend SSE connection. Your frontend SSE is an internal
-  UI channel, while Workbench tests the external BAP/BPP protocol interaction. ONDC describes Workbench as supporting schema
-  validation and scenario testing for end-to-end protocol flows. (ONDC Workbench overview
-  (https://github.com/ONDC-Official/automation-framework), official ONDC developer resources (https://github.com/ONDC-Official))
+/search sent
+/on_search received
+provider catalog stored
+/init sent
+/on_init received
+init transaction completed
 
-  Also remember that ONDC requests and callbacks must be digitally signed and verified; Workbench will expose signing or payload
-  issues that local frontend testing will not. (ONDC signing documentation
-  (https://github.com/ONDC-Official/developer-docs/blob/main/registry/signing-verification.md))
+Workbench validates ONDC protocol behavior; it does not replace your frontend SSE connection. Your frontend SSE is an internal
+UI channel, while Workbench tests the external BAP/BPP protocol interaction. ONDC describes Workbench as supporting schema
+validation and scenario testing for end-to-end protocol flows. (ONDC Workbench overview
+(https://github.com/ONDC-Official/automation-framework), official ONDC developer resources (https://github.com/ONDC-Official))
+
+Also remember that ONDC requests and callbacks must be digitally signed and verified; Workbench will expose signing or payload
+issues that local frontend testing will not. (ONDC signing documentation
+(https://github.com/ONDC-Official/developer-docs/blob/main/registry/signing-verification.md))

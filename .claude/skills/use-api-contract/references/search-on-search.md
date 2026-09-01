@@ -37,6 +37,7 @@ and incremental refresh in the Buyer NP.
 ## 1. /search — Payload Variants
 
 All /search requests share this required structure:
+
 - `context.domain = "ONDC:RET11"` for F&B
 - `context.action = "search"`
 - `context.ttl = "PT30S"` (standard; adjust as needed)
@@ -83,7 +84,10 @@ The standard catalog refresh. For F&B, do NOT include `category.id` — search b
           "code": "bap_terms",
           "list": [
             { "code": "static_terms", "value": "" },
-            { "code": "static_terms_new", "value": "https://github.com/ONDC-Official/NP-Static-Terms/buyerNP_BNP/1.0/tc.pdf" },
+            {
+              "code": "static_terms_new",
+              "value": "https://github.com/ONDC-Official/NP-Static-Terms/buyerNP_BNP/1.0/tc.pdf"
+            },
             { "code": "effective_date", "value": "2023-10-01T00:00:00.000Z" }
           ]
         }
@@ -381,18 +385,18 @@ Re-fetch when expired or when incremental refresh indicates a change.
   "time": {
     "label": "enable",
     "timestamp": "2023-06-03T07:30:30.000Z",
-    "days": "1,2,3,4,5,6,7",    // comma-separated day numbers 1=Mon, 7=Sun
+    "days": "1,2,3,4,5,6,7", // comma-separated day numbers 1=Mon, 7=Sun
     "schedule": {
-      "holidays": ["2023-08-15"],  // ISO date strings
-      "frequency": "PT4H",         // [optional] how often it opens
-      "times": ["1100", "1900"]    // [optional] opening times in HHMM
+      "holidays": ["2023-08-15"], // ISO date strings
+      "frequency": "PT4H", // [optional] how often it opens
+      "times": ["1100", "1900"] // [optional] opening times in HHMM
     },
     "range": {
-      "start": "1100",   // HHMM format
+      "start": "1100", // HHMM format
       "end": "2100"
     }
   },
-  "gps": "12.967555,77.749666",    // lat,lng
+  "gps": "12.967555,77.749666", // lat,lng
   "address": {
     "locality": "Jayanagar",
     "street": "Jayanagar 4th Block",
@@ -400,7 +404,8 @@ Re-fetch when expired or when incremental refresh indicates a change.
     "area_code": "560076",
     "state": "KA"
   },
-  "circle": {                      // [optional] legacy serviceability radius
+  "circle": {
+    // [optional] legacy serviceability radius
     "gps": "12.967555,77.749666",
     "radius": { "unit": "km", "value": "3" }
   }
@@ -422,7 +427,7 @@ Categories serve two distinct purposes in F&B, distinguished by their `type` tag
 ```json
 {
   "id": "5",
-  "parent_category_id": "",       // [optional] for nested menus
+  "parent_category_id": "", // [optional] for nested menus
   "descriptor": {
     "name": "Pizza",
     "short_desc": "...",
@@ -456,10 +461,10 @@ Categories serve two distinct purposes in F&B, distinguished by their `type` tag
     {
       "code": "config",
       "list": [
-        { "code": "min", "value": "1" },       // 0 = optional, ≥1 = mandatory
-        { "code": "max", "value": "1" },       // max selections allowed
+        { "code": "min", "value": "1" }, // 0 = optional, ≥1 = mandatory
+        { "code": "max", "value": "1" }, // max selections allowed
         { "code": "input", "value": "select" }, // "select" or "text" (for special instructions)
-        { "code": "seq", "value": "1" }        // display sequence order
+        { "code": "seq", "value": "1" } // display sequence order
       ]
     }
   ]
@@ -493,14 +498,15 @@ customizations map to it, the BAP must disable the associated base item entirely
     "unitized": {
       "measure": { "unit": "unit", "value": "1" }
     },
-    "available": { "count": "99" },   // "99" means in stock; "0" means out of stock
+    "available": { "count": "99" }, // "99" means in stock; "0" means out of stock
     "maximum": { "count": "99" }
   },
   "price": {
     "currency": "INR",
-    "value": "269.0",               // base price (before customizations)
+    "value": "269.0", // base price (before customizations)
     "maximum_value": "269.0",
-    "tags": [                        // [optional] price range for customizable items
+    "tags": [
+      // [optional] price range for customizable items
       {
         "code": "range",
         "list": [
@@ -517,12 +523,12 @@ customizations map to it, the BAP must disable the associated base item entirely
       }
     ]
   },
-  "category_id": "F&B",              // fixed "F&B" for all F&B items
-  "category_ids": ["5:1"],           // [optional] custom_menu assignment: "menu_id:rank"
+  "category_id": "F&B", // fixed "F&B" for all F&B items
+  "category_ids": ["5:1"], // [optional] custom_menu assignment: "menu_id:rank"
   "fulfillment_id": "F1",
   "location_id": "L1",
-  "related": false,                  // false for base items, true for customizations
-  "recommended": true,               // [optional]
+  "related": false, // false for base items, true for customizations
+  "recommended": true, // [optional]
   "@ondc/org/returnable": false,
   "@ondc/org/cancellable": false,
   "@ondc/org/return_window": "PT1H",
@@ -533,12 +539,12 @@ customizations map to it, the BAP must disable the associated base item entirely
   "tags": [
     { "code": "type", "list": [{ "code": "type", "value": "item" }] },
     {
-      "code": "custom_group",         // which CGs apply to this base item
+      "code": "custom_group", // which CGs apply to this base item
       "list": [{ "code": "id", "value": "CG1" }]
       // add more entries for additional CGs: CG2, CG3...
     },
     {
-      "code": "config",               // [optional] override CG config at item level
+      "code": "config", // [optional] override CG config at item level
       "list": [
         { "code": "id", "value": "CG1" },
         { "code": "min", "value": "1" },
@@ -547,7 +553,7 @@ customizations map to it, the BAP must disable the associated base item entirely
       ]
     },
     {
-      "code": "timing",               // [optional] item availability window
+      "code": "timing", // [optional] item availability window
       "list": [
         { "code": "day_from", "value": "1" },
         { "code": "day_to", "value": "5" },
@@ -557,7 +563,7 @@ customizations map to it, the BAP must disable the associated base item entirely
     },
     {
       "code": "veg_nonveg",
-      "list": [{ "code": "veg", "value": "yes" }]   // "yes" or "no"
+      "list": [{ "code": "veg", "value": "yes" }] // "yes" or "no"
     }
   ]
 }
@@ -577,7 +583,7 @@ customizations map to it, the BAP must disable the associated base item entirely
 
 ```json
 {
-  "id": "C1",                        // customization item ID
+  "id": "C1", // customization item ID
   "descriptor": { "name": "New Hand Tossed" },
   "quantity": {
     "available": { "count": "99" },
@@ -585,22 +591,22 @@ customizations map to it, the BAP must disable the associated base item entirely
   },
   "price": {
     "currency": "INR",
-    "value": "0.0",                  // incremental price (0 if included in base)
+    "value": "0.0", // incremental price (0 if included in base)
     "maximum_value": "0.0"
   },
   "category_id": "F&B",
-  "related": true,                   // ALWAYS true for customizations
+  "related": true, // ALWAYS true for customizations
   "tags": [
     { "code": "type", "list": [{ "code": "type", "value": "customization" }] },
     {
-      "code": "parent",              // which CG this option belongs to
+      "code": "parent", // which CG this option belongs to
       "list": [
         { "code": "id", "value": "CG1" },
-        { "code": "default", "value": "yes" }  // "yes" = pre-selected for buyer
+        { "code": "default", "value": "yes" } // "yes" = pre-selected for buyer
       ]
     },
     {
-      "code": "child",               // [optional] which CG becomes available after selecting this
+      "code": "child", // [optional] which CG becomes available after selecting this
       "list": [{ "code": "id", "value": "CG2" }]
     },
     {
@@ -634,9 +640,9 @@ Provider `tags[]` array holds critical operational data:
 {
   "code": "catalog_link",
   "list": [
-    { "code": "type", "value": "inline" },          // "inline" or "link"
+    { "code": "type", "value": "inline" }, // "inline" or "link"
     { "code": "type_value", "value": "https://s3.amazon.com/..." },
-    { "code": "type_validity", "value": "PT24H" },  // link validity duration
+    { "code": "type_validity", "value": "PT24H" }, // link validity duration
     { "code": "last_update", "value": "2023-05-21T00:00:00.000Z" }
   ]
 }
@@ -650,10 +656,10 @@ Provider `tags[]` array holds critical operational data:
 {
   "code": "timing",
   "list": [
-    { "code": "type", "value": "Order" },   // "Order", "Delivery", "Self-Pickup"
+    { "code": "type", "value": "Order" }, // "Order", "Delivery", "Self-Pickup"
     { "code": "location", "value": "L1" },
-    { "code": "day_from", "value": "1" },   // 1=Mon
-    { "code": "day_to", "value": "5" },     // 5=Fri
+    { "code": "day_from", "value": "1" }, // 1=Mon
+    { "code": "day_to", "value": "5" }, // 5=Fri
     { "code": "time_from", "value": "0900" },
     { "code": "time_to", "value": "1100" }
   ]
@@ -685,9 +691,9 @@ Multiple `timing` tags for different windows (e.g. lunch + dinner slots separate
   "list": [
     { "code": "location", "value": "L1" },
     { "code": "category", "value": "F&B" },
-    { "code": "type", "value": "10" },    // serviceability type code
-    { "code": "val", "value": "3" },      // radius value
-    { "code": "unit", "value": "km" }     // "km" or "pincode"
+    { "code": "type", "value": "10" }, // serviceability type code
+    { "code": "val", "value": "3" }, // radius value
+    { "code": "unit", "value": "km" } // "km" or "pincode"
   ]
 }
 ```
@@ -703,11 +709,11 @@ Provider-level offers, applied to items:
 {
   "id": "DISCP60",
   "descriptor": {
-    "code": "discount",            // offer type: "discount", "buyXgetY", "freebie"
+    "code": "discount", // offer type: "discount", "buyXgetY", "freebie"
     "images": ["https://..."]
   },
   "location_ids": ["L1"],
-  "item_ids": ["I1"],             // [optional] restrict to specific items
+  "item_ids": ["I1"], // [optional] restrict to specific items
   "time": {
     "label": "valid",
     "range": {
@@ -719,22 +725,22 @@ Provider-level offers, applied to items:
     {
       "code": "qualifier",
       "list": [
-        { "code": "min_value", "value": "159" }    // min cart value
+        { "code": "min_value", "value": "159" } // min cart value
       ]
     },
     {
       "code": "benefit",
       "list": [
-        { "code": "value_type", "value": "percent" },  // "percent" or "amount"
-        { "code": "value", "value": "-60.00" },         // negative = discount
-        { "code": "value_cap", "value": "-120.00" }     // [optional] cap
+        { "code": "value_type", "value": "percent" }, // "percent" or "amount"
+        { "code": "value", "value": "-60.00" }, // negative = discount
+        { "code": "value_cap", "value": "-120.00" } // [optional] cap
       ]
     },
     {
       "code": "meta",
       "list": [
-        { "code": "additive", "value": "no" },   // "yes" = combinable with others
-        { "code": "auto", "value": "yes" }       // "yes" = auto-applied, "no" = opt-in
+        { "code": "additive", "value": "no" }, // "yes" = combinable with others
+        { "code": "auto", "value": "yes" } // "yes" = auto-applied, "no" = opt-in
       ]
     }
   ]
@@ -744,11 +750,13 @@ Provider-level offers, applied to items:
 **Offer `descriptor.code` enum**: `"discount"`, `"buyXgetY"`, `"freebie"`
 
 **`qualifier` fields**:
+
 - `min_value` — minimum cart value for offer to apply
 - `item_count` — minimum item count in cart
 - `item_id` — specific item that must be in cart
 
 **`benefit` fields**:
+
 - `value_type` enum: `"percent"`, `"amount"`
 - `value` — negative for discounts (e.g. `"-60.00"`)
 - `value_cap` — maximum discount value (e.g. `"-120.00"`)
@@ -762,36 +770,36 @@ Provider-level offers, applied to items:
 
 ## 3. Enum Reference
 
-| Field path | Valid values |
-|---|---|
-| `context.domain` | `"ONDC:RET11"` (F&B) |
-| `context.action` (on_search) | `"on_search"` |
-| `bpp_terms.np_type` | `"ISN"`, `"MSN"` |
-| `bpp_terms.accept_bap_terms` | `"Y"`, `"N"` |
-| `bpp_terms.collect_payment` | `"Y"`, `"N"` |
-| `bpp/fulfillments[].type` | `"Delivery"`, `"Self-Pickup"`, `"Delivery and Self-Pickup"`, `"Buyer-Delivery"` |
-| `provider.time.label` | `"enable"`, `"disable"` |
-| `location.time.label` | `"enable"`, `"disable"` |
-| `item.time.label` | `"enable"`, `"disable"` |
-| `category.tags[type].value` | `"custom_menu"`, `"custom_group"`, `"variant_group"` |
-| `category.tags[config.input]` | `"select"`, `"text"` |
-| `item.category_id` | `"F&B"` (all items in F&B) |
-| `item.tags[type].value` | `"item"`, `"customization"` |
-| `item.tags[veg_nonveg.veg]` | `"yes"`, `"no"` |
-| `item.tags[parent.default]` | `"yes"`, `"no"` |
-| `item.quantity.available.count` | `"99"` (in stock), `"0"` (out of stock), or string number |
-| `provider.tags[timing.type]` | `"Order"`, `"Delivery"`, `"Self-Pickup"` |
-| `offer.descriptor.code` | `"discount"`, `"buyXgetY"`, `"freebie"` |
-| `offer.tags[benefit.value_type]` | `"percent"`, `"amount"` |
-| `offer.tags[meta.auto]` | `"yes"`, `"no"` |
-| `offer.tags[meta.additive]` | `"yes"`, `"no"` |
-| `catalog_link.type` | `"inline"`, `"link"` |
-| `catalog_inc.mode` | `"start"`, `"stop"` |
-| `catalog_full.payload_type` | `"inline"`, `"link"` |
-| `price.currency` | `"INR"` |
-| `location.circle.radius.unit` | `"km"` |
-| `days` format | `"1,2,3,4,5,6,7"` (1=Mon, 7=Sun) |
-| Time format (HHMM) | 4-digit string e.g. `"0900"`, `"2130"` |
+| Field path                       | Valid values                                                                    |
+| -------------------------------- | ------------------------------------------------------------------------------- |
+| `context.domain`                 | `"ONDC:RET11"` (F&B)                                                            |
+| `context.action` (on_search)     | `"on_search"`                                                                   |
+| `bpp_terms.np_type`              | `"ISN"`, `"MSN"`                                                                |
+| `bpp_terms.accept_bap_terms`     | `"Y"`, `"N"`                                                                    |
+| `bpp_terms.collect_payment`      | `"Y"`, `"N"`                                                                    |
+| `bpp/fulfillments[].type`        | `"Delivery"`, `"Self-Pickup"`, `"Delivery and Self-Pickup"`, `"Buyer-Delivery"` |
+| `provider.time.label`            | `"enable"`, `"disable"`                                                         |
+| `location.time.label`            | `"enable"`, `"disable"`                                                         |
+| `item.time.label`                | `"enable"`, `"disable"`                                                         |
+| `category.tags[type].value`      | `"custom_menu"`, `"custom_group"`, `"variant_group"`                            |
+| `category.tags[config.input]`    | `"select"`, `"text"`                                                            |
+| `item.category_id`               | `"F&B"` (all items in F&B)                                                      |
+| `item.tags[type].value`          | `"item"`, `"customization"`                                                     |
+| `item.tags[veg_nonveg.veg]`      | `"yes"`, `"no"`                                                                 |
+| `item.tags[parent.default]`      | `"yes"`, `"no"`                                                                 |
+| `item.quantity.available.count`  | `"99"` (in stock), `"0"` (out of stock), or string number                       |
+| `provider.tags[timing.type]`     | `"Order"`, `"Delivery"`, `"Self-Pickup"`                                        |
+| `offer.descriptor.code`          | `"discount"`, `"buyXgetY"`, `"freebie"`                                         |
+| `offer.tags[benefit.value_type]` | `"percent"`, `"amount"`                                                         |
+| `offer.tags[meta.auto]`          | `"yes"`, `"no"`                                                                 |
+| `offer.tags[meta.additive]`      | `"yes"`, `"no"`                                                                 |
+| `catalog_link.type`              | `"inline"`, `"link"`                                                            |
+| `catalog_inc.mode`               | `"start"`, `"stop"`                                                             |
+| `catalog_full.payload_type`      | `"inline"`, `"link"`                                                            |
+| `price.currency`                 | `"INR"`                                                                         |
+| `location.circle.radius.unit`    | `"km"`                                                                          |
+| `days` format                    | `"1,2,3,4,5,6,7"` (1=Mon, 7=Sun)                                                |
+| Time format (HHMM)               | 4-digit string e.g. `"0900"`, `"2130"`                                          |
 
 ---
 
@@ -919,13 +927,13 @@ ACK or NACK:
 
 **NACK** — catalog couldn't be ingested. Use these specific error codes:
 
-| Situation | Error code | Error message format |
-|---|---|---|
-| Provider not found in cache | `20003` | `"[{provider_id:P1},{provider_id:P2}]"` |
-| Provider location not found | `20004` | `"[{provider_id:P1,location_id:L1}]"` |
-| Item not found | `20005` | `"[{provider_id:P1,item_id:I1}]"` |
-| Multiple error types combined | `"20004,20005"` | Combined stringified JSON |
-| All other errors | `20000` | Descriptive text string |
+| Situation                     | Error code      | Error message format                    |
+| ----------------------------- | --------------- | --------------------------------------- |
+| Provider not found in cache   | `20003`         | `"[{provider_id:P1},{provider_id:P2}]"` |
+| Provider location not found   | `20004`         | `"[{provider_id:P1,location_id:L1}]"`   |
+| Item not found                | `20005`         | `"[{provider_id:P1,item_id:I1}]"`       |
+| Multiple error types combined | `"20004,20005"` | Combined stringified JSON               |
+| All other errors              | `20000`         | Descriptive text string                 |
 
 NACK response shape:
 

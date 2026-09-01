@@ -5,4 +5,3 @@ export const router = express.Router();
 
 router.use("/logistics", searchRouter);
 router.use(onSearchRouter);
-

@@ -66,14 +66,14 @@ HDFC SmartGateway
 
 **HDFC sends these webhook event types:**
 
-| HDFC Event | Meaning | Required |
-|---|---|---|
-| `ORDER_CREATED` | Order created in HDFC system | Yes |
-| `ORDER_SUCCEEDED` | Payment successful (CHARGED) | Yes |
-| `ORDER_FAILED` | Payment failed | Yes |
-| `ORDER_REFUNDED` | Refund successful | If refunds integrated |
-| `ORDER_REFUND_FAILED` | Refund failed | If refunds integrated |
-| `ORDER_AUTHORIZED` | Pre-Auth complete (for EMI/capture flow) | For pre-auth |
+| HDFC Event            | Meaning                                  | Required              |
+| --------------------- | ---------------------------------------- | --------------------- |
+| `ORDER_CREATED`       | Order created in HDFC system             | Yes                   |
+| `ORDER_SUCCEEDED`     | Payment successful (CHARGED)             | Yes                   |
+| `ORDER_FAILED`        | Payment failed                           | Yes                   |
+| `ORDER_REFUNDED`      | Refund successful                        | If refunds integrated |
+| `ORDER_REFUND_FAILED` | Refund failed                            | If refunds integrated |
+| `ORDER_AUTHORIZED`    | Pre-Auth complete (for EMI/capture flow) | For pre-auth          |
 
 ---
 
@@ -93,6 +93,7 @@ The SSE stream (opened at `/select` time) receives two new event types after `/o
   "currency": "INR"
 }
 ```
+
 Frontend action: redirect buyer to `session_url`.
 
 ### `payment_error` — pushed when session creation fails
@@ -110,17 +111,18 @@ Emitted when `createHdfcSession` cannot create a Juspay session (misconfiguratio
 ```
 
 Frontend action:
+
 - `retryable: true` → show error message with retry button; retry via `POST /payment/retry/:id`
 - `retryable: false` → show error; do not offer retry (configuration issue — fix backend)
 
 **Error codes:**
 
-| `error_code` | Cause | `retryable` |
-|---|---|---|
-| `JUSPAY_API_ERROR` | Missing `HDFC_PAYMENT_PAGE_CLIENT_ID` or other config/API failure | `false` |
-| `JUSPAY_NULL_RESPONSE` | Juspay returned empty response | `true` |
-| `MISSING_PAYMENT_URL` | Juspay response missing `payment_page_url` | `true` |
-| `SESSION_CREATE_ERROR` | Unexpected error (no `/on_init` record, etc.) | `true` |
+| `error_code`           | Cause                                                             | `retryable` |
+| ---------------------- | ----------------------------------------------------------------- | ----------- |
+| `JUSPAY_API_ERROR`     | Missing `HDFC_PAYMENT_PAGE_CLIENT_ID` or other config/API failure | `false`     |
+| `JUSPAY_NULL_RESPONSE` | Juspay returned empty response                                    | `true`      |
+| `MISSING_PAYMENT_URL`  | Juspay response missing `payment_page_url`                        | `true`      |
+| `SESSION_CREATE_ERROR` | Unexpected error (no `/on_init` record, etc.)                     | `true`      |
 
 ### `payment_status` — pushed when HDFC notifies (webhook or redirect)
 
@@ -136,6 +138,7 @@ Frontend action:
 ```
 
 Frontend action:
+
 - `CHARGED` → proceed to `/confirm` with `pg_txn_id`
 - `AUTHORIZED` → show pending UI; wait for `CHARGED` (pre-auth awaiting capture)
 - Any other status → show error to buyer, offer retry via `POST /payment/retry/:id`
@@ -144,16 +147,16 @@ Frontend action:
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `src/db/schema/pg-transaction.schema.ts` | `pgTransactionTable` — PG session lifecycle, FK → `ondc_on_init` |
-| `src/db/schema/enums.ts` | `pgPaymentStatusEnum` — PENDING, CHARGED, AUTHENTICATION_FAILED, AUTHORIZED, etc. |
-| `src/utils/payment/hdfc-client.ts` | Juspay SDK singleton with JWE auth, sandbox/prod URLs |
-| `src/utils/order-logger.ts` | Per-order file logging — `orderLogger` (to `logs/{hdfcOrderId}.log`) and `saveOrderJsonFile` (to `logs/{hdfcOrderId}/order.json`) |
-| `src/services/payment.service.ts` | `createHdfcSession`, `handlePaymentCallback`, `checkPaymentStatusFromHdfc`, `retryPaymentSession`, `handleHdfcWebhook`, `getPaymentFullStatus` |
-| `src/controllers/payment.controller.ts` | `paymentCallback`, `getPaymentStatus`, `retryPayment`, `hdfcWebhook`, `getPaymentFullStatusController` |
-| `src/routes/payment.routes.ts` | Route registration |
-| `src/services/init.service.ts` | Calls `createHdfcSession` after `pushSSEvent("on_init", ...)` |
+| File                                     | Purpose                                                                                                                                        |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/db/schema/pg-transaction.schema.ts` | `pgTransactionTable` — PG session lifecycle, FK → `ondc_on_init`                                                                               |
+| `src/db/schema/enums.ts`                 | `pgPaymentStatusEnum` — PENDING, CHARGED, AUTHENTICATION_FAILED, AUTHORIZED, etc.                                                              |
+| `src/utils/payment/hdfc-client.ts`       | Juspay SDK singleton with JWE auth, sandbox/prod URLs                                                                                          |
+| `src/utils/order-logger.ts`              | Per-order file logging — `orderLogger` (to `logs/{hdfcOrderId}.log`) and `saveOrderJsonFile` (to `logs/{hdfcOrderId}/order.json`)              |
+| `src/services/payment.service.ts`        | `createHdfcSession`, `handlePaymentCallback`, `checkPaymentStatusFromHdfc`, `retryPaymentSession`, `handleHdfcWebhook`, `getPaymentFullStatus` |
+| `src/controllers/payment.controller.ts`  | `paymentCallback`, `getPaymentStatus`, `retryPayment`, `hdfcWebhook`, `getPaymentFullStatusController`                                         |
+| `src/routes/payment.routes.ts`           | Route registration                                                                                                                             |
+| `src/services/init.service.ts`           | Calls `createHdfcSession` after `pushSSEvent("on_init", ...)`                                                                                  |
 
 ---
 
@@ -267,7 +270,10 @@ If you return non-200, HDFC will **retry the webhook** until it gets 200.
 ### Mapping HDFC Events to PG Status
 
 ```typescript
-function mapHdfcEventToStatus(eventName: string, orderStatus: string): PgPaymentStatus {
+function mapHdfcEventToStatus(
+  eventName: string,
+  orderStatus: string,
+): PgPaymentStatus {
   switch (eventName) {
     case "ORDER_CREATED":
       return "PENDING";
@@ -316,35 +322,41 @@ Written by `orderLogger` (`src/utils/order-logger.ts`).
 ## Key Design Decisions
 
 ### Auto-created via SSE, not by frontend
+
 `createHdfcSession` is called automatically from `processOnInit` (fire-and-forget). The frontend does NOT call any payment endpoint to start the flow — it just listens on the SSE stream.
 
 ### `transaction_id` as Juspay `order_id`
+
 No mapping table needed — ONDC `transaction_id` IS the Juspay `order_id`. HDFC status check and `/confirm` payment both use this same ID.
 
 ### ONDC amount is always authoritative
+
 `pg_transaction.amount` is set from `on_init.quote.price.value` (read from PG). HDFC is told this exact amount. If HDFC ever returns a different amount, reject and alert.
 
 ### Errors are stored and pushed via SSE
+
 `createHdfcSession` is fire-and-forget. Errors go to `pg_transaction.lastError` AND a `payment_error` SSE event is pushed immediately to notify the frontend. A failed session does NOT crash the webhook or affect the `on_init` SSE push. Buyer can retry via `POST /payment/retry/:id`.
 
 ### Callback is idempotent
+
 `pg_transaction` is upserted by `transactionId`. Duplicate HDFC callbacks are handled safely — the record is updated but no duplicate rows.
 
 ### `payment.callbackPayloadJson` for audit
+
 The full raw callback from HDFC is stored as JSONB, regardless of format (form-encoded or JSON). This is critical for reconciliation disputes.
 
 ---
 
 ## Endpoints
 
-| Method | Path | Auth | Purpose |
-|--------|------|------|---------|
-| GET | `/payment/callback` | None | HDFC redirects buyer here after payment (browser) |
-| POST | `/payment/callback` | None | HDFC may POST form-encoded |
-| POST | `/payment/hdfc-webhook` | Basic Auth | HDFC server-to-server webhook (ORDER_CREATED, ORDER_SUCCEEDED, etc.) |
-| GET | `/payment/status/:transactionId` | JWT | Manual status poll by ONDC transaction ID (fallback) |
-| GET | `/payment/full-status/:identifier` | JWT | Dual-inquiry status — accepts transactionId, hdfcOrderId, or juspayOrderId |
-| POST | `/payment/retry/:transactionId` | JWT | Retry failed payment (idempotent) |
+| Method | Path                               | Auth       | Purpose                                                                    |
+| ------ | ---------------------------------- | ---------- | -------------------------------------------------------------------------- |
+| GET    | `/payment/callback`                | None       | HDFC redirects buyer here after payment (browser)                          |
+| POST   | `/payment/callback`                | None       | HDFC may POST form-encoded                                                 |
+| POST   | `/payment/hdfc-webhook`            | Basic Auth | HDFC server-to-server webhook (ORDER_CREATED, ORDER_SUCCEEDED, etc.)       |
+| GET    | `/payment/status/:transactionId`   | JWT        | Manual status poll by ONDC transaction ID (fallback)                       |
+| GET    | `/payment/full-status/:identifier` | JWT        | Dual-inquiry status — accepts transactionId, hdfcOrderId, or juspayOrderId |
+| POST   | `/payment/retry/:transactionId`    | JWT        | Retry failed payment (idempotent)                                          |
 
 ---
 
@@ -353,6 +365,7 @@ The full raw callback from HDFC is stored as JSONB, regardless of format (form-e
 When the `payment_status` SSE event shows `CHARGED`, the frontend proceeds to `/confirm`.
 
 The `/confirm` payment object uses:
+
 - `paid_amount`: from `on_init.quote.price.value` (stored in `pg_transaction.amount`)
 - `transaction_id`: `pg_txn_id` from the `payment_status` event (HDFC's reference)
 
@@ -373,15 +386,15 @@ The `/confirm` payment object uses:
 
 ## Error Handling
 
-| Scenario | Behavior |
-|----------|----------|
-| `createHdfcSession` fails | Error stored in `pg_transaction.lastError`. `payment_error` SSE pushed immediately. Frontend shows error with retry option (if retryable). Buyer can retry via `POST /payment/retry`. |
-| HDFC webhook received with `ORDER_FAILED` | Push failure via SSE. Buyer retries via `POST /payment/retry/:id` (same `transaction_id`, idempotent). |
-| HDFC webhook received with `ORDER_SUCCEEDED` | Push success via SSE. Frontend proceeds to `/confirm`. Auto-confirm triggered. |
-| HDFC callback not received in ~5min | No automatic action. Buyer contacts support. (A cron to expire stale sessions can be added.) |
-| `payment_status` = `AUTHENTICATION_FAILED` or `AUTHORIZATION_FAILED` | Push failure via SSE. Buyer retries via `POST /payment/retry/:id` (same `transaction_id`, idempotent). |
-| `payment_status` = `CHARGED` | Push success via SSE. Frontend proceeds to `/confirm`. |
-| `/confirm` NACK after `CHARGED` | Do NOT refund. Retry `/confirm` up to 3 times. If still failing, escalate via IGM. |
+| Scenario                                                             | Behavior                                                                                                                                                                              |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createHdfcSession` fails                                            | Error stored in `pg_transaction.lastError`. `payment_error` SSE pushed immediately. Frontend shows error with retry option (if retryable). Buyer can retry via `POST /payment/retry`. |
+| HDFC webhook received with `ORDER_FAILED`                            | Push failure via SSE. Buyer retries via `POST /payment/retry/:id` (same `transaction_id`, idempotent).                                                                                |
+| HDFC webhook received with `ORDER_SUCCEEDED`                         | Push success via SSE. Frontend proceeds to `/confirm`. Auto-confirm triggered.                                                                                                        |
+| HDFC callback not received in ~5min                                  | No automatic action. Buyer contacts support. (A cron to expire stale sessions can be added.)                                                                                          |
+| `payment_status` = `AUTHENTICATION_FAILED` or `AUTHORIZATION_FAILED` | Push failure via SSE. Buyer retries via `POST /payment/retry/:id` (same `transaction_id`, idempotent).                                                                                |
+| `payment_status` = `CHARGED`                                         | Push success via SSE. Frontend proceeds to `/confirm`.                                                                                                                                |
+| `/confirm` NACK after `CHARGED`                                      | Do NOT refund. Retry `/confirm` up to 3 times. If still failing, escalate via IGM.                                                                                                    |
 
 ---
 
@@ -410,16 +423,16 @@ HDFC_WEBHOOK_PASSWORD=your_webhook_password
 
 Read these files for the authoritative implementation:
 
-| File | Key function |
-|------|-------------|
-| `src/services/payment.service.ts` | `createHdfcSession()` — reads quote, calls Juspay, upserts PG, pushes SSE |
-| `src/services/payment.service.ts` | `handlePaymentCallback()` — verifies with HDFC, updates PG, pushes SSE |
-| `src/services/payment.service.ts` | `handleHdfcWebhook()` — processes ORDER_CREATED, ORDER_SUCCEEDED, ORDER_FAILED, ORDER_REFUNDED events from HDFC server webhooks |
-| `src/services/payment.service.ts` | `getPaymentFullStatus()` — dual-inquiry status: DB first, then HDFC backend for pending states |
-| `src/services/init.service.ts` | `processOnInit()` — calls `createHdfcSession` after `pushSSEvent("on_init")` |
-| `src/controllers/payment.controller.ts` | `paymentCallback()` — handles HDFC redirect/POST |
-| `src/controllers/payment.controller.ts` | `hdfcWebhook()` — handles HDFC server-to-server webhook POST |
-| `src/controllers/payment.controller.ts` | `getPaymentFullStatusController()` — `GET /payment/full-status/:identifier` |
-| `src/db/schema/pg-transaction.schema.ts` | Full schema with FK → `ondc_on_init` |
-| `src/utils/sse-manager.ts` | `pushSSEvent()` — pushes SSE events to frontend |
-| `src/utils/order-logger.ts` | `orderLogger`, `saveOrderJsonFile` — per-order file logging |
+| File                                     | Key function                                                                                                                    |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `src/services/payment.service.ts`        | `createHdfcSession()` — reads quote, calls Juspay, upserts PG, pushes SSE                                                       |
+| `src/services/payment.service.ts`        | `handlePaymentCallback()` — verifies with HDFC, updates PG, pushes SSE                                                          |
+| `src/services/payment.service.ts`        | `handleHdfcWebhook()` — processes ORDER_CREATED, ORDER_SUCCEEDED, ORDER_FAILED, ORDER_REFUNDED events from HDFC server webhooks |
+| `src/services/payment.service.ts`        | `getPaymentFullStatus()` — dual-inquiry status: DB first, then HDFC backend for pending states                                  |
+| `src/services/init.service.ts`           | `processOnInit()` — calls `createHdfcSession` after `pushSSEvent("on_init")`                                                    |
+| `src/controllers/payment.controller.ts`  | `paymentCallback()` — handles HDFC redirect/POST                                                                                |
+| `src/controllers/payment.controller.ts`  | `hdfcWebhook()` — handles HDFC server-to-server webhook POST                                                                    |
+| `src/controllers/payment.controller.ts`  | `getPaymentFullStatusController()` — `GET /payment/full-status/:identifier`                                                     |
+| `src/db/schema/pg-transaction.schema.ts` | Full schema with FK → `ondc_on_init`                                                                                            |
+| `src/utils/sse-manager.ts`               | `pushSSEvent()` — pushes SSE events to frontend                                                                                 |
+| `src/utils/order-logger.ts`              | `orderLogger`, `saveOrderJsonFile` — per-order file logging                                                                     |

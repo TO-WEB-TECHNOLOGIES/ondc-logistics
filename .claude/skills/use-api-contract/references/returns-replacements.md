@@ -22,12 +22,12 @@
 
 ## 1. Overview — Returns vs Replacements vs Cancellation
 
-| Flow | Trigger | API Used | Reverse Logistics |
-|------|---------|----------|-------------------|
-| **Cancellation** | Buyer/seller wants to abort order (pre-delivery) | `/cancel` | No (logistics already in forward path) |
-| **Return** | Buyer wants to send items back after delivery | `/update` (item) | Yes — Reverse QC fulfillment |
-| **Replacement** | Buyer wants different items instead | `/update` (item) | Yes — 2 fulfillments (forward + reverse) |
-| **LSP cancellation** | LSP can't deliver → RTO initiated | LSP → Seller/Buyer App | Yes — RTO fulfillment |
+| Flow                 | Trigger                                          | API Used               | Reverse Logistics                        |
+| -------------------- | ------------------------------------------------ | ---------------------- | ---------------------------------------- |
+| **Cancellation**     | Buyer/seller wants to abort order (pre-delivery) | `/cancel`              | No (logistics already in forward path)   |
+| **Return**           | Buyer wants to send items back after delivery    | `/update` (item)       | Yes — Reverse QC fulfillment             |
+| **Replacement**      | Buyer wants different items instead              | `/update` (item)       | Yes — 2 fulfillments (forward + reverse) |
+| **LSP cancellation** | LSP can't deliver → RTO initiated                | LSP → Seller/Buyer App | Yes — RTO fulfillment                    |
 
 **F&B non-returnable**: Food items are typically non-returnable (`@ondc/org/returnable = "false"`). This reference covers catalog items marked as returnable.
 
@@ -69,6 +69,7 @@ Settlement trail updated in Order.payment
 ```
 
 **Prerequisites for return:**
+
 - Item must be marked as `@ondc/org/returnable = "true"` in catalog
 - Buyer must be within the return window (defined by seller policy)
 - Buyer must upload images identifying deficiencies/damages
@@ -115,12 +116,12 @@ Settlement trail updated in Order.payment
 
 **Additional fields for return (beyond basic /update):**
 
-| Field | Description |
-|-------|-------------|
-| `update_target` | `"item"` — signals item-level update (return/replacement) |
-| `order.items[].id` | Item ID being returned |
-| `order.items[].fulfillment_id` | Fulfillment ID containing the item |
-| `order.items[].quantity.count` | Quantity being returned |
+| Field                          | Description                                               |
+| ------------------------------ | --------------------------------------------------------- |
+| `update_target`                | `"item"` — signals item-level update (return/replacement) |
+| `order.items[].id`             | Item ID being returned                                    |
+| `order.items[].fulfillment_id` | Fulfillment ID containing the item                        |
+| `order.items[].quantity.count` | Quantity being returned                                   |
 
 > **Note**: The ONDC contract for RET11 supports `/update` but this BAP implementation focuses on cancellation flows first. Returns/replacements are lower priority for F&B (food is non-returnable). The schema above shows the target structure.
 
@@ -225,6 +226,7 @@ Reverse fulfillment: LSP picks up from buyer → delivers to seller
 ```
 
 **Reverse QC notes:**
+
 - `Fulfillment.type = "Reverse QC"` — mandatory for the return leg
 - `start.location` = buyer address (pickup location)
 - `end.location` = seller address (drop location)
@@ -237,10 +239,10 @@ Reverse fulfillment: LSP picks up from buyer → delivers to seller
 
 If the Seller App does not accept the return/replacement request, it returns a policy error:
 
-| Code | Type | Meaning | BAP Action |
-|------|------|---------|------------|
-| `50001` | POLICY ERROR | Cancellation not accepted by seller | Log; alert buyer; seller has declined cancel |
-| `50002` | POLICY ERROR | Replacement not accepted by seller | Log; alert buyer; seller has declined replacement |
+| Code    | Type         | Meaning                             | BAP Action                                        |
+| ------- | ------------ | ----------------------------------- | ------------------------------------------------- |
+| `50001` | POLICY ERROR | Cancellation not accepted by seller | Log; alert buyer; seller has declined cancel      |
+| `50002` | POLICY ERROR | Replacement not accepted by seller  | Log; alert buyer; seller has declined replacement |
 
 **NACK response shape:**
 
@@ -290,13 +292,13 @@ Retail order cancelled → buyer refund issued (amount at buyer app discretion)
 
 **LSP cancellation reason codes** (from LSP to Seller/Buyer App):
 
-| Code | Reason |
-|------|--------|
-| `016` | Force majeure (accident/strike/law & order) |
-| `018` | Order not serviceable (logistics issue) |
-| `011` | Retail buyer not found / can't be contacted |
+| Code  | Reason                                             |
+| ----- | -------------------------------------------------- |
+| `016` | Force majeure (accident/strike/law & order)        |
+| `018` | Order not serviceable (logistics issue)            |
+| `011` | Retail buyer not found / can't be contacted        |
 | `013` | Retail buyer can't/doesn't want to accept delivery |
-| `014` | Delivery address incorrect or not found |
+| `014` | Delivery address incorrect or not found            |
 
 ---
 
@@ -323,16 +325,17 @@ After `/on_cancel` (cancellation) or `/on_status` with `Return_Picked` (return),
 
 **Settlement field definitions:**
 
-| Field | Value |
-|-------|-------|
-| `settlement_counterparty` | `"buyer"` — refund goes to buyer |
-| `settlement_phase` | `"refund"` — phase is refund |
-| `settlement_status` | `"forward-settled"` — settled in forward direction |
-| `settlement_type` | `"neft"` / `"rtgs"` / `"upi"` — payment method |
-| `settlement_amount` | Amount being refunded |
-| `settlement_date` | ISO8601 timestamp of settlement |
+| Field                     | Value                                              |
+| ------------------------- | -------------------------------------------------- |
+| `settlement_counterparty` | `"buyer"` — refund goes to buyer                   |
+| `settlement_phase`        | `"refund"` — phase is refund                       |
+| `settlement_status`       | `"forward-settled"` — settled in forward direction |
+| `settlement_type`         | `"neft"` / `"rtgs"` / `"upi"` — payment method     |
+| `settlement_amount`       | Amount being refunded                              |
+| `settlement_date`         | ISO8601 timestamp of settlement                    |
 
 **Refund amount rules:**
+
 - **Pre-shipment cancellation**: full item amount minus logistics costs (buyer app discretion)
 - **Post-shipment cancellation**: full item amount (logistics already incurred)
 - **Returns**: item price minus reverse logistics cost (buyer app discretion)

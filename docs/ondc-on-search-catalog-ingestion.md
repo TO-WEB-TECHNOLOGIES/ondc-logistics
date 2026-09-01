@@ -792,16 +792,13 @@ The frontend can consume it using the browser's `EventSource` API:
 
 ```js
 const eventSource = new EventSource(
-  `/api/logistics/search/events?searchId=${searchId}`
+  `/api/logistics/search/events?searchId=${searchId}`,
 );
 
 eventSource.addEventListener("search_result", (event) => {
   const result = JSON.parse(event.data);
 
-  setResults((previous) => [
-    ...previous,
-    result,
-  ]);
+  setResults((previous) => [...previous, result]);
 });
 
 eventSource.addEventListener("search_completed", (event) => {
@@ -1026,7 +1023,7 @@ class OnSearchService {
     callbackRepository,
     catalogIngestionService,
     lifecycleManager,
-    ssePublisher
+    ssePublisher,
   ) {}
 }
 ```
