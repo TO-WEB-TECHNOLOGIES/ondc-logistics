@@ -26,7 +26,7 @@ const protocol = {
   city: process.env.ONDC_CITY ?? "std:080",
   coreVersion: process.env.ONDC_CORE_VERSION ?? "1.2.0",
   bapId: process.env.BAP_ID ?? process.env.SUBSCRIBER_ID ?? "",
-  bapUri: process.env.BAP_URI ?? process.env.BFF ?? "",
+  bapUri: process.env.BAP_URI ?? "",
   ttl: process.env.ONDC_TTL ?? "PT30S",
 };
 
@@ -45,8 +45,10 @@ const confirmService = new ConfirmService({
   transport,
   repository: new DrizzleConfirmRepository(),
 });
+
 export const searchRouter = express.Router();
 export const onSearchRouter = express.Router();
+
 searchRouter.post("/search", createSearchController(searchService));
 searchRouter.post("/init", createInitController(initService));
 searchRouter.post("/confirm", createConfirmController(confirmService));

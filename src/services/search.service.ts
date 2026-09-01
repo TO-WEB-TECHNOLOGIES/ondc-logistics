@@ -9,6 +9,7 @@ import type {
 } from "../types/search/internal.js";
 import type { OndcTransport } from "../utils/ondc-transport.js";
 import type { SearchRepository } from "../repositories/search.repository.js";
+
 export interface SearchServiceDependencies {
   transport: OndcTransport;
   repository: SearchRepository;
@@ -17,14 +18,19 @@ export interface SearchServiceDependencies {
     "transactionId" | "messageId" | "timestamp"
   >;
 }
+
 export class SearchService {
+
   constructor(private readonly dependencies: SearchServiceDependencies) {}
+  
   async createSearch(request: SearchRequest): Promise<SearchResponse> {
     const payload = this.createOndcRequest(request);
-    console.log("[search.service] identifiers", {
-      transactionId: payload.context.transaction_id,
-      messageId: payload.context.message_id,
-    });
+    // console.log("[search.service] identifiers", {
+    //   transactionId: payload.context.transaction_id,
+    //   messageId: payload.context.message_id,
+    // });
+    console.log(request);
+    console.log(payload);
     const persisted = await this.dependencies.repository.createSearch({
       request,
       payload,
@@ -54,8 +60,10 @@ export class SearchService {
       status: "SEARCH_SENT",
     };
   }
+
   createOndcRequest(request: SearchRequest) {
     const source = request.protocol;
+
     return mapSearchRequestToOndc(request, {
       ...this.dependencies.protocol,
       domain: source?.domain ?? this.dependencies.protocol.domain,
@@ -70,5 +78,6 @@ export class SearchService {
       messageId: source?.messageId ?? randomUUID(),
       timestamp: source?.timestamp ?? new Date().toISOString(),
     });
+    
   }
 }

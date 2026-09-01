@@ -1,6 +1,7 @@
 ﻿import type { Request, Response } from "express";
 import type { SearchService } from "../services/search.service.js";
 import {
+  parseMinimalSearchRequest,
   parseSearchRequest,
   SearchValidationError,
 } from "../utils/search-validation.js";
@@ -12,7 +13,7 @@ export const createSearchController =
     console.log("[search.controller] incoming /search request");
     try {
       const result = await searchService.createSearch(
-        parseSearchRequest(request.body),
+        parseMinimalSearchRequest(request.body),
       );
       console.log("[search.controller] /search accepted", {
         searchId: result.searchId,

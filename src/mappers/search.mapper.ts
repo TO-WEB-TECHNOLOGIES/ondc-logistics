@@ -13,6 +13,7 @@ export interface SearchProtocolOptions {
   ttl?: string;
 }
 const decimalString = (value: string | number) => String(value);
+
 const mapAddress = (
   address: SearchRequest["start"]["address"],
 ): OndcAddress => ({

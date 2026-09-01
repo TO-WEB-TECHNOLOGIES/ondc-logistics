@@ -18,6 +18,7 @@ export class SearchValidationError extends Error {
     this.name = "SearchValidationError";
   }
 }
+
 const isRecord = (value: unknown): value is Record<string, any> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const requiredString = (value: unknown, field: string): string => {
@@ -309,3 +310,284 @@ export const parseOnSearchResponse = (value: unknown): OndcOnSearchResponse => {
     );
   return value as OndcOnSearchResponse;
 };
+
+// request-side validation
+export const parseMinimalSearchRequest = (
+  value: unknown,
+): SearchRequest => {
+  if (!isRecord(value)) {
+    throw new SearchValidationError("request body must be an object");
+  }
+
+  // ------------------------------------------------------------
+  // START LOCATION
+  // ------------------------------------------------------------
+
+  const start = isRecord(value.start)
+    ? value.start
+    : (() => {
+        throw new SearchValidationError("start must be an object");
+      })();
+
+  // ------------------------------------------------------------
+  // END LOCATION
+  // ------------------------------------------------------------
+
+  const end = isRecord(value.end)
+    ? value.end
+    : (() => {
+        throw new SearchValidationError("end must be an object");
+      })();
+
+  // ------------------------------------------------------------
+  // SCHEDULE
+  // ------------------------------------------------------------
+
+  const schedule = isRecord(value.schedule)
+    ? value.schedule
+    : (() => {
+        throw new SearchValidationError("schedule must be an object");
+      })();
+
+  // ------------------------------------------------------------
+  // PAYLOAD
+  // ------------------------------------------------------------
+
+  const payload = isRecord(value.payload)
+    ? value.payload
+    : (() => {
+        throw new SearchValidationError("payload must be an object");
+      })();
+
+  // ------------------------------------------------------------
+  // PAYLOAD.WEIGHT
+  // ------------------------------------------------------------
+
+  const weight = isRecord(payload.weight)
+    ? payload.weight
+    : (() => {
+        throw new SearchValidationError(
+          "payload.weight must be an object",
+        );
+      })();
+
+  // ------------------------------------------------------------
+  // PAYLOAD.DIMENSIONS
+  // ------------------------------------------------------------
+
+  const dimensions = isRecord(payload.dimensions)
+    ? payload.dimensions
+    : (() => {
+        throw new SearchValidationError(
+          "payload.dimensions must be an object",
+        );
+      })();
+
+  const length = isRecord(dimensions.length)
+    ? dimensions.length
+    : (() => {
+        throw new SearchValidationError(
+          "payload.dimensions.length must be an object",
+        );
+      })();
+
+  const breadth = isRecord(dimensions.breadth)
+    ? dimensions.breadth
+    : (() => {
+        throw new SearchValidationError(
+          "payload.dimensions.breadth must be an object",
+        );
+      })();
+
+  const height = isRecord(dimensions.height)
+    ? dimensions.height
+    : (() => {
+        throw new SearchValidationError(
+          "payload.dimensions.height must be an object",
+        );
+      })();
+
+  // ------------------------------------------------------------
+  // PAYLOAD.VALUE
+  // ------------------------------------------------------------
+
+  const payloadValue = isRecord(payload.value)
+    ? payload.value
+    : (() => {
+        throw new SearchValidationError(
+          "payload.value must be an object",
+        );
+      })();
+
+  // ------------------------------------------------------------
+  // RETURN INTERNAL SearchRequest
+  // ------------------------------------------------------------
+
+  return {
+    categoryId: requiredString(
+      value.category_id,
+      "category_id",
+    ),
+
+    // Defaulted internally.
+    fulfillmentType: "Delivery",
+
+    // Defaulted internally.
+    authorization: {
+      startType: "OTP",
+      endType: "OTP",
+    },
+
+    start: {
+      type: "start",
+      gps: requiredString(
+        start.gps,
+        "start.gps",
+      ),
+      address: {
+        areaCode: requiredString(
+          start.area_code,
+          "start.area_code",
+        ),
+      },
+    },
+
+    end: {
+      type: "end",
+      gps: requiredString(
+        end.gps,
+        "end.gps",
+      ),
+      address: {
+        areaCode: requiredString(
+          end.area_code,
+          "end.area_code",
+        ),
+      },
+    },
+
+    schedule: {
+      days: requiredString(
+        schedule.days,
+        "schedule.days",
+      ),
+
+      rangeStart: requiredString(
+        schedule.range_start,
+        "schedule.range_start",
+      ),
+
+      rangeEnd: requiredString(
+        schedule.range_end,
+        "schedule.range_end",
+      ),
+    },
+
+    payload: {
+      weight: {
+        value: requiredDecimal(
+          weight.value,
+          "payload.weight.value",
+        ),
+        unit: requiredString(
+          weight.unit,
+          "payload.weight.unit",
+        ),
+      },
+
+      dimensions: {
+        length: {
+          value: requiredDecimal(
+            length.value,
+            "payload.dimensions.length.value",
+          ),
+          unit: requiredString(
+            length.unit,
+            "payload.dimensions.length.unit",
+          ),
+        },
+
+        breadth: {
+          value: requiredDecimal(
+            breadth.value,
+            "payload.dimensions.breadth.value",
+          ),
+          unit: requiredString(
+            breadth.unit,
+            "payload.dimensions.breadth.unit",
+          ),
+        },
+
+        height: {
+          value: requiredDecimal(
+            height.value,
+            "payload.dimensions.height.value",
+          ),
+          unit: requiredString(
+            height.unit,
+            "payload.dimensions.height.unit",
+          ),
+        },
+      },
+
+      category: requiredString(
+        payload.category,
+        "payload.category",
+      ),
+
+      value: {
+        amount: requiredDecimal(
+          payloadValue.amount,
+          "payload.value.amount",
+        ),
+        currency: requiredString(
+          payloadValue.currency,
+          "payload.value.currency",
+        ),
+      },
+
+      dangerousGoods: requiredBoolean(
+        payload.dangerous_goods,
+        "payload.dangerous_goods",
+      ),
+    },
+  };
+};
+
+const requiredDecimal = (
+  value: unknown,
+  path: string,
+): string | number => {
+  if (
+    typeof value !== "string" &&
+    typeof value !== "number"
+  ) {
+    throw new SearchValidationError(
+      `${path} must be a string or number`,
+    );
+  }
+
+  if (
+    typeof value === "string" &&
+    value.trim() === ""
+  ) {
+    throw new SearchValidationError(
+      `${path} must not be empty`,
+    );
+  }
+
+  return value;
+};
+
+const requiredBoolean = (
+  value: unknown,
+  path: string,
+): boolean => {
+  if (typeof value !== "boolean") {
+    throw new SearchValidationError(
+      `${path} must be a boolean`,
+    );
+  }
+
+  return value;
+}
