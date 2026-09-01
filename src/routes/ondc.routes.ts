@@ -47,14 +47,24 @@ const confirmService = new ConfirmService({
 });
 
 export const searchRouter = express.Router();
-export const onSearchRouter = express.Router();
-
 searchRouter.post("/search", createSearchController(searchService));
-searchRouter.post("/init", createInitController(initService));
-searchRouter.post("/confirm", createConfirmController(confirmService));
+
 searchRouter.get("/search/:searchId/events", (request, response) => {
   searchSseManager.subscribe(request.params.searchId, response);
 });
+
+export const onSearchRouter = express.Router();
 onSearchRouter.post("/on_search", createOnSearchController(onSearchService));
-onSearchRouter.post("/on_init", createOnInitController(initService));
-onSearchRouter.post("/on_confirm", createOnConfirmController(confirmService));
+
+export const initRouter = express.Router();
+initRouter.post("/init", createInitController(initService));
+
+export const onInitRouter = express.Router();
+onInitRouter.post("/on_init", createOnInitController(initService));
+
+export const confirmRouter = express.Router();
+confirmRouter.post("/confirm", createConfirmController(confirmService));
+
+export const onConfirmRouter = express.Router();
+onConfirmRouter.post("/on_confirm", createOnConfirmController(confirmService));
+
