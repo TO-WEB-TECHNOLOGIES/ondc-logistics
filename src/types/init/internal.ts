@@ -9,8 +9,11 @@ import type {
 
 export interface InitBilling {
   name: string;
-  email?: string;
+  email: string;
   phone?: string;
+  taxNumber: string;
+  createdAt: string;
+  updatedAt: string;
   address: SearchAddress;
 }
 export interface InitPayment {

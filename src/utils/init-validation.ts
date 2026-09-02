@@ -208,13 +208,11 @@ export const parseOnInitResponse = (value: unknown): OndcOnInitResponse => {
 
 const minimalContact = (v: unknown, p: string) => {
   const x = record(v, p);
-  if (x.phone === undefined && x.email === undefined)
-    throw new InitValidationError("phone or email is required", p);
+  str(x.email, `${p}.email`);
   if (x.phone !== undefined) str(x.phone, `${p}.phone`);
-  if (x.email !== undefined) str(x.email, `${p}.email`);
   return {
     ...(x.phone !== undefined ? { phone: x.phone } : {}),
-    ...(x.email !== undefined ? { email: x.email } : {}),
+    email: x.email,
   };
 };
 
@@ -231,6 +229,19 @@ export const parseMinimalInitRequest = (value: unknown): InitRequest => {
   const billing = record(x.billing, "billing");
   const billingAddress = record(billing.address, "billing.address");
   str(billing.name, "billing.name");
+  str(billing.email, "billing.email");
+  str(billing.tax_number, "billing.tax_number");
+  str(billing.created_at, "billing.created_at");
+  str(billing.updated_at, "billing.updated_at");
+  for (const key of [
+    "name",
+    "building",
+    "locality",
+    "city",
+    "state",
+    "country",
+  ])
+    str(billingAddress[key], `billing.address.${key}`);
   str(billingAddress.area_code, "billing.address.area_code");
   if (billing.phone !== undefined) str(billing.phone, "billing.phone");
   if (billing.email !== undefined) str(billing.email, "billing.email");
@@ -262,20 +273,19 @@ export const parseMinimalInitRequest = (value: unknown): InitRequest => {
     deliveryContact: minimalContact(x.delivery_contact, "delivery_contact"),
     billing: {
       name: billing.name,
-      ...(billing.email ? { email: billing.email } : {}),
+      email: billing.email,
       ...(billing.phone ? { phone: billing.phone } : {}),
+      taxNumber: billing.tax_number,
+      createdAt: billing.created_at,
+      updatedAt: billing.updated_at,
       address: {
-        ...(billingAddress.name ? { name: billingAddress.name } : {}),
-        ...(billingAddress.building
-          ? { building: billingAddress.building }
-          : {}),
-        ...(billingAddress.locality
-          ? { locality: billingAddress.locality }
-          : {}),
+        name: billingAddress.name,
+        building: billingAddress.building,
+        locality: billingAddress.locality,
         ...(billingAddress.street ? { street: billingAddress.street } : {}),
-        ...(billingAddress.city ? { city: billingAddress.city } : {}),
-        ...(billingAddress.state ? { state: billingAddress.state } : {}),
-        ...(billingAddress.country ? { country: billingAddress.country } : {}),
+        city: billingAddress.city,
+        state: billingAddress.state,
+        country: billingAddress.country,
         areaCode: billingAddress.area_code,
       },
     },

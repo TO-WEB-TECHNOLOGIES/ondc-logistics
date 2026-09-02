@@ -15,13 +15,13 @@ export interface InitProtocolOptions {
   ttl?: string;
 }
 const address = (a: SearchAddress) => ({
-  ...(a.name ? { name: a.name } : {}),
-  ...(a.building ? { building: a.building } : {}),
-  ...(a.locality ? { locality: a.locality } : {}),
+  name: a.name,
+  building: a.building,
+  locality: a.locality,
   ...(a.street ? { street: a.street } : {}),
-  ...(a.city ? { city: a.city } : {}),
-  ...(a.state ? { state: a.state } : {}),
-  ...(a.country ? { country: a.country } : {}),
+  city: a.city,
+  state: a.state,
+  country: a.country,
   area_code: a.areaCode,
 });
 export const mapInitRequestToOndc = (
@@ -67,7 +67,7 @@ export const mapInitRequestToOndc = (
       authorization: end.authorization,
       contact: request.deliveryContact,
     },
-    ...(f.tags ? { tags: f.tags } : {}),
+    ...(f.tags?.length ? { tags: f.tags } : {}),
   };
   return {
     context: {
@@ -99,8 +99,11 @@ export const mapInitRequestToOndc = (
 
         billing: {
           name: request.billing.name,
-          ...(request.billing.email ? { email: request.billing.email } : {}),
+          email: request.billing.email,
           ...(request.billing.phone ? { phone: request.billing.phone } : {}),
+          tax_number: request.billing.taxNumber,
+          created_at: request.billing.createdAt,
+          updated_at: request.billing.updatedAt,
           address: address(request.billing.address),
         },
 

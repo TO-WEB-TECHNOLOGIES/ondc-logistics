@@ -15,6 +15,15 @@ import type {
 } from "../types/init/ondc.js";
 import type { OndcOnSearchResponse } from "../types/search/ondc.js";
 
+const INIT_FULFILLMENT_TAG_CODES = new Set([
+  "linked_provider",
+  "fulfill_request",
+  "fulfill_response",
+  "linked_order",
+  "special_req",
+  "linked_package",
+]);
+
 export interface InitRepository {
   resolveSelection(
     request: InitRequest,
@@ -83,7 +92,16 @@ export class DrizzleInitRepository implements InitRepository {
               bppUri: callback.context.bpp_uri ?? "",
               provider,
               item,
-              fulfillment,
+              fulfillment: {
+                ...fulfillment,
+                ...(fulfillment.tags
+                  ? {
+                      tags: fulfillment.tags.filter((tag) =>
+                        INIT_FULFILLMENT_TAG_CODES.has(tag.code),
+                      ),
+                    }
+                  : {}),
+              },
               search: search.requestPayload as unknown as any,
               providerLocations: provider.locations ?? [],
             });
