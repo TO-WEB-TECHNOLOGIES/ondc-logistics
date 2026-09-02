@@ -9,7 +9,10 @@ export const createOnSearchController =
   (onSearchService: OnSearchService) =>
   async (request: Request, response: Response): Promise<void> => {
     console.log("[on-search.controller] incoming /on_search request");
-    console.log(request.body);
+    console.log(
+      "[on-search.controller] full incoming payload",
+      JSON.stringify(request.body, null, 2),
+    );
     try {
       const callback = parseOnSearchResponse(request.body);
       console.log("[on-search.controller] callback parsed", {
