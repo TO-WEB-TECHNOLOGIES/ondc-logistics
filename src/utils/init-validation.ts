@@ -23,8 +23,7 @@ const str = (v: unknown, p: string) => {
   return v;
 };
 const arr = (v: unknown, p: string) => {
-  if (!Array.isArray(v) || v.length === 0)
-    throw new InitValidationError("must be a non-empty array", p);
+  if (!Array.isArray(v)) throw new InitValidationError("must be an array", p);
   return v;
 };
 const address = (v: unknown, p: string) => {
