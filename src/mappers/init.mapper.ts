@@ -69,6 +69,7 @@ export const mapInitRequestToOndc = (
     },
     ...(f.tags?.length ? { tags: f.tags } : {}),
   };
+
   return {
     context: {
       domain: protocol.domain,
@@ -90,7 +91,7 @@ export const mapInitRequestToOndc = (
       order: {
         provider: {
           id: selected.provider.id,
-          locations: selected.provider.locations ?? [],
+          // locations: selected.provider.locations ?? [],
         },
 
         items: [item],

@@ -6,7 +6,7 @@
 
 export interface OndcInitProvider {
   id: string;
-  locations: Array<{ id: string }>;
+  // locations: Array<{ id: string }>;
 }
 export interface OndcInitItem {
   quantity?: { count: number };
