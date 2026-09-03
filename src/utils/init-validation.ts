@@ -40,7 +40,6 @@ const context = (v: unknown, action: "init" | "on_init") => {
     "country",
     "city",
     "core_version",
-    "bap_id",
     "bap_uri",
     "transaction_id",
     "message_id",
@@ -48,6 +47,7 @@ const context = (v: unknown, action: "init" | "on_init") => {
   ])
     str(c[k], `context.${k}`);
   if (action === "init") {
+    str(c.bap_id, "context.bap_id");
     str(c.bpp_id, "context.bpp_id");
     str(c.bpp_uri, "context.bpp_uri");
   }
@@ -84,13 +84,15 @@ const order = (v: unknown, p = "message.order", requireBilling = true) => {
   const o = record(v, p);
   const provider = record(o.provider, `${p}.provider`);
   str(provider.id, `${p}.provider.id`);
-  const locations = arr(provider.locations, `${p}.provider.locations`);
-  locations.forEach((l, i) =>
-    str(
-      record(l, `${p}.provider.locations[${i}]`).id,
-      `${p}.provider.locations[${i}].id`,
-    ),
-  );
+  if (provider.locations !== undefined) {
+    const locations = arr(provider.locations, `${p}.provider.locations`);
+    locations.forEach((l, i) =>
+      str(
+        record(l, `${p}.provider.locations[${i}]`).id,
+        `${p}.provider.locations[${i}].id`,
+      ),
+    );
+  }
   const items = arr(o.items, `${p}.items`);
   items.forEach((i, n) => {
     const x = record(i, `${p}.items[${n}]`);
