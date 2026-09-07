@@ -91,6 +91,7 @@ export const mapInitRequestToOndc = (
       order: {
         provider: {
           id: selected.provider.id,
+          ...selected.provider.locations?.length ? { locations: selected.provider.locations } : {},
         },
 
         items: [item],

@@ -42,6 +42,7 @@ export class InitService {
       messageId: randomUUID(),
       timestamp: new Date().toISOString(),
     });
+    // console.log(JSON.stringify(payload, null, 2));
     const persisted = await this.dependencies.repository.create(payload);
     try {
       await this.dependencies.transport.sendInit(payload);
