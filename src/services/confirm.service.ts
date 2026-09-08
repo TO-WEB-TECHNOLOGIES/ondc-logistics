@@ -3,58 +3,23 @@ import type {
   ConfirmRequest,
   ConfirmResponse,
 } from "../types/confirm/internal.js";
-import type {
-  OndcConfirmRequest,
-  OndcConfirmOrder,
-} from "../types/confirm/ondc.js";
+import type { OndcConfirmOrder } from "../types/confirm/ondc.js";
 import type { OndcTransport } from "../utils/ondc-transport.js";
 import type { ConfirmRepository } from "../repositories/confirm.repository.js";
 import {
   ConfirmValidationError,
   validateConfirmPayload,
 } from "../utils/confirm-validation.js";
+import {
+  buildConfirmOrder,
+  buildConfirmPayload,
+  mergeInitializedOrder,
+} from "../mappers/confirm.mapper.js";
 
-const withBapAcceptance = (tags: unknown) => {
-  const list = Array.isArray(tags)
-    ? tags.map((x: any) => ({
-        ...x,
-        list: Array.isArray(x?.list) ? [...x.list] : [],
-      }))
-    : [];
-  const existing = list.find((x: any) => x.code === "bap_terms");
-  if (existing) {
-    existing.list = existing.list.filter(
-      (x: any) => x.code !== "accept_bpp_terms",
-    );
-    existing.list.push({ code: "accept_bpp_terms", value: "Y" });
-  } else
-    list.push({
-      code: "bap_terms",
-      list: [{ code: "accept_bpp_terms", value: "Y" }],
-    });
-  return list;
-};
-
-const mergeById = (
-  stored: any[],
-  supplied: unknown,
-  immutableKeys: string[],
-) => {
-  if (!Array.isArray(supplied)) return stored;
-  return stored.map((item: any, index: number) => {
-    const extra = (
-      supplied[index] && typeof supplied[index] === "object"
-        ? supplied[index]
-        : {}
-    ) as any;
-    const match = supplied.find((candidate: any) => candidate?.id === item.id);
-    const supplement = match ?? extra;
-    const result = { ...item, ...supplement };
-    for (const key of immutableKeys) result[key] = item[key];
-    return result;
-  });
-};
-
+// Comparison helpers below back the state-consistency checks in
+// validateAgainstInit: they verify a /confirm request agrees with the
+// initialized (/init + /on_init) transaction rather than shape wire data,
+// so they stay in the service rather than the mapper.
 const canonical = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === "object") {
@@ -100,6 +65,35 @@ const requireSameIfProvided = (
     );
 };
 
+// Unlike items/billing/payment (which /confirm callers either omit entirely
+// or resend in full), a /confirm fulfillment is expected to be a *partial*
+// object carrying only the confirm-only fields (start.person/time,
+// end.person, tags — see buildConfirmOrder) — it's not required to restate
+// `type`. So identity is checked by `id` (must reference a real initialized
+// fulfillment), and `type` is only cross-checked when the caller happens to
+// include it, rather than requiring an exact {id,type} match for every entry.
+const validateFulfillmentIdentity = (incoming: unknown, initialized: any[]) => {
+  if (incoming === undefined || incoming === null) return;
+  if (!Array.isArray(incoming))
+    throw new ConfirmValidationError(
+      "does not match initialized transaction",
+      "message.order.fulfillments",
+    );
+  for (const supplied of incoming) {
+    const match = initialized?.find((x: any) => x?.id === supplied?.id);
+    if (!match)
+      throw new ConfirmValidationError(
+        "does not match initialized transaction",
+        "message.order.fulfillments",
+      );
+    if (supplied?.type !== undefined && supplied.type !== match.type)
+      throw new ConfirmValidationError(
+        "does not match initialized transaction",
+        "message.order.fulfillments",
+      );
+  }
+};
+
 const validateAgainstInit = (incoming: any, initialized: any) => {
   requireSameIfProvided(
     incoming.provider?.id,
@@ -116,11 +110,7 @@ const validateAgainstInit = (incoming: any, initialized: any) => {
     itemIdentity(initialized.items),
     "message.order.items",
   );
-  requireSameIfProvided(
-    incoming.fulfillments?.map((x: any) => ({ id: x?.id, type: x?.type })),
-    initialized.fulfillments?.map((x: any) => ({ id: x?.id, type: x?.type })),
-    "message.order.fulfillments",
-  );
+  validateFulfillmentIdentity(incoming.fulfillments, initialized.fulfillments);
   requireSameIfProvided(
     incoming.quote,
     initialized.quote,
@@ -136,11 +126,10 @@ const validateAgainstInit = (incoming: any, initialized: any) => {
     initialized.payment,
     "message.order.payment",
   );
-  requireSameIfProvided(
-    incoming["@ondc/org/linked_order"],
-    initialized["@ondc/org/linked_order"],
-    "message.order.@ondc/org/linked_order",
-  );
+  // No consistency check against `initialized` for @ondc/org/linked_order:
+  // unlike quote/billing/payment, it is never present in /init or /on_init
+  // (see buildConfirmOrder) — it's supplied for the first time at /confirm,
+  // so there is nothing prior to compare it against.
 };
 
 export class ConfirmService {
@@ -161,24 +150,7 @@ export class ConfirmService {
     );
     const initOrder = state.init.message.order as any;
     const onInitOrder = state.onInit.message?.order as any;
-    // /on_init may omit fields present in /init (for example items[].category_id).
-    // Keep callback values authoritative while retaining omitted INIT fields.
-    const initialized = {
-      ...initOrder,
-      ...onInitOrder,
-      provider: {
-        ...initOrder.provider,
-        ...onInitOrder?.provider,
-        locations:
-          onInitOrder?.provider?.locations ?? initOrder.provider.locations,
-      },
-      items: mergeById(initOrder.items, onInitOrder?.items, []),
-      fulfillments: mergeById(
-        initOrder.fulfillments,
-        onInitOrder?.fulfillments,
-        [],
-      ),
-    } as any;
+    const initialized = mergeInitializedOrder(initOrder, onInitOrder) as any;
     const initializedState = {
       ...state.init,
       message: { ...state.init.message, order: initialized },
@@ -223,6 +195,7 @@ export class ConfirmService {
       itemIdentity(requestItems),
       itemIdentity(initializedItems),
     );
+
     console.log("CONFIRM initTransactionId:", initTransactionId);
     console.log(
       "CONFIRM request items:",
@@ -257,38 +230,28 @@ export class ConfirmService {
     }
     const orderId = suppliedOrder.id ?? state.orderId ?? randomUUID();
     const now = new Date().toISOString();
-    const order: OndcConfirmOrder = {
-      ...initialized,
-      ...suppliedOrder,
-      id: orderId,
-      state: "Created",
-      created_at: suppliedOrder.created_at ?? initialized.created_at ?? now,
-      updated_at: now,
-      provider: initialized.provider,
-      // Items and fulfillments are generated from initialized DB state after consistency checks.
-      items: initialized.items,
-      fulfillments: initialized.fulfillments,
-      quote: initialized.quote,
-      billing: initialized.billing,
-      payment: initialized.payment,
-      "@ondc/org/linked_order": initialized["@ondc/org/linked_order"],
-      tags: withBapAcceptance(suppliedOrder.tags ?? initialized.tags),
-    } as OndcConfirmOrder;
+    // Items/provider/quote/billing/payment come from the initialized
+    // transaction (post consistency checks above); fulfillments and
+    // @ondc/org/linked_order fold in the confirm-only fields the caller
+    // supplies (see buildConfirmOrder for why — they don't exist in /init).
+    const order: OndcConfirmOrder = buildConfirmOrder({
+      initialized,
+      suppliedOrder,
+      orderId,
+      now,
+    });
 
-    const payload: OndcConfirmRequest = {
-      context: {
-        ...state.init.context,
-        action: "confirm",
-        transaction_id: initTransactionId,
-        message_id: (input.context?.message_id as string) ?? randomUUID(),
-        timestamp: now,
-      },
-      message: { order },
-    };
+    const payload = buildConfirmPayload({
+      order,
+      initContext: state.init.context,
+      transactionId: initTransactionId,
+      messageId: (input.context?.message_id as string) ?? randomUUID(),
+      now,
+    });
     validateConfirmPayload(payload);
     console.log(
       "[confirm.service] final ONDC /confirm payload",
-      JSON.stringify(payload, null, 2),
+      JSON.stringify(payload, null, 10),
     );
     const created = await this.dependencies.repository.create(
       payload,

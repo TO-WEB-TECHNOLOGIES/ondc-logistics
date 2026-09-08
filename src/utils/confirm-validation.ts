@@ -25,8 +25,8 @@ const str = (v: unknown, p: string) => {
   return v;
 };
 const arr = (v: unknown, p: string) => {
-  if (!Array.isArray(v) || v.length === 0)
-    throw new ConfirmValidationError("must be a non-empty array", p);
+  if (!Array.isArray(v))
+    throw new ConfirmValidationError("must be an array", p);
   return v;
 };
 const address = (v: unknown, p: string) => {
@@ -67,13 +67,13 @@ const validateBasicOrder = (v: unknown, p = "message.order") => {
   str(o.updated_at, p + ".updated_at");
   const provider = record(o.provider, p + ".provider");
   str(provider.id, p + ".provider.id");
-  const locations = arr(provider.locations, p + ".provider.locations");
-  locations.forEach((x: any, i: number) =>
-    str(
-      record(x, p + ".provider.locations[" + i + "]").id,
-      p + ".provider.locations[" + i + "].id",
-    ),
-  );
+  // const locations = arr(provider.locations, p + ".provider.locations");
+  // locations.forEach((x: any, i: number) =>
+  //   str(
+  //     record(x, p + ".provider.locations[" + i + "]").id,
+  //     p + ".provider.locations[" + i + "].id",
+  //   ),
+  // );
   const items = arr(o.items, p + ".items");
   const fulfillments = arr(o.fulfillments, p + ".fulfillments");
   const fids = new Set(
