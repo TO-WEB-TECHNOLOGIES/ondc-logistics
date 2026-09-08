@@ -137,6 +137,20 @@ export interface NormalizedProviderResult {
   };
 }
 
+export interface NormalizedSearchSide {
+  gps: string;
+  address: SearchAddress;
+  authorizationType: string;
+}
+
+// The search envelope as read back from logistics_searches +
+// logistics_search_locations — everything /init needs from the original
+// search request, without ever touching a JSON payload column.
+export interface NormalizedSearchEnvelope {
+  start: NormalizedSearchSide;
+  end: NormalizedSearchSide;
+}
+
 export interface SearchResultEvent {
   event: "search_result";
   searchId: string;

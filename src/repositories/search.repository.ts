@@ -1,20 +1,18 @@
-﻿import { and, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db1 } from "../db/index.js";
 import {
-  logisticsSearchHolidays,
-  logisticsSearchLocations,
-  logisticsSearchPayments,
-  logisticsSearchPayloads,
-  logisticsSearchProviderSchedules,
   logisticsSearches,
   ondcTransactions,
   onSearchCallbacks,
+  providerLocations,
+  searchProviderFulfillments,
+  searchProviderItems,
+  searchProviders,
+  tagValues,
+  tags,
 } from "../db/schema/index.js";
 import type { SearchRequest } from "../types/search/internal.js";
-import type {
-  OndcOnSearchResponse,
-  OndcSearchRequest,
-} from "../types/search/ondc.js";
+import type { OndcSearchRequest } from "../types/search/ondc.js";
 
 export type SearchRepository = {
   createSearch(input: {
@@ -56,7 +54,6 @@ export class DrizzleSearchRepository implements SearchRepository {
           bapUri: payload.context.bap_uri,
           timestamp: new Date(payload.context.timestamp),
           ttl: payload.context.ttl,
-          requestPayload: payload,
         })
         .returning({ id: ondcTransactions.id });
 
@@ -68,120 +65,270 @@ export class DrizzleSearchRepository implements SearchRepository {
           fulfillmentType: request.fulfillmentType,
           authorizationStartType: request.authorization.startType,
           authorizationEndType: request.authorization.endType,
+
+          startGps: request.start.gps,
+          startAddressName: request.start.address.name,
+          startAddressBuilding: request.start.address.building,
+          startAddressLocality: request.start.address.locality,
+          startAddressStreet: request.start.address.street,
+          startAddressCity: request.start.address.city,
+          startAddressState: request.start.address.state,
+          startAddressCountry: request.start.address.country,
+          startAreaCode: request.start.address.areaCode,
+
+          endGps: request.end.gps,
+          endAddressName: request.end.address.name,
+          endAddressBuilding: request.end.address.building,
+          endAddressLocality: request.end.address.locality,
+          endAddressStreet: request.end.address.street,
+          endAddressCity: request.end.address.city,
+          endAddressState: request.end.address.state,
+          endAddressCountry: request.end.address.country,
+          endAreaCode: request.end.address.areaCode,
+
+          ...(request.schedule
+            ? {
+                scheduleDays: request.schedule.days,
+                scheduleDuration: request.schedule.duration,
+                scheduleRangeStart: request.schedule.rangeStart,
+                scheduleRangeEnd: request.schedule.rangeEnd,
+                scheduleHolidays: request.schedule.holidays?.length
+                  ? request.schedule.holidays
+                  : undefined,
+              }
+            : {}),
+
+          ...(request.payload
+            ? {
+                payloadWeightValue: numeric(request.payload.weight.value),
+                payloadWeightUnit: request.payload.weight.unit,
+                payloadLengthValue: numeric(
+                  request.payload.dimensions.length.value,
+                ),
+                payloadLengthUnit: request.payload.dimensions.length.unit,
+                payloadBreadthValue: numeric(
+                  request.payload.dimensions.breadth.value,
+                ),
+                payloadBreadthUnit: request.payload.dimensions.breadth.unit,
+                payloadHeightValue: numeric(
+                  request.payload.dimensions.height.value,
+                ),
+                payloadHeightUnit: request.payload.dimensions.height.unit,
+                payloadCategory: request.payload.category,
+                payloadValueAmount: numeric(request.payload.value.amount),
+                payloadValueCurrency: request.payload.value.currency,
+                payloadDangerousGoods: request.payload.dangerousGoods,
+              }
+            : {}),
+
+          ...(request.payment
+            ? {
+                paymentType: request.payment.type,
+                paymentCollectionAmount:
+                  request.payment.collectionAmount === undefined
+                    ? undefined
+                    : numeric(request.payment.collectionAmount),
+                paymentCurrency: request.payment.currency,
+              }
+            : {}),
         })
         .returning({ id: logisticsSearches.id });
 
-      await tx.insert(logisticsSearchLocations).values([
-        {
-          searchId: search.id,
-          locationType: "start",
-          gps: request.start.gps,
-          ...request.start.address,
-          areaCode: request.start.address.areaCode,
-        },
-        {
-          searchId: search.id,
-          locationType: "end",
-          gps: request.end.gps,
-          ...request.end.address,
-          areaCode: request.end.address.areaCode,
-        },
-      ]);
-
-      if (request.schedule) {
-        const [schedule] = await tx
-          .insert(logisticsSearchProviderSchedules)
-          .values({
-            searchId: search.id,
-            days: request.schedule.days,
-            duration: request.schedule.duration,
-            rangeStart: request.schedule.rangeStart,
-            rangeEnd: request.schedule.rangeEnd,
-          })
-          .returning({ id: logisticsSearchProviderSchedules.id });
-        if (request.schedule.holidays?.length) {
-          await tx.insert(logisticsSearchHolidays).values(
-            request.schedule.holidays.map((holidayDate) => ({
-              scheduleId: schedule.id,
-              holidayDate,
-            })),
-          );
-        }
-      }
-
-      if (request.payload) {
-        await tx.insert(logisticsSearchPayloads).values({
-          searchId: search.id,
-          weightValue: numeric(request.payload.weight.value),
-          weightUnit: request.payload.weight.unit,
-          lengthValue: numeric(request.payload.dimensions.length.value),
-          lengthUnit: request.payload.dimensions.length.unit,
-          breadthValue: numeric(request.payload.dimensions.breadth.value),
-          breadthUnit: request.payload.dimensions.breadth.unit,
-          heightValue: numeric(request.payload.dimensions.height.value),
-          heightUnit: request.payload.dimensions.height.unit,
-          category: request.payload.category,
-          valueAmount: numeric(request.payload.value.amount),
-          valueCurrency: request.payload.value.currency,
-          dangerousGoods: request.payload.dangerousGoods,
-        });
-      }
-      if (request.payment) {
-        await tx.insert(logisticsSearchPayments).values({
-          searchId: search.id,
-          type: request.payment.type,
-          collectionAmount:
-            request.payment.collectionAmount === undefined
-              ? undefined
-              : numeric(request.payment.collectionAmount),
-          currency: request.payment.currency,
-        });
-      }
       return { searchId: search.id };
     });
   }
 
   async getSearchOptions(searchId: string) {
     const [search] = await this.database
-      .select({ transactionId: ondcTransactions.transactionId })
+      .select({ id: logisticsSearches.id })
       .from(logisticsSearches)
-      .innerJoin(
-        ondcTransactions,
-        eq(logisticsSearches.transactionDbId, ondcTransactions.id),
-      )
       .where(eq(logisticsSearches.id, searchId))
       .limit(1);
     if (!search) return { status: "NOT_FOUND" as const, options: [] };
-    const rows = await this.database
+
+    const callbacks = await this.database
       .select({
-        payload: onSearchCallbacks.payload,
-        status: onSearchCallbacks.status,
+        callbackId: onSearchCallbacks.id,
+        bppId: onSearchCallbacks.bppId,
+        bppUri: onSearchCallbacks.bppUri,
       })
       .from(onSearchCallbacks)
-      .where(eq(onSearchCallbacks.transactionId, search.transactionId));
-    const processed = rows.filter((row) => row.status === "processed");
-    if (!processed.length) return { status: "PENDING" as const, options: [] };
-    const options = processed.flatMap((row) => {
-      const callback = row.payload as OndcOnSearchResponse;
-      return (callback.message.catalog["bpp/providers"] ?? []).map(
-        (provider) => ({
-          bppId: callback.context.bpp_id,
-          bppUri: callback.context.bpp_uri,
-          providerId: provider.id,
-          provider: provider.descriptor,
-          locations: provider.locations ?? [],
-          items: (provider.items ?? []).map((item) => ({
-            itemId: item.id,
-            categoryId: item.category_id,
-            fulfillmentId: item.fulfillment_id,
-            descriptor: item.descriptor,
-            price: item.price,
-            time: item.time,
-          })),
-          fulfillments: provider.fulfillments ?? [],
-        }),
+      .where(
+        and(
+          eq(onSearchCallbacks.searchId, search.id),
+          eq(onSearchCallbacks.status, "processed"),
+        ),
       );
-    });
+    if (!callbacks.length) return { status: "PENDING" as const, options: [] };
+
+    const options: Array<{
+      bppId: string;
+      bppUri?: string;
+      providerId: string;
+      provider: { code?: string; name?: string; short_desc?: string; long_desc?: string };
+      locations: Array<{
+        id: string;
+        gps?: string;
+        address?: Record<string, unknown>;
+      }>;
+      items: Array<{
+        itemId: string;
+        categoryId?: string;
+        fulfillmentId?: string;
+        descriptor?: {
+          code?: string;
+          name?: string;
+          short_desc?: string;
+          long_desc?: string;
+        };
+        price?: { currency?: string; value?: string };
+        time?: { label?: string; duration?: string; timestamp?: string };
+      }>;
+      fulfillments: Array<{
+        id: string;
+        type?: string;
+        start?: { time?: { duration?: string } };
+        tags?: Array<{ code: string; list?: Array<{ code: string; value: string }> }>;
+      }>;
+    }> = [];
+
+    for (const callback of callbacks) {
+      const providerRows = await this.database
+        .select({ id: searchProviders.id, providerId: searchProviders.providerId, name: searchProviders.name, shortDescription: searchProviders.shortDescription, longDescription: searchProviders.longDescription })
+        .from(searchProviders)
+        .where(eq(searchProviders.callbackId, callback.callbackId));
+
+      for (const provider of providerRows) {
+        const [locations, items, fulfillments] = await Promise.all([
+          this.database
+            .select({
+              locationId: providerLocations.locationId,
+              gps: providerLocations.gps,
+              addressName: providerLocations.addressName,
+              addressBuilding: providerLocations.addressBuilding,
+              addressLocality: providerLocations.addressLocality,
+              street: providerLocations.street,
+              city: providerLocations.city,
+              state: providerLocations.state,
+              country: providerLocations.country,
+              areaCode: providerLocations.areaCode,
+            })
+            .from(providerLocations)
+            .where(eq(providerLocations.searchProviderRowId, provider.id)),
+          this.database
+            .select({
+              catalogItemId: searchProviderItems.catalogItemId,
+              parentItemId: searchProviderItems.parentItemId,
+              categoryId: searchProviderItems.categoryId,
+              fulfillmentId: searchProviderItems.fulfillmentId,
+              descriptorCode: searchProviderItems.descriptorCode,
+              name: searchProviderItems.name,
+              shortDescription: searchProviderItems.shortDescription,
+              longDescription: searchProviderItems.longDescription,
+              tatLabel: searchProviderItems.tatLabel,
+              tatDuration: searchProviderItems.tatDuration,
+              tatTimestamp: searchProviderItems.tatTimestamp,
+              priceAmount: searchProviderItems.priceAmount,
+              priceCurrency: searchProviderItems.priceCurrency,
+            })
+            .from(searchProviderItems)
+            .where(eq(searchProviderItems.providerRowId, provider.id)),
+          this.database
+            .select({
+              id: searchProviderFulfillments.id,
+              fulfillmentId: searchProviderFulfillments.fulfillmentId,
+              type: searchProviderFulfillments.type,
+              pickupDuration: searchProviderFulfillments.pickupDuration,
+            })
+            .from(searchProviderFulfillments)
+            .where(eq(searchProviderFulfillments.providerRowId, provider.id)),
+        ]);
+
+        const fulfillmentsWithTags = await Promise.all(
+          fulfillments.map(async (f) => {
+            const tagRows = await this.database
+              .select({
+                tagId: tags.id,
+                code: tags.code,
+              })
+              .from(tags)
+              .where(eq(tags.searchProviderFulfillmentId, f.id));
+            const fulfillmentTags = await Promise.all(
+              tagRows.map(async (t) => ({
+                code: t.code,
+                list: (
+                  await this.database
+                    .select({
+                      code: tagValues.code,
+                      value: tagValues.value,
+                    })
+                    .from(tagValues)
+                    .where(eq(tagValues.tagId, t.tagId))
+                ).map((v) => ({ code: v.code, value: v.value ?? "" })),
+              })),
+            );
+            return {
+              id: f.fulfillmentId ?? "",
+              type: f.type ?? undefined,
+              ...(f.pickupDuration
+                ? { start: { time: { duration: f.pickupDuration } } }
+                : {}),
+              ...(fulfillmentTags.length ? { tags: fulfillmentTags } : {}),
+            };
+          }),
+        );
+
+        options.push({
+          bppId: callback.bppId,
+          bppUri: callback.bppUri ?? undefined,
+          providerId: provider.providerId,
+          provider: {
+            name: provider.name ?? undefined,
+            short_desc: provider.shortDescription ?? undefined,
+            long_desc: provider.longDescription ?? undefined,
+          },
+          locations: locations
+            .filter((l): l is typeof l & { locationId: string } =>
+              Boolean(l.locationId),
+            )
+            .map((l) => ({
+              id: l.locationId,
+              gps: l.gps ?? undefined,
+              address: {
+                name: l.addressName ?? undefined,
+                building: l.addressBuilding ?? undefined,
+                locality: l.addressLocality ?? undefined,
+                street: l.street ?? undefined,
+                city: l.city ?? undefined,
+                state: l.state ?? undefined,
+                country: l.country ?? undefined,
+                area_code: l.areaCode ?? undefined,
+              },
+            })),
+          items: items.map((item) => ({
+            itemId: item.catalogItemId,
+            categoryId: item.categoryId ?? undefined,
+            fulfillmentId: item.fulfillmentId ?? undefined,
+            descriptor: {
+              code: item.descriptorCode ?? undefined,
+              name: item.name ?? undefined,
+              short_desc: item.shortDescription ?? undefined,
+              long_desc: item.longDescription ?? undefined,
+            },
+            price: {
+              currency: item.priceCurrency ?? undefined,
+              value: item.priceAmount ?? undefined,
+            },
+            time: {
+              label: item.tatLabel ?? undefined,
+              duration: item.tatDuration ?? undefined,
+              timestamp: item.tatTimestamp?.toISOString(),
+            },
+          })),
+          fulfillments: fulfillmentsWithTags,
+        });
+      }
+    }
     return { status: "READY" as const, options };
   }
   async updateTransactionStatus(

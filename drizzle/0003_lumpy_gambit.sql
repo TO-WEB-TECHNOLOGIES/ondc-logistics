@@ -1,1 +1,0 @@
-ALTER TABLE "ondc_transactions" ADD COLUMN "parent_transaction_id" varchar;

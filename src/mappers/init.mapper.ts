@@ -34,23 +34,36 @@ export const mapInitRequestToOndc = (
   },
 ): OndcInitRequest => {
   const f = selected.fulfillment;
-  const start = selected.search.message.intent.fulfillment.start;
-  const end = selected.search.message.intent.fulfillment.end;
-  const searchStart = start.location;
-  const searchEnd = end.location;
+  const start = selected.searchEnvelope.start;
+  const end = selected.searchEnvelope.end;
   const item = {
     id: selected.item.id,
     ...(request.quantity !== undefined
       ? { quantity: { count: request.quantity } }
       : {}),
-    ...(selected.item.fulfillment_id
-      ? { fulfillment_id: selected.item.fulfillment_id }
+    ...(selected.item.fulfillmentId
+      ? { fulfillment_id: selected.item.fulfillmentId }
       : {}),
-    ...(selected.item.category_id
-      ? { category_id: selected.item.category_id }
+    ...(selected.item.categoryId
+      ? { category_id: selected.item.categoryId }
       : {}),
     ...(selected.item.descriptor
-      ? { descriptor: selected.item.descriptor }
+      ? {
+          descriptor: {
+            ...(selected.item.descriptor.code
+              ? { code: selected.item.descriptor.code }
+              : {}),
+            ...(selected.item.descriptor.name
+              ? { name: selected.item.descriptor.name }
+              : {}),
+            ...(selected.item.descriptor.shortDesc
+              ? { short_desc: selected.item.descriptor.shortDesc }
+              : {}),
+            ...(selected.item.descriptor.longDesc
+              ? { long_desc: selected.item.descriptor.longDesc }
+              : {}),
+          },
+        }
       : {}),
     ...(selected.item.time ? { time: selected.item.time } : {}),
   };
@@ -58,13 +71,13 @@ export const mapInitRequestToOndc = (
     id: f.id,
     type: f.type ?? "Delivery",
     start: {
-      location: searchStart,
-      authorization: start.authorization,
+      location: { gps: start.gps, address: address(start.address) },
+      authorization: { type: start.authorizationType },
       contact: request.pickupContact,
     },
     end: {
-      location: searchEnd,
-      authorization: end.authorization,
+      location: { gps: end.gps, address: address(end.address) },
+      authorization: { type: end.authorizationType },
       contact: request.deliveryContact,
     },
     ...(f.tags?.length ? { tags: f.tags } : {}),
@@ -91,7 +104,15 @@ export const mapInitRequestToOndc = (
       order: {
         provider: {
           id: selected.provider.id,
-          ...selected.provider.locations?.length ? { locations: selected.provider.locations } : {},
+          ...(selected.providerLocations.length
+            ? {
+                locations: selected.providerLocations.map((l) => ({
+                  id: l.id,
+                  ...(l.gps ? { gps: l.gps } : {}),
+                  ...(l.address ? { address: address(l.address) } : {}),
+                })),
+              }
+            : {}),
         },
 
         items: [item],

@@ -14,6 +14,7 @@ export const createOnSearchController =
       JSON.stringify(request.body, null, 2),
     );
     try {
+      console.log("[on-search.controller] parsing callback");
       const callback = parseOnSearchResponse(request.body);
       console.log("[on-search.controller] callback parsed", {
         transactionId: callback.context.transaction_id,

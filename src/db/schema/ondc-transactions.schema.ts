@@ -1,6 +1,5 @@
 import {
   index,
-  jsonb,
   pgTable,
   timestamp,
   uuid,
@@ -29,8 +28,6 @@ export const ondcTransactions = pgTable(
     bppUri: varchar("bpp_uri"),
     timestamp: timestamp("timestamp", { withTimezone: true }),
     ttl: varchar("ttl"),
-    requestPayload: jsonb("request_payload"),
-    responsePayload: jsonb("response_payload"),
     callbackMessageId: varchar("callback_message_id"),
     callbackTimestamp: timestamp("callback_timestamp", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })

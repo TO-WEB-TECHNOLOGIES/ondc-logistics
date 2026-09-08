@@ -1,11 +1,9 @@
-﻿import type { DecimalInput, SearchAddress } from "../search/internal.js";
-import type {
-  OndcCatalogItem,
-  OndcFulfillment,
-  OndcProvider,
-  OndcProviderLocation,
-  OndcSearchRequest,
-} from "../search/ondc.js";
+﻿import type {
+  DecimalInput,
+  NormalizedSearchEnvelope,
+  SearchAddress,
+} from "../search/internal.js";
+import type { OndcTag } from "../search/ondc.js";
 
 export interface InitBilling {
   name: string;
@@ -39,15 +37,37 @@ export interface InitRequest {
   billing: InitBilling;
   payment: InitPayment;
 }
+export interface ResolvedInitProviderLocation {
+  id: string;
+  gps?: string;
+  address?: SearchAddress;
+}
+export interface ResolvedInitItem {
+  id: string;
+  fulfillmentId?: string;
+  categoryId?: string;
+  descriptor?: {
+    code?: string;
+    name?: string;
+    shortDesc?: string;
+    longDesc?: string;
+  };
+  time?: { label?: string; duration?: string; timestamp?: string };
+}
+export interface ResolvedInitFulfillment {
+  id: string;
+  type?: string;
+  tags: OndcTag[];
+}
 export interface ResolvedInitSelection {
   searchTransactionId: string;
   bppId: string;
   bppUri: string;
-  provider: OndcProvider;
-  item: OndcCatalogItem;
-  fulfillment: OndcFulfillment;
-  search: OndcSearchRequest;
-  providerLocations: OndcProviderLocation[];
+  provider: { id: string };
+  providerLocations: ResolvedInitProviderLocation[];
+  item: ResolvedInitItem;
+  fulfillment: ResolvedInitFulfillment;
+  searchEnvelope: NormalizedSearchEnvelope;
 }
 export interface InitResponse {
   initId: string;

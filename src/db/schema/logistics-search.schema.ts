@@ -14,6 +14,11 @@ import { ondcTransactions } from "./ondc-transactions.schema.js";
 const timestampWithTimezone = (name: string) =>
   timestamp(name, { withTimezone: true });
 
+// One row per /search request. Locations (start/end), the provider
+// schedule, the shipment payload, and payment terms were previously split
+// into five child tables; each is either exactly one row per search or a
+// short list, so they're flattened here as columns (holidays as a native
+// Postgres array) instead.
 export const logisticsSearches = pgTable(
   "logistics_searches",
   {
@@ -25,111 +30,72 @@ export const logisticsSearches = pgTable(
     fulfillmentType: varchar("fulfillment_type"),
     authorizationStartType: varchar("authorization_start_type"),
     authorizationEndType: varchar("authorization_end_type"),
+
+    startGps: varchar("start_gps"),
+    startAddressName: varchar("start_address_name"),
+    startAddressBuilding: varchar("start_address_building"),
+    startAddressLocality: varchar("start_address_locality"),
+    startAddressStreet: varchar("start_address_street"),
+    startAddressCity: varchar("start_address_city"),
+    startAddressState: varchar("start_address_state"),
+    startAddressCountry: varchar("start_address_country"),
+    startAreaCode: varchar("start_area_code"),
+
+    endGps: varchar("end_gps"),
+    endAddressName: varchar("end_address_name"),
+    endAddressBuilding: varchar("end_address_building"),
+    endAddressLocality: varchar("end_address_locality"),
+    endAddressStreet: varchar("end_address_street"),
+    endAddressCity: varchar("end_address_city"),
+    endAddressState: varchar("end_address_state"),
+    endAddressCountry: varchar("end_address_country"),
+    endAreaCode: varchar("end_area_code"),
+
+    scheduleDays: varchar("schedule_days"),
+    scheduleDuration: varchar("schedule_duration"),
+    scheduleRangeStart: time("schedule_range_start"),
+    scheduleRangeEnd: time("schedule_range_end"),
+    scheduleHolidays: date("schedule_holidays").array(),
+
+    payloadWeightValue: decimal("payload_weight_value", {
+      precision: 18,
+      scale: 6,
+    }),
+    payloadWeightUnit: varchar("payload_weight_unit"),
+    payloadLengthValue: decimal("payload_length_value", {
+      precision: 18,
+      scale: 6,
+    }),
+    payloadLengthUnit: varchar("payload_length_unit"),
+    payloadBreadthValue: decimal("payload_breadth_value", {
+      precision: 18,
+      scale: 6,
+    }),
+    payloadBreadthUnit: varchar("payload_breadth_unit"),
+    payloadHeightValue: decimal("payload_height_value", {
+      precision: 18,
+      scale: 6,
+    }),
+    payloadHeightUnit: varchar("payload_height_unit"),
+    payloadCategory: varchar("payload_category"),
+    payloadValueAmount: decimal("payload_value_amount", {
+      precision: 18,
+      scale: 2,
+    }),
+    payloadValueCurrency: varchar("payload_value_currency"),
+    payloadDangerousGoods: boolean("payload_dangerous_goods"),
+
+    paymentType: varchar("payment_type"),
+    paymentCollectionAmount: decimal("payment_collection_amount", {
+      precision: 18,
+      scale: 2,
+    }),
+    paymentCurrency: varchar("payment_currency"),
+
     createdAt: timestampWithTimezone("created_at").defaultNow().notNull(),
     updatedAt: timestampWithTimezone("updated_at").defaultNow().notNull(),
   },
   (table) => [
     index("logistics_searches_transaction_db_id_idx").on(table.transactionDbId),
-  ],
-);
-
-export const logisticsSearchLocations = pgTable(
-  "logistics_search_locations",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    searchId: uuid("search_id")
-      .notNull()
-      .references(() => logisticsSearches.id, { onDelete: "cascade" }),
-    locationType: varchar("location_type"),
-    gps: varchar("gps"),
-    areaCode: varchar("area_code"),
-    name: varchar("name"),
-    building: varchar("building"),
-    locality: varchar("locality"),
-    street: varchar("street"),
-    city: varchar("city"),
-    state: varchar("state"),
-    country: varchar("country"),
-    createdAt: timestampWithTimezone("created_at").defaultNow().notNull(),
-  },
-  (table) => [
-    index("logistics_search_locations_search_id_idx").on(table.searchId),
-  ],
-);
-
-export const logisticsSearchProviderSchedules = pgTable(
-  "logistics_search_provider_schedules",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    searchId: uuid("search_id")
-      .notNull()
-      .references(() => logisticsSearches.id, { onDelete: "cascade" }),
-    days: varchar("days"),
-    duration: varchar("duration"),
-    rangeStart: time("range_start"),
-    rangeEnd: time("range_end"),
-    createdAt: timestampWithTimezone("created_at").defaultNow().notNull(),
-  },
-  (table) => [
-    index("logistics_search_provider_schedules_search_id_idx").on(
-      table.searchId,
-    ),
-  ],
-);
-
-export const logisticsSearchHolidays = pgTable(
-  "logistics_search_holidays",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    scheduleId: uuid("schedule_id")
-      .notNull()
-      .references(() => logisticsSearchProviderSchedules.id, {
-        onDelete: "cascade",
-      }),
-    holidayDate: date("holiday_date"),
-  },
-  (table) => [
-    index("logistics_search_holidays_schedule_id_idx").on(table.scheduleId),
-  ],
-);
-
-export const logisticsSearchPayloads = pgTable(
-  "logistics_search_payloads",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    searchId: uuid("search_id")
-      .notNull()
-      .references(() => logisticsSearches.id, { onDelete: "cascade" }),
-    weightValue: decimal("weight_value", { precision: 18, scale: 6 }),
-    weightUnit: varchar("weight_unit"),
-    lengthValue: decimal("length_value", { precision: 18, scale: 6 }),
-    lengthUnit: varchar("length_unit"),
-    breadthValue: decimal("breadth_value", { precision: 18, scale: 6 }),
-    breadthUnit: varchar("breadth_unit"),
-    heightValue: decimal("height_value", { precision: 18, scale: 6 }),
-    heightUnit: varchar("height_unit"),
-    category: varchar("category"),
-    valueAmount: decimal("value_amount", { precision: 18, scale: 2 }),
-    valueCurrency: varchar("value_currency"),
-    dangerousGoods: boolean("dangerous_goods"),
-  },
-  (table) => [
-    index("logistics_search_payloads_search_id_idx").on(table.searchId),
-  ],
-);
-
-export const logisticsSearchPayments = pgTable(
-  "logistics_search_payments",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    searchId: uuid("search_id")
-      .notNull()
-      .references(() => logisticsSearches.id, { onDelete: "cascade" }),
-    type: varchar("type"),
-    collectionAmount: decimal("collection_amount", { precision: 18, scale: 2 }),
-    currency: varchar("currency"),
-  },
-  (table) => [
-    index("logistics_search_payments_search_id_idx").on(table.searchId),
   ],
 );

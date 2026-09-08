@@ -1,6 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { db1 } from "../db/index.js";
 import { ondcTransactions } from "../db/schema/index.js";
+import { buildOndcInitOrder } from "../mappers/init-persistence.mapper.js";
+import { fetchInitOrderSnapshot } from "./init-order-reader.js";
 import type {
   OndcConfirmRequest,
   OndcOnConfirmResponse,
@@ -39,10 +41,22 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
     });
     const [row] = await this.database
       .select({
+        id: ondcTransactions.id,
         transactionId: ondcTransactions.transactionId,
-        requestPayload: ondcTransactions.requestPayload,
-        responsePayload: ondcTransactions.responsePayload,
+        messageId: ondcTransactions.messageId,
         status: ondcTransactions.status,
+        domain: ondcTransactions.domain,
+        country: ondcTransactions.country,
+        city: ondcTransactions.city,
+        coreVersion: ondcTransactions.coreVersion,
+        bapId: ondcTransactions.bapId,
+        bapUri: ondcTransactions.bapUri,
+        bppId: ondcTransactions.bppId,
+        bppUri: ondcTransactions.bppUri,
+        timestamp: ondcTransactions.timestamp,
+        ttl: ondcTransactions.ttl,
+        callbackMessageId: ondcTransactions.callbackMessageId,
+        callbackTimestamp: ondcTransactions.callbackTimestamp,
       })
       .from(ondcTransactions)
       .where(
@@ -53,15 +67,55 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
       )
       .limit(1);
     if (!row) throw new Error("init transaction not found");
-    if (row.status !== "completed" || !row.responsePayload)
+
+    const [initSnapshot, onInitSnapshot] = await Promise.all([
+      fetchInitOrderSnapshot(this.database, row.id, "init"),
+      fetchInitOrderSnapshot(this.database, row.id, "on_init"),
+    ]);
+    if (row.status !== "completed" || !initSnapshot || !onInitSnapshot)
       throw new Error("init transaction has no completed on_init");
+
+    const baseContext = {
+      domain: row.domain ?? "",
+      country: row.country ?? "",
+      city: row.city ?? "",
+      core_version: row.coreVersion ?? "",
+      bap_id: row.bapId ?? "",
+      bap_uri: row.bapUri ?? "",
+    };
+    const init: OndcInitRequest = {
+      context: {
+        ...baseContext,
+        action: "init",
+        bpp_id: row.bppId ?? "",
+        bpp_uri: row.bppUri ?? "",
+        transaction_id: row.transactionId,
+        message_id: row.messageId,
+        timestamp: (row.timestamp ?? new Date()).toISOString(),
+        ...(row.ttl ? { ttl: row.ttl } : {}),
+      },
+      message: { order: buildOndcInitOrder(initSnapshot) },
+    };
+    const onInit: OndcOnInitResponse = {
+      context: {
+        ...baseContext,
+        action: "on_init",
+        ...(row.bppId ? { bpp_id: row.bppId } : {}),
+        ...(row.bppUri ? { bpp_uri: row.bppUri } : {}),
+        transaction_id: row.transactionId,
+        message_id: row.callbackMessageId ?? row.messageId,
+        timestamp: (row.callbackTimestamp ?? new Date()).toISOString(),
+      },
+      message: { order: buildOndcInitOrder(onInitSnapshot) },
+    };
+
     console.log("[confirm.repository] initialized state loaded", {
       initTransactionId,
       status: row.status,
     });
     return {
-      init: row.requestPayload as OndcInitRequest,
-      onInit: row.responsePayload as OndcOnInitResponse,
+      init,
+      onInit,
       initTransactionId: row.transactionId,
     };
   }
@@ -104,7 +158,6 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
       bppUri: payload.context.bpp_uri,
       timestamp: new Date(payload.context.timestamp),
       ttl: payload.context.ttl,
-      requestPayload: payload,
     });
     return true;
   }
@@ -144,7 +197,6 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
       .select({
         id: ondcTransactions.id,
         orderId: ondcTransactions.orderId,
-        requestPayload: ondcTransactions.requestPayload,
         callbackMessageId: ondcTransactions.callbackMessageId,
         bppId: ondcTransactions.bppId,
       })
@@ -178,7 +230,6 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
       .set({
         status: response.error ? "failed" : "completed",
         orderState: state,
-        responsePayload: response,
         callbackMessageId: c.message_id,
         callbackTimestamp: new Date(c.timestamp),
         bppId: c.bpp_id,
