@@ -134,17 +134,6 @@ export const createOnConfirmController =
             );
             return;
           }
-          console.log("[on-confirm.controller] BEFORE RESPONSE");
-
-          response.status(200).json({
-            message: {
-              ack: {
-                status: "ACK",
-              },
-            },
-          });
-
-          console.log("[on-confirm.controller] AFTER RESPONSE");
         })
         .catch((error) => {
           console.log("[on-confirm.controller] processing failed", {
@@ -160,6 +149,17 @@ export const createOnConfirmController =
             },
           });
         });
+        console.log("[on-confirm.controller] BEFORE RESPONSE");
+
+        response.status(200).json({
+          message: {
+            ack: {
+              status: "ACK",
+            },
+          },
+        });
+
+        console.log("[on-confirm.controller] AFTER RESPONSE");
     } catch (error) {
       if (error instanceof ConfirmValidationError) {
         console.log("[on-confirm.controller] validation failed", detail(error));
