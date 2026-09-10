@@ -99,6 +99,11 @@ export const createOnConfirmController =
       void service
         .handleCallback(callback)
         .then((result) => {
+          console.log("[on-confirm.controller] /on_confirm result", {
+            transactionId: callback.context.transaction_id,
+            orderId: callback.message?.order?.id,
+            result,
+          });
           if (result === "not_found") {
             response.status(200).json(
               ondcNack({
@@ -133,7 +138,9 @@ export const createOnConfirmController =
         })
         .catch((error) => {
           console.log("[on-confirm.controller] processing failed", {
-            error: error instanceof Error ? error.message : error,
+            transactionId: callback.context.transaction_id,
+            orderId: callback.message?.order?.id,
+            error: error instanceof Error ? (error.stack ?? error.message) : error,
           });
           response.status(500).json({
             error: {

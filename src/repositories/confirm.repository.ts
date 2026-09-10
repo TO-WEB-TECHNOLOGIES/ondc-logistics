@@ -212,10 +212,13 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
   }
   async handleCallback(response: OndcOnConfirmResponse) {
     const c = response.context;
+    const incomingOrderId = response.message?.order?.id;
     console.log("[confirm.repository] looking up /on_confirm", {
       transactionId: c.transaction_id,
       messageId: c.message_id,
       bppId: c.bpp_id,
+      incomingOrderId,
+      hasError: Boolean(response.error),
     });
     const [row] = await this.database
       .select({
@@ -229,23 +232,59 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
         and(
           eq(ondcTransactions.transactionId, c.transaction_id),
           eq(ondcTransactions.action, "confirm"),
+          // A transaction_id can have more than one /confirm row (retries,
+          // each currently minting its own order id — see loadInitialized).
+          // Without matching on order id too, LIMIT 1 below can pick an
+          // unrelated sibling attempt and this callback gets wrongly NACKed
+          // as invalid_order even though it's legitimate for its own row.
+          ...(incomingOrderId
+            ? [eq(ondcTransactions.orderId, incomingOrderId)]
+            : []),
         ),
       )
       .limit(1);
     if (!row) {
       console.log("[confirm.repository] confirm transaction not found", {
         transactionId: c.transaction_id,
+        incomingOrderId,
       });
       return "not_found";
     }
-    if (row.callbackMessageId === c.message_id) return "duplicate";
-    if (row.bppId && c.bpp_id && row.bppId !== c.bpp_id) return "invalid_bpp";
+    console.log("[confirm.repository] /on_confirm matched confirm row", {
+      transactionId: c.transaction_id,
+      rowId: row.id,
+      rowOrderId: row.orderId,
+      rowBppId: row.bppId,
+      incomingOrderId,
+      incomingBppId: c.bpp_id,
+    });
+    if (row.callbackMessageId === c.message_id) {
+      console.log("[confirm.repository] duplicate /on_confirm callback", {
+        transactionId: c.transaction_id,
+        messageId: c.message_id,
+      });
+      return "duplicate";
+    }
+    if (row.bppId && c.bpp_id && row.bppId !== c.bpp_id) {
+      console.log("[confirm.repository] /on_confirm bpp_id mismatch", {
+        transactionId: c.transaction_id,
+        expectedBppId: row.bppId,
+        receivedBppId: c.bpp_id,
+      });
+      return "invalid_bpp";
+    }
     if (
       !response.error &&
       row.orderId &&
       response.message?.order?.id !== row.orderId
-    )
+    ) {
+      console.log("[confirm.repository] /on_confirm order.id mismatch", {
+        transactionId: c.transaction_id,
+        expectedOrderId: row.orderId,
+        receivedOrderId: response.message?.order?.id,
+      });
       return "invalid_order";
+    }
     const state = response.error
       ? "failed"
       : (response.message?.order?.state ?? "unknown");
