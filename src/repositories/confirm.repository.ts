@@ -1,8 +1,15 @@
 import { and, eq } from "drizzle-orm";
 import { db1 } from "../db/index.js";
-import { ondcTransactions } from "../db/schema/index.js";
-import { buildOndcInitOrder } from "../mappers/init-persistence.mapper.js";
-import { fetchInitOrderSnapshot } from "./init-order-reader.js";
+import { initOrders, ondcTransactions } from "../db/schema/index.js";
+import {
+  buildOndcInitOrder,
+  extractInitOrder,
+} from "../mappers/init-persistence.mapper.js";
+import { insertInitOrderSnapshot } from "./init.repository.js";
+import {
+  fetchInitOrderSnapshot,
+  fetchSearchAddressNames,
+} from "./init-order-reader.js";
 import type {
   OndcConfirmRequest,
   OndcOnConfirmResponse,
@@ -134,30 +141,47 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
       .limit(1);
     if (existing.length > 0) return false;
 
+    const personNames = await fetchSearchAddressNames(
+      this.database,
+      payload.context.transaction_id,
+    );
+
     console.log("[confirm.repository] persisting /confirm", {
       orderId: payload.message.order.id,
       transactionId: payload.context.transaction_id,
       messageId: payload.context.message_id,
       parentTransactionId: initTransactionId,
     });
-    await this.database.insert(ondcTransactions).values({
-      transactionId: payload.context.transaction_id,
-      messageId: payload.context.message_id,
-      action: "confirm",
-      parentTransactionId: initTransactionId,
-      orderId: payload.message.order.id,
-      orderState: payload.message.order.state,
-      status: "pending",
-      domain: payload.context.domain,
-      country: payload.context.country,
-      city: payload.context.city,
-      coreVersion: payload.context.core_version,
-      bapId: payload.context.bap_id,
-      bapUri: payload.context.bap_uri,
-      bppId: payload.context.bpp_id,
-      bppUri: payload.context.bpp_uri,
-      timestamp: new Date(payload.context.timestamp),
-      ttl: payload.context.ttl,
+    await this.database.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(ondcTransactions)
+        .values({
+          transactionId: payload.context.transaction_id,
+          messageId: payload.context.message_id,
+          action: "confirm",
+          parentTransactionId: initTransactionId,
+          orderId: payload.message.order.id,
+          orderState: payload.message.order.state,
+          status: "pending",
+          domain: payload.context.domain,
+          country: payload.context.country,
+          city: payload.context.city,
+          coreVersion: payload.context.core_version,
+          bapId: payload.context.bap_id,
+          bapUri: payload.context.bap_uri,
+          bppId: payload.context.bpp_id,
+          bppUri: payload.context.bpp_uri,
+          timestamp: new Date(payload.context.timestamp),
+          ttl: payload.context.ttl,
+        })
+        .returning({ id: ondcTransactions.id });
+
+      const extracted = extractInitOrder(
+        payload.message.order,
+        { bppId: payload.context.bpp_id, bppUri: payload.context.bpp_uri },
+        personNames,
+      );
+      await insertInitOrderSnapshot(tx, row.id, "confirm", extracted);
     });
     return true;
   }
@@ -225,20 +249,44 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
     const state = response.error
       ? "failed"
       : (response.message?.order?.state ?? "unknown");
-    await this.database
-      .update(ondcTransactions)
-      .set({
-        status: response.error ? "failed" : "completed",
-        orderState: state,
-        callbackMessageId: c.message_id,
-        callbackTimestamp: new Date(c.timestamp),
-        bppId: c.bpp_id,
-        bppUri: c.bpp_uri,
-        errorCode: response.error?.code as string | undefined,
-        errorMessage: response.error?.message as string | undefined,
-        updatedAt: new Date(),
-      })
-      .where(eq(ondcTransactions.id, row.id));
+    const personNames =
+      !response.error && response.message?.order
+        ? await fetchSearchAddressNames(this.database, c.transaction_id)
+        : undefined;
+    await this.database.transaction(async (tx) => {
+      if (!response.error && response.message?.order) {
+        // Replace any prior on_confirm snapshot (e.g. a corrected callback
+        // for the same transaction) rather than leaving stale child rows.
+        await tx
+          .delete(initOrders)
+          .where(
+            and(
+              eq(initOrders.transactionDbId, row.id),
+              eq(initOrders.snapshotType, "on_confirm"),
+            ),
+          );
+        const extracted = extractInitOrder(
+          response.message.order,
+          { bppId: c.bpp_id, bppUri: c.bpp_uri },
+          personNames,
+        );
+        await insertInitOrderSnapshot(tx, row.id, "on_confirm", extracted);
+      }
+      await tx
+        .update(ondcTransactions)
+        .set({
+          status: response.error ? "failed" : "completed",
+          orderState: state,
+          callbackMessageId: c.message_id,
+          callbackTimestamp: new Date(c.timestamp),
+          bppId: c.bpp_id,
+          bppUri: c.bpp_uri,
+          errorCode: response.error?.code as string | undefined,
+          errorMessage: response.error?.message as string | undefined,
+          updatedAt: new Date(),
+        })
+        .where(eq(ondcTransactions.id, row.id));
+    });
     console.log("[confirm.repository] /on_confirm persisted", {
       transactionId: c.transaction_id,
       orderId: row.orderId,

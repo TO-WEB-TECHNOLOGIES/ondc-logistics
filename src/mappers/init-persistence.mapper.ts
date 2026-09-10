@@ -65,6 +65,9 @@ export interface ExtractedInitOrder {
     tracking?: boolean;
     stateCode?: string;
     stateShortDesc?: string;
+    agentName?: string;
+    agentPhone?: string;
+    vehicleRegistration?: string;
     start: ExtractedFulfillmentSide;
     end: ExtractedFulfillmentSide;
     tags: Array<{ code: string; list: Array<{ code: string; value?: string }> }>;
@@ -140,9 +143,6 @@ interface ExtractedFulfillmentSide {
   contactPhone?: string;
   contactEmail?: string;
   personName?: string;
-  agentName?: string;
-  agentPhone?: string;
-  vehicleRegistration?: string;
   timeDuration?: string;
   timeTimestamp?: string;
   timeRangeStart?: string;
@@ -178,9 +178,6 @@ const extractSide = (
   contactPhone: side?.contact?.phone,
   contactEmail: side?.contact?.email,
   personName: side?.person?.name,
-  agentName: (side as any)?.agent?.name,
-  agentPhone: (side as any)?.agent?.phone,
-  vehicleRegistration: (side as any)?.vehicle?.registration,
   timeDuration: side?.time?.duration,
   timeTimestamp: side?.time?.timestamp,
   timeRangeStart: side?.time?.range?.start,
@@ -203,6 +200,12 @@ const extractTags = (tags: OndcTag[] | undefined) =>
 export const extractInitOrder = (
   order: OndcInitOrder,
   context: { bppId?: string; bppUri?: string },
+  // Forces start/end person.name to the given values regardless of what the
+  // payload itself carries — callers pass the originating /search request's
+  // location address name (logistics_searches.start/end_address_name) here,
+  // since the ONDC payload's own person.name is unreliable (LSPs may not
+  // echo one back, and we never sent one in /init to begin with).
+  personNameOverride?: { start?: string; end?: string },
 ): ExtractedInitOrder => {
   const billing = order.billing as Record<string, unknown> | undefined;
   const payment = order.payment as Record<string, unknown> | undefined;
@@ -260,17 +263,34 @@ export const extractInitOrder = (
       timeDuration: item.time?.duration,
       timeTimestamp: item.time?.timestamp,
     })),
-    fulfillments: order.fulfillments.map((f) => ({
-      fulfillmentId: f.id,
-      type: f.type,
-      awbNo: f["@ondc/org/awb_no"],
-      tracking: f.tracking,
-      stateCode: f.state?.descriptor?.code,
-      stateShortDesc: f.state?.descriptor?.short_desc,
-      start: extractSide(f.start),
-      end: extractSide(f.end),
-      tags: extractTags(f.tags),
-    })),
+    fulfillments: order.fulfillments.map((f) => {
+      const agent = f.agent as { name?: string; phone?: string } | undefined;
+      const vehicle = f.vehicle as { registration?: string } | undefined;
+      return {
+        fulfillmentId: f.id,
+        type: f.type,
+        awbNo: f["@ondc/org/awb_no"],
+        tracking: f.tracking,
+        stateCode: f.state?.descriptor?.code,
+        stateShortDesc: f.state?.descriptor?.short_desc,
+        agentName: agent?.name,
+        agentPhone: agent?.phone,
+        vehicleRegistration: vehicle?.registration,
+        start: {
+          ...extractSide(f.start),
+          ...(personNameOverride?.start !== undefined
+            ? { personName: personNameOverride.start }
+            : {}),
+        },
+        end: {
+          ...extractSide(f.end),
+          ...(personNameOverride?.end !== undefined
+            ? { personName: personNameOverride.end }
+            : {}),
+        },
+        tags: extractTags(f.tags),
+      };
+    }),
     quoteBreakups: (
       (quote?.breakup as Array<Record<string, unknown>> | undefined) ?? []
     ).map((b) => ({
@@ -444,6 +464,9 @@ export interface FetchedInitOrder {
     tracking?: boolean | null;
     stateCode?: string | null;
     stateShortDesc?: string | null;
+    agentName?: string | null;
+    agentPhone?: string | null;
+    vehicleRegistration?: string | null;
     start: FetchedFulfillmentSide;
     end: FetchedFulfillmentSide;
     tags: Array<{ code: string; values: Array<{ code: string; value?: string | null }> }>;
@@ -515,9 +538,6 @@ interface FetchedFulfillmentSide {
   contactPhone?: string | null;
   contactEmail?: string | null;
   personName?: string | null;
-  agentName?: string | null;
-  agentPhone?: string | null;
-  vehicleRegistration?: string | null;
   timeDuration?: string | null;
   timeTimestamp?: Date | null;
   timeRangeStart?: Date | null;
@@ -579,17 +599,6 @@ const buildSide = (side: FetchedFulfillmentSide) => ({
       }
     : {}),
   ...(side.personName ? { person: { name: side.personName } } : {}),
-  ...(side.agentName || side.agentPhone
-    ? {
-        agent: {
-          ...(side.agentName ? { name: side.agentName } : {}),
-          ...(side.agentPhone ? { phone: side.agentPhone } : {}),
-        },
-      }
-    : {}),
-  ...(side.vehicleRegistration
-    ? { vehicle: { registration: side.vehicleRegistration } }
-    : {}),
   ...(side.timeDuration || side.timeTimestamp || side.timeRangeStart || side.timeRangeEnd
     ? {
         time: {
@@ -709,6 +718,17 @@ export const buildOndcInitOrder = (fetched: FetchedInitOrder): OndcInitOrder => 
       ...(f.awbNo ? { "@ondc/org/awb_no": f.awbNo } : {}),
       ...(f.tracking !== undefined && f.tracking !== null
         ? { tracking: f.tracking }
+        : {}),
+      ...(f.agentName || f.agentPhone
+        ? {
+            agent: {
+              ...(f.agentName ? { name: f.agentName } : {}),
+              ...(f.agentPhone ? { phone: f.agentPhone } : {}),
+            },
+          }
+        : {}),
+      ...(f.vehicleRegistration
+        ? { vehicle: { registration: f.vehicleRegistration } }
         : {}),
       ...(f.tags.length ? { tags: buildTags(f.tags) } : {}),
     })),

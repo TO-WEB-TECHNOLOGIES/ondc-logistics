@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db1 } from "../db/index.js";
 import {
   initOrderCancellationTerms,
@@ -8,6 +8,8 @@ import {
   initOrderQuoteBreakups,
   initOrderSettlements,
   initOrders,
+  logisticsSearches,
+  ondcTransactions,
   providerLocations,
   tagValues,
   tags,
@@ -95,6 +97,9 @@ export async function fetchInitOrderSnapshot(
         tracking: f.tracking,
         stateCode: f.stateCode,
         stateShortDesc: f.stateShortDesc,
+        agentName: f.agentName,
+        agentPhone: f.agentPhone,
+        vehicleRegistration: f.vehicleRegistration,
         start: {
           gps: f.startGps,
           addressName: f.startAddressName,
@@ -109,9 +114,6 @@ export async function fetchInitOrderSnapshot(
           contactPhone: f.startContactPhone,
           contactEmail: f.startContactEmail,
           personName: f.startPersonName,
-          agentName: f.startAgentName,
-          agentPhone: f.startAgentPhone,
-          vehicleRegistration: f.startVehicleRegistration,
           timeDuration: f.startTimeDuration,
           timeTimestamp: f.startTimeTimestamp,
           timeRangeStart: f.startTimeRangeStart,
@@ -138,9 +140,6 @@ export async function fetchInitOrderSnapshot(
           contactPhone: f.endContactPhone,
           contactEmail: f.endContactEmail,
           personName: f.endPersonName,
-          agentName: f.endAgentName,
-          agentPhone: f.endAgentPhone,
-          vehicleRegistration: f.endVehicleRegistration,
           timeDuration: f.endTimeDuration,
           timeTimestamp: f.endTimeTimestamp,
           timeRangeStart: f.endTimeRangeStart,
@@ -267,4 +266,38 @@ export async function fetchInitOrderSnapshot(
     linkedOrder,
   };
   return result;
+}
+
+// search, init, and confirm (and their callbacks) all share one ONDC
+// transaction_id — only `action` distinguishes their ondc_transactions rows
+// (see init.service.ts, which reuses the search's transaction_id for /init,
+// and confirm.service.ts, which reuses it again for /confirm). So the
+// search's requested start/end location name is reachable from any stage
+// with a direct join, no parent-transaction chain needed.
+export async function fetchSearchAddressNames(
+  database: typeof db1,
+  transactionId: string,
+): Promise<{ start?: string; end?: string } | undefined> {
+  const [row] = await database
+    .select({
+      startAddressName: logisticsSearches.startAddressName,
+      endAddressName: logisticsSearches.endAddressName,
+    })
+    .from(logisticsSearches)
+    .innerJoin(
+      ondcTransactions,
+      eq(logisticsSearches.transactionDbId, ondcTransactions.id),
+    )
+    .where(
+      and(
+        eq(ondcTransactions.transactionId, transactionId),
+        eq(ondcTransactions.action, "search"),
+      ),
+    )
+    .limit(1);
+  if (!row) return undefined;
+  return {
+    start: row.startAddressName ?? undefined,
+    end: row.endAddressName ?? undefined,
+  };
 }

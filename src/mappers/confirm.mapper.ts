@@ -126,7 +126,7 @@ export const mergeInitializedOrder = (
 
 /**
  * Folds confirm-time-only fulfillment fields (@ondc/org/awb_no, start.time,
- * start/end.person, start/end.instructions, fulfillment tags such as
+ * start/end.instructions, fulfillment tags such as
  * state/rto_action/reverseqc_input) from the caller's supplied order onto
  * the initialized fulfillment.
  *
@@ -135,6 +135,12 @@ export const mergeInitializedOrder = (
  * from /confirm onward, so they must come from the caller's /confirm
  * request rather than the initialized transaction. `location` and
  * `contact` stay authoritative from /init and are never overwritten here.
+ *
+ * `person` is deliberately excluded from this merge: start/end.person.name
+ * always comes from the initialized transaction (which sources it from the
+ * originating /search request's location address name — see
+ * extractInitOrder's personNameOverride), never from the caller, so a
+ * /confirm request never needs to (and can no longer) supply it.
  */
 const mergeConfirmFulfillments = (
   initializedFulfillments: OndcInitFulfillment[],
@@ -155,14 +161,12 @@ const mergeConfirmFulfillments = (
       start: {
         ...fulfillment.start,
         ...(match.start?.time ? { time: match.start.time } : {}),
-        ...(match.start?.person ? { person: match.start.person } : {}),
         ...(match.start?.instructions
           ? { instructions: match.start.instructions }
           : {}),
       },
       end: {
         ...fulfillment.end,
-        ...(match.end?.person ? { person: match.end.person } : {}),
         ...(match.end?.instructions ? { instructions: match.end.instructions } : {}),
       },
       ...(Array.isArray(match.tags) ? { tags: match.tags } : {}),

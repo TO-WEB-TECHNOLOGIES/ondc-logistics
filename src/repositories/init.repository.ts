@@ -19,6 +19,7 @@ import {
   tags,
 } from "../db/schema/index.js";
 import { extractInitOrder } from "../mappers/init-persistence.mapper.js";
+import { fetchSearchAddressNames } from "./init-order-reader.js";
 import type {
   InitRequest,
   ResolvedInitSelection,
@@ -55,16 +56,17 @@ export interface InitRepository {
   ): Promise<"processed" | "duplicate" | "not_found">;
 }
 
-type Tx = Parameters<Parameters<typeof db1.transaction>[0]>[0];
+export type Tx = Parameters<Parameters<typeof db1.transaction>[0]>[0];
 
 // Inserts one init_orders snapshot (+ all child rows) for a transaction.
-// Used for both the 'init' snapshot (what we sent) and the 'on_init'
-// snapshot (what the BPP returned) — the two are kept as separate rows so a
-// field missing in /on_init can be told apart from one explicitly present.
-async function insertInitOrderSnapshot(
+// Used for the 'init'/'on_init' snapshots (what we sent / what the BPP
+// returned) and, by confirm.repository.ts, the 'confirm'/'on_confirm'
+// snapshots — kept as separate rows per snapshot type so a field missing in
+// a callback can be told apart from one explicitly present in what we sent.
+export async function insertInitOrderSnapshot(
   tx: Tx,
   transactionDbId: string,
-  snapshotType: "init" | "on_init",
+  snapshotType: "init" | "on_init" | "confirm" | "on_confirm",
   extracted: ReturnType<typeof extractInitOrder>,
 ) {
   const [row] = await tx
@@ -168,6 +170,9 @@ async function insertInitOrderSnapshot(
         tracking: f.tracking,
         stateCode: f.stateCode,
         stateShortDesc: f.stateShortDesc,
+        agentName: f.agentName,
+        agentPhone: f.agentPhone,
+        vehicleRegistration: f.vehicleRegistration,
         startGps: f.start.gps,
         startAddressName: f.start.address?.name,
         startAddressBuilding: f.start.address?.building,
@@ -181,9 +186,6 @@ async function insertInitOrderSnapshot(
         startContactPhone: f.start.contactPhone,
         startContactEmail: f.start.contactEmail,
         startPersonName: f.start.personName,
-        startAgentName: f.start.agentName,
-        startAgentPhone: f.start.agentPhone,
-        startVehicleRegistration: f.start.vehicleRegistration,
         startTimeDuration: f.start.timeDuration,
         startTimeTimestamp: f.start.timeTimestamp
           ? new Date(f.start.timeTimestamp)
@@ -216,9 +218,6 @@ async function insertInitOrderSnapshot(
         endContactPhone: f.end.contactPhone,
         endContactEmail: f.end.contactEmail,
         endPersonName: f.end.personName,
-        endAgentName: f.end.agentName,
-        endAgentPhone: f.end.agentPhone,
-        endVehicleRegistration: f.end.vehicleRegistration,
         endTimeDuration: f.end.timeDuration,
         endTimeTimestamp: f.end.timeTimestamp
           ? new Date(f.end.timeTimestamp)
@@ -589,6 +588,10 @@ export class DrizzleInitRepository implements InitRepository {
   }
 
   async create(payload: OndcInitRequest) {
+    const personNames = await fetchSearchAddressNames(
+      this.database,
+      payload.context.transaction_id,
+    );
     return this.database.transaction(async (tx) => {
       const [row] = await tx
         .insert(ondcTransactions)
@@ -610,10 +613,11 @@ export class DrizzleInitRepository implements InitRepository {
         })
         .returning({ id: ondcTransactions.id });
 
-      const extracted = extractInitOrder(payload.message.order, {
-        bppId: payload.context.bpp_id,
-        bppUri: payload.context.bpp_uri,
-      });
+      const extracted = extractInitOrder(
+        payload.message.order,
+        { bppId: payload.context.bpp_id, bppUri: payload.context.bpp_uri },
+        personNames,
+      );
       await insertInitOrderSnapshot(tx, row.id, "init", extracted);
 
       return { initId: row.id };
@@ -659,6 +663,10 @@ export class DrizzleInitRepository implements InitRepository {
     if (!row) return "not_found" as const;
     if (row.callbackMessageId === c.message_id) return "duplicate" as const;
 
+    const personNames = await fetchSearchAddressNames(
+      this.database,
+      c.transaction_id,
+    );
     await this.database.transaction(async (tx) => {
       if (response.message?.order) {
         // Replace any prior on_init snapshot (e.g. a corrected callback for
@@ -671,10 +679,11 @@ export class DrizzleInitRepository implements InitRepository {
               eq(initOrders.snapshotType, "on_init"),
             ),
           );
-        const extracted = extractInitOrder(response.message.order, {
-          bppId: c.bpp_id,
-          bppUri: c.bpp_uri,
-        });
+        const extracted = extractInitOrder(
+          response.message.order,
+          { bppId: c.bpp_id, bppUri: c.bpp_uri },
+          personNames,
+        );
         await insertInitOrderSnapshot(tx, row.id, "on_init", extracted);
       }
       await tx

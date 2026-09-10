@@ -167,6 +167,14 @@ export const initOrderFulfillments = pgTable(
     tracking: boolean("tracking"),
     stateCode: varchar("state_code"),
     stateShortDesc: varchar("state_short_desc"),
+    // agent is a single object on the fulfillment itself per the contract
+    // (sibling of start/end, not nested under either side) — only ever
+    // populated once an LSP assigns a rider, which happens at /on_confirm.
+    agentName: varchar("agent_name"),
+    agentPhone: varchar("agent_phone"),
+    // vehicle is likewise a single object on the fulfillment itself, not
+    // nested under either side.
+    vehicleRegistration: varchar("vehicle_registration"),
 
     startGps: varchar("start_gps"),
     startAddressName: varchar("start_address_name"),
@@ -181,9 +189,6 @@ export const initOrderFulfillments = pgTable(
     startContactPhone: varchar("start_contact_phone"),
     startContactEmail: varchar("start_contact_email"),
     startPersonName: varchar("start_person_name"),
-    startAgentName: varchar("start_agent_name"),
-    startAgentPhone: varchar("start_agent_phone"),
-    startVehicleRegistration: varchar("start_vehicle_registration"),
     startTimeDuration: varchar("start_time_duration"),
     startTimeTimestamp: timestampWithTimezone("start_time_timestamp"),
     startTimeRangeStart: timestampWithTimezone("start_time_range_start"),
@@ -212,9 +217,6 @@ export const initOrderFulfillments = pgTable(
     endContactPhone: varchar("end_contact_phone"),
     endContactEmail: varchar("end_contact_email"),
     endPersonName: varchar("end_person_name"),
-    endAgentName: varchar("end_agent_name"),
-    endAgentPhone: varchar("end_agent_phone"),
-    endVehicleRegistration: varchar("end_vehicle_registration"),
     endTimeDuration: varchar("end_time_duration"),
     endTimeTimestamp: timestampWithTimezone("end_time_timestamp"),
     endTimeRangeStart: timestampWithTimezone("end_time_range_start"),
