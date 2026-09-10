@@ -134,13 +134,24 @@ export const createOnConfirmController =
             );
             return;
           }
-          response.status(200).json({ message: { ack: { status: "ACK" } } });
+          console.log("[on-confirm.controller] BEFORE RESPONSE");
+
+          response.status(200).json({
+            message: {
+              ack: {
+                status: "ACK",
+              },
+            },
+          });
+
+          console.log("[on-confirm.controller] AFTER RESPONSE");
         })
         .catch((error) => {
           console.log("[on-confirm.controller] processing failed", {
             transactionId: callback.context.transaction_id,
             orderId: callback.message?.order?.id,
-            error: error instanceof Error ? (error.stack ?? error.message) : error,
+            error:
+              error instanceof Error ? (error.stack ?? error.message) : error,
           });
           response.status(500).json({
             error: {
