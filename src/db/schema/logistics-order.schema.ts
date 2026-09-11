@@ -29,6 +29,10 @@ export const logisticsOrder = pgTable(
     // Item (single/primary item)
     itemId: varchar("item_id"),
     itemCategoryId: varchar("item_category_id"),
+    // Fulfillment-type code (e.g. "P2P"/"P2H2P") — echoed on every /update
+    // payload's items[].descriptor.code per the contract's example; distinct
+    // from itemDescriptorName (a display name).
+    itemDescriptorCode: varchar("item_descriptor_code"),
     itemDescriptorName: varchar("item_descriptor_name"),
     itemQuantityCount: integer("item_quantity_count"),
 

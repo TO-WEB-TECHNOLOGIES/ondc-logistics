@@ -10,15 +10,21 @@ import {
   createConfirmController,
   createOnConfirmController,
 } from "../controllers/confirm.controller.js";
+import {
+  createOnUpdateController,
+  createUpdateController,
+} from "../controllers/update.controller.js";
 import { OnSearchService } from "../services/on-search.service.js";
 import { SearchService } from "../services/search.service.js";
 import { InitService } from "../services/init.service.js";
 import { ConfirmService } from "../services/confirm.service.js";
+import { UpdateService } from "../services/update.service.js";
 import { GatewayOndcTransport } from "../utils/ondc-transport.js";
 import { DrizzleSearchRepository } from "../repositories/search.repository.js";
 import { DrizzleOnSearchRepository } from "../repositories/on-search.repository.js";
 import { DrizzleInitRepository } from "../repositories/init.repository.js";
 import { DrizzleConfirmRepository } from "../repositories/confirm.repository.js";
+import { DrizzleUpdateRepository } from "../repositories/update.repository.js";
 import { searchSseManager } from "../utils/search-sse.js";
 
 const protocol = {
@@ -52,6 +58,11 @@ const confirmService = new ConfirmService({
   transport,
   repository: new DrizzleConfirmRepository(),
 });
+const updateService = new UpdateService({
+  transport,
+  repository: new DrizzleUpdateRepository(),
+  protocol,
+});
 
 export const searchRouter = express.Router();
 searchRouter.post("/search", createSearchController(searchService));
@@ -79,3 +90,9 @@ confirmRouter.post("/confirm", createConfirmController(confirmService));
 
 export const onConfirmRouter = express.Router();
 onConfirmRouter.post("/on_confirm", createOnConfirmController(confirmService));
+
+export const updateRouter = express.Router();
+updateRouter.post("/update", createUpdateController(updateService));
+
+export const onUpdateRouter = express.Router();
+onUpdateRouter.post("/on_update", createOnUpdateController(updateService));

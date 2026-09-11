@@ -50,6 +50,7 @@ const buildLogisticsOrderColumns = (order: AnyOrder) => {
 
     itemId: item?.id,
     itemCategoryId: item?.category_id,
+    itemDescriptorCode: item?.descriptor?.code,
     itemDescriptorName: item?.descriptor?.name,
     itemQuantityCount: item?.quantity?.count,
 

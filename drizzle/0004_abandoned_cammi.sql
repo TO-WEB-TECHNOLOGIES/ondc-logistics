@@ -1,0 +1,1 @@
+ALTER TABLE "logistics_order" ADD COLUMN "item_descriptor_code" varchar;
