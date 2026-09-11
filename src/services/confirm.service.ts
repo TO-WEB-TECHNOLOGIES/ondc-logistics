@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { generateOrderId } from "../utils/order-id.js";
 import type {
   ConfirmRequest,
   ConfirmResponse,
@@ -228,7 +229,7 @@ export class ConfirmService {
         "message.order.id",
       );
     }
-    const orderId = suppliedOrder.id ?? state.orderId ?? randomUUID();
+    const orderId = suppliedOrder.id ?? state.orderId ?? generateOrderId();
     const now = new Date().toISOString();
     // Items/provider/quote/billing/payment come from the initialized
     // transaction (post consistency checks above); fulfillments and

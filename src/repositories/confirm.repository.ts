@@ -1,11 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db1 } from "../db/index.js";
-import { initOrders, ondcTransactions } from "../db/schema/index.js";
-import {
-  buildOndcInitOrder,
-  extractInitOrder,
-} from "../mappers/init-persistence.mapper.js";
-import { insertInitOrderSnapshot } from "./init.repository.js";
+import { logisticsOrder, ondcTransactions } from "../db/schema/index.js";
+import { buildOndcInitOrder } from "../mappers/init-persistence.mapper.js";
 import {
   fetchInitOrderSnapshot,
   fetchSearchAddressNames,
@@ -116,14 +112,24 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
       message: { order: buildOndcInitOrder(onInitSnapshot) },
     };
 
+    // A prior /confirm attempt for this transaction may have already minted
+    // an order — reuse it instead of minting a second one on retry.
+    const [existingOrder] = await this.database
+      .select({ orderId: logisticsOrder.orderId })
+      .from(logisticsOrder)
+      .where(eq(logisticsOrder.transactionId, row.transactionId))
+      .limit(1);
+
     console.log("[confirm.repository] initialized state loaded", {
       initTransactionId,
       status: row.status,
+      existingOrderId: existingOrder?.orderId,
     });
     return {
       init,
       onInit,
       initTransactionId: row.transactionId,
+      orderId: existingOrder?.orderId,
     };
   }
   async create(payload: OndcConfirmRequest, initTransactionId: string) {
@@ -141,11 +147,6 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
       .limit(1);
     if (existing.length > 0) return false;
 
-    const personNames = await fetchSearchAddressNames(
-      this.database,
-      payload.context.transaction_id,
-    );
-
     console.log("[confirm.repository] persisting /confirm", {
       orderId: payload.message.order.id,
       transactionId: payload.context.transaction_id,
@@ -153,35 +154,61 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
       parentTransactionId: initTransactionId,
     });
     await this.database.transaction(async (tx) => {
-      const [row] = await tx
-        .insert(ondcTransactions)
-        .values({
-          transactionId: payload.context.transaction_id,
-          messageId: payload.context.message_id,
-          action: "confirm",
-          parentTransactionId: initTransactionId,
-          orderId: payload.message.order.id,
-          orderState: payload.message.order.state,
-          status: "pending",
-          domain: payload.context.domain,
-          country: payload.context.country,
-          city: payload.context.city,
-          coreVersion: payload.context.core_version,
-          bapId: payload.context.bap_id,
-          bapUri: payload.context.bap_uri,
-          bppId: payload.context.bpp_id,
-          bppUri: payload.context.bpp_uri,
-          timestamp: new Date(payload.context.timestamp),
-          ttl: payload.context.ttl,
-        })
-        .returning({ id: ondcTransactions.id });
+      await tx.insert(ondcTransactions).values({
+        transactionId: payload.context.transaction_id,
+        messageId: payload.context.message_id,
+        action: "confirm",
+        parentTransactionId: initTransactionId,
+        orderId: payload.message.order.id,
+        orderState: payload.message.order.state,
+        status: "pending",
+        domain: payload.context.domain,
+        country: payload.context.country,
+        city: payload.context.city,
+        coreVersion: payload.context.core_version,
+        bapId: payload.context.bap_id,
+        bapUri: payload.context.bap_uri,
+        bppId: payload.context.bpp_id,
+        bppUri: payload.context.bpp_uri,
+        timestamp: new Date(payload.context.timestamp),
+        ttl: payload.context.ttl,
+      });
 
-      const extracted = extractInitOrder(
-        payload.message.order,
-        { bppId: payload.context.bpp_id, bppUri: payload.context.bpp_uri },
-        personNames,
-      );
-      await insertInitOrderSnapshot(tx, row.id, "confirm", extracted);
+      // order.id is minted fresh per attempt today (see loadInitialized), so
+      // this is always a first insert for this order, not a repeat write.
+      const order = payload.message.order as Record<string, unknown> & {
+        id: string;
+        state: string;
+        created_at?: string;
+        updated_at?: string;
+        provider: { id: string };
+        items: unknown;
+        fulfillments: unknown;
+        quote: unknown;
+        billing: unknown;
+        payment: unknown;
+        tags: unknown;
+        cancellation_terms?: unknown;
+        "@ondc/org/linked_order"?: unknown;
+      };
+      await tx.insert(logisticsOrder).values({
+        orderId: order.id,
+        transactionId: payload.context.transaction_id,
+        bppId: payload.context.bpp_id,
+        bppUri: payload.context.bpp_uri,
+        providerId: order.provider.id,
+        state: order.state,
+        orderCreatedAt: order.created_at ? new Date(order.created_at) : undefined,
+        orderUpdatedAt: order.updated_at ? new Date(order.updated_at) : undefined,
+        items: order.items,
+        fulfillments: order.fulfillments,
+        quote: order.quote,
+        linkedOrder: order["@ondc/org/linked_order"],
+        billing: order.billing,
+        payment: order.payment,
+        cancellationTerms: order.cancellation_terms,
+        tags: order.tags,
+      });
     });
     return true;
   }
@@ -293,23 +320,59 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
         ? await fetchSearchAddressNames(this.database, c.transaction_id)
         : undefined;
     await this.database.transaction(async (tx) => {
-      if (!response.error && response.message?.order) {
-        // Replace any prior on_confirm snapshot (e.g. a corrected callback
-        // for the same transaction) rather than leaving stale child rows.
+      if (!response.error && response.message?.order && row.orderId) {
+        // Full replace of items/fulfillments/quote/etc. with the BPP's
+        // returned order — the contract's /on_confirm carries the complete
+        // order object, so this is the authoritative state going forward.
+        // person.name is forced from the originating /search addresses
+        // (same override /init/on_init already apply) since a BPP's
+        // /on_confirm may omit or alter it.
+        const order = response.message.order as unknown as Record<string, unknown> & {
+          state: string;
+          created_at?: string;
+          updated_at?: string;
+          provider?: { id?: string };
+          items: unknown;
+          fulfillments: Array<Record<string, any>>;
+          quote: unknown;
+          billing: unknown;
+          payment: unknown;
+          tags: unknown;
+          cancellation_terms?: unknown;
+          "@ondc/org/linked_order"?: unknown;
+        };
+        const fulfillments =
+          personNames?.start || personNames?.end
+            ? order.fulfillments.map((f) => ({
+                ...f,
+                start: personNames?.start
+                  ? { ...f.start, person: { ...f.start?.person, name: personNames.start } }
+                  : f.start,
+                end: personNames?.end
+                  ? { ...f.end, person: { ...f.end?.person, name: personNames.end } }
+                  : f.end,
+              }))
+            : order.fulfillments;
         await tx
-          .delete(initOrders)
-          .where(
-            and(
-              eq(initOrders.transactionDbId, row.id),
-              eq(initOrders.snapshotType, "on_confirm"),
-            ),
-          );
-        const extracted = extractInitOrder(
-          response.message.order,
-          { bppId: c.bpp_id, bppUri: c.bpp_uri },
-          personNames,
-        );
-        await insertInitOrderSnapshot(tx, row.id, "on_confirm", extracted);
+          .update(logisticsOrder)
+          .set({
+            bppId: c.bpp_id,
+            bppUri: c.bpp_uri,
+            providerId: order.provider?.id,
+            state: order.state,
+            orderCreatedAt: order.created_at ? new Date(order.created_at) : undefined,
+            orderUpdatedAt: order.updated_at ? new Date(order.updated_at) : undefined,
+            items: order.items,
+            fulfillments,
+            quote: order.quote,
+            linkedOrder: order["@ondc/org/linked_order"],
+            billing: order.billing,
+            payment: order.payment,
+            cancellationTerms: order.cancellation_terms,
+            tags: order.tags,
+            updatedAt: new Date(),
+          })
+          .where(eq(logisticsOrder.orderId, row.orderId));
       }
       await tx
         .update(ondcTransactions)
