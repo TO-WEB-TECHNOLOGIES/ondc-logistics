@@ -32,9 +32,11 @@ export const buildAuthenticationUpdate = (
   };
 
   const base = buildBaseOrder(row, tags);
-  const [fulfillment] = base.fulfillments;
+  const fulfillment = base.fulfillments[0] as any;
   return {
     ...base,
-    fulfillments: [{ ...fulfillment, [side]: { authorization } }],
+    fulfillments: [
+      { ...fulfillment, [side]: { ...fulfillment[side], authorization } },
+    ],
   };
 };

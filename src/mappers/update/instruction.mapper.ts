@@ -36,9 +36,11 @@ export const buildInstructionUpdate = (
   };
 
   const base = buildBaseOrder(row, tags);
-  const [fulfillment] = base.fulfillments;
+  const fulfillment = base.fulfillments[0] as any;
   return {
     ...base,
-    fulfillments: [{ ...fulfillment, [side]: { instructions } }],
+    fulfillments: [
+      { ...fulfillment, [side]: { ...fulfillment[side], instructions } },
+    ],
   };
 };
