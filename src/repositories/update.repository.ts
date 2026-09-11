@@ -8,9 +8,14 @@ import type {
   OndcUpdateOrder,
   OndcUpdateRequest,
 } from "../types/update/ondc.js";
+import {
+  loadFulfillmentTags as loadFulfillmentTagsShared,
+  loadLogisticsOrder,
+  type LogisticsOrderRow,
+  type Tx,
+} from "./logistics-order-shared.js";
 
-type Tx = Parameters<Parameters<typeof db1.transaction>[0]>[0];
-export type LogisticsOrderRow = typeof logisticsOrder.$inferSelect;
+export type { LogisticsOrderRow };
 export type UpdateCallbackResult =
   "processed" | "duplicate" | "not_found" | "invalid_order" | "invalid_bpp";
 
@@ -154,33 +159,11 @@ export class DrizzleUpdateRepository implements UpdateRepository {
   constructor(private readonly database: typeof db1 = db1) {}
 
   async loadOrder(orderId: string) {
-    const [row] = await this.database
-      .select()
-      .from(logisticsOrder)
-      .where(eq(logisticsOrder.orderId, orderId))
-      .limit(1);
-    return row;
+    return loadLogisticsOrder(this.database, orderId);
   }
 
   async loadFulfillmentTags(orderId: string): Promise<OndcTag[]> {
-    const tagRows = await this.database
-      .select({ id: tags.id, code: tags.code })
-      .from(tags)
-      .where(eq(tags.logisticsOrderId, orderId));
-    const result: OndcTag[] = [];
-    for (const tagRow of tagRows) {
-      const values = await this.database
-        .select({ code: tagValues.code, value: tagValues.value })
-        .from(tagValues)
-        .where(eq(tagValues.tagId, tagRow.id));
-      result.push({
-        code: tagRow.code,
-        ...(values.length
-          ? { list: values.map((v) => ({ code: v.code, value: v.value ?? "" })) }
-          : {}),
-      });
-    }
-    return result;
+    return loadFulfillmentTagsShared(this.database, orderId);
   }
 
   async create(payload: OndcUpdateRequest, updateType: UpdateType) {

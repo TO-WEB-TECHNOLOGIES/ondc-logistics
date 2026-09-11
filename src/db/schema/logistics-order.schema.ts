@@ -40,6 +40,12 @@ export const logisticsOrder = pgTable(
     fulfillmentId: varchar("fulfillment_id"),
     fulfillmentType: varchar("fulfillment_type"),
     awbNo: varchar("awb_no"),
+    // Granular fulfillment-state code (Pending/Agent-assigned/Order-picked-up/
+    // etc — see the contract's "Fulfillment states & mapping to order states"
+    // table) — distinct from the coarser order-level `state` column above.
+    // Populated by /on_confirm and /on_status.
+    fulfillmentStateCode: varchar("fulfillment_state_code"),
+    fulfillmentStateShortDesc: varchar("fulfillment_state_short_desc"),
 
     // Start/end instructions (PCC/DCC)
     startInstructionCode: varchar("start_instruction_code"),

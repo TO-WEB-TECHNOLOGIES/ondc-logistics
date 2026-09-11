@@ -5,11 +5,13 @@ import type { OndcSearchRequest } from "../types/search/ondc.js";
 import type { OndcInitRequest } from "../types/init/ondc.js";
 import type { OndcConfirmRequest } from "../types/confirm/ondc.js";
 import type { OndcUpdateRequest } from "../types/update/ondc.js";
+import type { OndcStatusRequest } from "../types/status/ondc.js";
 export interface OndcTransport {
   sendSearch(request: OndcSearchRequest): Promise<void>;
   sendInit(request: OndcInitRequest): Promise<void>;
   sendConfirm(request: OndcConfirmRequest): Promise<void>;
   sendUpdate(request: OndcUpdateRequest): Promise<void>;
+  sendStatus(request: OndcStatusRequest): Promise<void>;
 }
 export class UnconfiguredOndcTransport implements OndcTransport {
   async sendSearch(_request: OndcSearchRequest) {
@@ -28,6 +30,11 @@ export class UnconfiguredOndcTransport implements OndcTransport {
     );
   }
   async sendUpdate(_request: OndcUpdateRequest) {
+    throw new NotImplementedError(
+      "ONDC transport/signing is not configured yet",
+    );
+  }
+  async sendStatus(_request: OndcStatusRequest) {
     throw new NotImplementedError(
       "ONDC transport/signing is not configured yet",
     );
@@ -85,6 +92,20 @@ export class GatewayOndcTransport implements OndcTransport {
         bap_id: request.context.bap_id,
         bpp_id: request.context.bpp_id,
         order_id: request.message.order.id,
+      },
+    });
+  }
+  async sendStatus(request: OndcStatusRequest) {
+    await sendOndcRequest({
+      action: "status",
+      payload: request as unknown as Record<string, unknown>,
+      baseURL: request.context.bpp_uri,
+      logMeta: {
+        transaction_id: request.context.transaction_id,
+        message_id: request.context.message_id,
+        bap_id: request.context.bap_id,
+        bpp_id: request.context.bpp_id,
+        order_id: request.message.order_id,
       },
     });
   }

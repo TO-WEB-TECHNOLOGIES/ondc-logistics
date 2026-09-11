@@ -14,18 +14,26 @@ import {
   createOnUpdateController,
   createUpdateController,
 } from "../controllers/update.controller.js";
+import {
+  createOnStatusController,
+  createStatusController,
+} from "../controllers/status.controller.js";
+import { createOrderStatusController } from "../controllers/order-status.controller.js";
 import { OnSearchService } from "../services/on-search.service.js";
 import { SearchService } from "../services/search.service.js";
 import { InitService } from "../services/init.service.js";
 import { ConfirmService } from "../services/confirm.service.js";
 import { UpdateService } from "../services/update.service.js";
+import { StatusService } from "../services/status.service.js";
 import { GatewayOndcTransport } from "../utils/ondc-transport.js";
 import { DrizzleSearchRepository } from "../repositories/search.repository.js";
 import { DrizzleOnSearchRepository } from "../repositories/on-search.repository.js";
 import { DrizzleInitRepository } from "../repositories/init.repository.js";
 import { DrizzleConfirmRepository } from "../repositories/confirm.repository.js";
 import { DrizzleUpdateRepository } from "../repositories/update.repository.js";
+import { DrizzleStatusRepository } from "../repositories/status.repository.js";
 import { searchSseManager } from "../utils/search-sse.js";
+import { orderSseManager } from "../utils/order-sse.js";
 
 const protocol = {
   domain: process.env.ONDC_DOMAIN ?? "nic2004:60232",
@@ -61,6 +69,12 @@ const confirmService = new ConfirmService({
 const updateService = new UpdateService({
   transport,
   repository: new DrizzleUpdateRepository(),
+  protocol,
+});
+const statusRepository = new DrizzleStatusRepository();
+const statusService = new StatusService({
+  transport,
+  repository: statusRepository,
   protocol,
 });
 
@@ -112,3 +126,34 @@ updateRouter.post("/update", createUpdateController(updateService));
 
 export const onUpdateRouter = express.Router();
 onUpdateRouter.post("/on_update", createOnUpdateController(updateService));
+
+export const statusRouter = express.Router();
+statusRouter.post("/status", createStatusController(statusService));
+
+statusRouter.get(
+  "/orders/:orderId/status",
+  createOrderStatusController(statusRepository),
+);
+
+/**
+ * @swagger
+ * /logistics/orders/{orderId}/status/events:
+ *   get:
+ *     summary: SSE stream of order status updates
+ *     description: text/event-stream — pushes an "order_status" event whenever /on_status is processed for this order, as an alternative to polling GET /logistics/orders/{orderId}/status.
+ *     tags: [Status]
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: SSE stream (text/event-stream).
+ */
+statusRouter.get("/orders/:orderId/status/events", (request, response) => {
+  orderSseManager.subscribe(request.params.orderId, response);
+});
+
+export const onStatusRouter = express.Router();
+onStatusRouter.post("/on_status", createOnStatusController(statusService));
