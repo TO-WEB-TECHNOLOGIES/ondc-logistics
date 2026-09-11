@@ -9,6 +9,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { initOrderFulfillments, initOrders } from "./init-order.schema.js";
+import { logisticsOrder } from "./logistics-order.schema.js";
 import {
   searchProviderFulfillments,
   searchProviders,
@@ -57,8 +58,12 @@ export const providerLocations = pgTable(
   ],
 );
 
-// Shared by search_provider_fulfillments (/on_search) and both init_orders
-// (order-level) and init_order_fulfillments (fulfillment-level) tags.
+// Shared by search_provider_fulfillments (/on_search), init_orders
+// (order-level) / init_order_fulfillments (fulfillment-level) tags, and
+// logistics_order (confirmed-order order/fulfillment tags — e.g. the
+// "state"/ready_to_ship tag — logistics_order has a single fulfillment per
+// row, so one owner column covers both order- and fulfillment-level tags
+// for a confirmed order).
 export const tags = pgTable(
   "tags",
   {
@@ -75,6 +80,10 @@ export const tags = pgTable(
     ).references(() => searchProviderFulfillments.id, {
       onDelete: "cascade",
     }),
+    logisticsOrderId: varchar("logistics_order_id").references(
+      () => logisticsOrder.orderId,
+      { onDelete: "cascade" },
+    ),
     code: varchar("code").notNull(),
     createdAt: timestampWithTimezone("created_at").defaultNow().notNull(),
   },
@@ -84,9 +93,10 @@ export const tags = pgTable(
     index("tags_search_provider_fulfillment_id_idx").on(
       table.searchProviderFulfillmentId,
     ),
+    index("tags_logistics_order_id_idx").on(table.logisticsOrderId),
     check(
       "tags_exactly_one_owner",
-      sql`num_nonnulls(${table.initOrderId}, ${table.initOrderFulfillmentId}, ${table.searchProviderFulfillmentId}) = 1`,
+      sql`num_nonnulls(${table.initOrderId}, ${table.initOrderFulfillmentId}, ${table.searchProviderFulfillmentId}, ${table.logisticsOrderId}) = 1`,
     ),
   ],
 );
