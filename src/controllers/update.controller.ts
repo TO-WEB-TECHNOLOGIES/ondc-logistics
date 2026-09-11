@@ -12,6 +12,98 @@ const detail = (e: UpdateValidationError) => ({
   message: e.message,
 });
 
+/**
+ * @swagger
+ * /logistics/update:
+ *   post:
+ *     summary: Update a confirmed logistics order
+ *     description: >
+ *       Single endpoint for all /update kinds — the frontend selects which via
+ *       `updateType` (app-specific, never forwarded to ONDC). fulfillmentId is required
+ *       on every request and checked against the order's stored fulfillment as an
+ *       identity guard. Full request/response examples: docs/update-api.md.
+ *     tags: [Update]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             oneOf:
+ *               - type: object
+ *                 required: [orderId, fulfillmentId, updateType, linkedOrder]
+ *                 properties:
+ *                   orderId: { type: string, example: od260910a1b2c3d4 }
+ *                   fulfillmentId: { type: string, example: "1" }
+ *                   updateType: { type: string, enum: [LINKED_ORDER_DETAILS] }
+ *                   linkedOrder:
+ *                     type: object
+ *                     description: At least one field required; omitted fields keep their stored value.
+ *                     properties:
+ *                       retailOrderId: { type: string }
+ *                       productName: { type: string }
+ *                       quantityCount: { type: integer }
+ *                       weight:
+ *                         type: object
+ *                         properties: { unit: { type: string }, value: { type: number } }
+ *                       dimensions:
+ *                         type: object
+ *                         properties:
+ *                           length: { type: object }
+ *                           breadth: { type: object }
+ *                           height: { type: object }
+ *                       providerName: { type: string }
+ *               - type: object
+ *                 required: [orderId, fulfillmentId, updateType, instruction]
+ *                 properties:
+ *                   orderId: { type: string, example: od260910a1b2c3d4 }
+ *                   fulfillmentId: { type: string, example: "1" }
+ *                   updateType: { type: string, enum: [START_INSTRUCTION, END_INSTRUCTION] }
+ *                   instruction:
+ *                     type: object
+ *                     required: [code]
+ *                     properties:
+ *                       code: { type: string, example: "2" }
+ *                       shortDesc: { type: string }
+ *                       longDesc: { type: string }
+ *                       images: { type: array, items: { type: string } }
+ *               - type: object
+ *                 required: [orderId, fulfillmentId, updateType, authorization]
+ *                 properties:
+ *                   orderId: { type: string, example: od260910a1b2c3d4 }
+ *                   fulfillmentId: { type: string, example: "1" }
+ *                   updateType: { type: string, enum: [START_AUTHENTICATION, END_AUTHENTICATION] }
+ *                   authorization:
+ *                     type: object
+ *                     required: [token]
+ *                     properties:
+ *                       type: { type: string, default: OTP }
+ *                       token: { type: string, example: "482913" }
+ *                       validFrom: { type: string, format: date-time }
+ *                       validTo: { type: string, format: date-time }
+ *               - type: object
+ *                 required: [orderId, fulfillmentId, updateType]
+ *                 properties:
+ *                   orderId: { type: string, example: od260910a1b2c3d4 }
+ *                   fulfillmentId: { type: string, example: "1" }
+ *                   updateType: { type: string, enum: [READY_TO_SHIP] }
+ *     responses:
+ *       202:
+ *         description: Update accepted and sent to the network.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 orderId: { type: string }
+ *                 transactionId: { type: string }
+ *                 messageId: { type: string }
+ *                 updateType: { type: string }
+ *                 status: { type: string, enum: [UPDATE_SENT] }
+ *       400:
+ *         description: Invalid request body.
+ *       409:
+ *         description: orderId not found, or fulfillmentId does not match the order.
+ */
 export const createUpdateController =
   (service: UpdateService) =>
   (request: Request, response: Response): void => {
@@ -68,6 +160,26 @@ export const createUpdateController =
     }
   };
 
+/**
+ * @swagger
+ * /on_update:
+ *   post:
+ *     summary: ONDC callback — update result from an LSP
+ *     description: >
+ *       Called by the LSP/BPP network, not by the frontend. Always responds 200 with
+ *       ACK/NACK; updates the logistics_order row's state and AWB (if returned).
+ *     tags: [Update]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: Standard ONDC /on_update envelope (context + message.order, or error).
+ *     responses:
+ *       200:
+ *         description: ACK or NACK.
+ */
 export const createOnUpdateController =
   (service: UpdateService) =>
   (request: Request, response: Response): void => {

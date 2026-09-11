@@ -7,7 +7,10 @@ const options: swaggerJsdoc.Options = {
       title: "ONDC Logistics Buyer App Platform (BAP) API",
       version: "1.0.0",
       description:
-        "ONDC Logistics App Platform — supports /issue, /on_issue, /issue_status, /on_issue_status and all standard ONDC logistics flows.",
+        "ONDC Logistics App Platform (LBNP/BAP) — app-facing endpoints for /search, /init, /confirm, /update, " +
+        "plus the ONDC callback endpoints (/on_search, /on_init, /on_confirm, /on_update) the LSP calls back into. " +
+        "App-facing endpoints take minimal business-level request bodies; the backend builds, signs, and sends the " +
+        "full ONDC wire payload.",
     },
     servers: [
       {
@@ -17,13 +20,24 @@ const options: swaggerJsdoc.Options = {
     ],
     tags: [
       {
-        name: "Issue",
-        description:
-          "IGM Issue management — /issue, /issue_status, /on_issue, /on_issue_status",
+        name: "Search",
+        description: "POST /logistics/search, its polling/SSE endpoints, and the /on_search callback",
+      },
+      {
+        name: "Init",
+        description: "POST /logistics/init and the /on_init callback",
+      },
+      {
+        name: "Confirm",
+        description: "POST /logistics/confirm and the /on_confirm callback",
+      },
+      {
+        name: "Update",
+        description: "POST /logistics/update and the /on_update callback",
       },
     ],
   },
-  apis: ["./src/controllers/*.ts"],
+  apis: ["./src/controllers/*.ts", "./src/routes/*.ts"],
 };
 
 export const swaggerSpec = swaggerJsdoc(options);

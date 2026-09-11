@@ -170,10 +170,20 @@ app.get("/", (req: Request, res: Response) => {
 app.use(router);
 
 // Swagger UI — available at /swagger
-// app.use("/swagger", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-//   customCss: ".swagger-ui .topbar { display: none }",
-//   customSiteTitle: "ONDC BAP API",
-// }));
+app.use(
+  "/swagger",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customCss: ".swagger-ui .topbar { display: none }",
+    customSiteTitle: "ONDC BAP API",
+  }),
+);
+
+// Raw OpenAPI JSON — for Postman's Import → Link/Raw text (see docs/update-api.md
+// or ask for a Postman collection to be generated from this).
+app.get("/swagger.json", (_req: Request, res: Response) => {
+  res.status(200).json(swaggerSpec);
+});
 
 // Sentry Express error handler — MUST be registered after all controllers/routes
 // and before any other (fall-through) error middleware. Captures errors thrown

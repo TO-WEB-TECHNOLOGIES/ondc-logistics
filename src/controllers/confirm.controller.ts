@@ -11,6 +11,63 @@ const detail = (e: ConfirmValidationError) => ({
   message: e.message,
 });
 
+/**
+ * @swagger
+ * /logistics/confirm:
+ *   post:
+ *     summary: Confirm a logistics order
+ *     description: >
+ *       Loads the persisted /init + /on_init state, validates the request against it,
+ *       mints an order_id (generateOrderId), builds and sends the full ONDC /confirm
+ *       payload, and persists the resulting logistics_order row. Idempotent per
+ *       (transaction_id, message_id, action, order_id).
+ *     tags: [Confirm]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [initTransactionId]
+ *             properties:
+ *               initTransactionId:
+ *                 type: string
+ *                 description: transaction_id from the prior /logistics/init call.
+ *               context:
+ *                 type: object
+ *                 properties:
+ *                   transaction_id: { type: string }
+ *                   message_id: { type: string }
+ *               order:
+ *                 type: object
+ *                 description: >
+ *                   Confirm-only fields not present in /init (per fulfillment: start.time,
+ *                   start/end.instructions, tags; plus @ondc/org/linked_order). Everything
+ *                   else (provider, items, quote, billing, payment) comes from the
+ *                   initialized transaction and cannot be overridden here.
+ *                 properties:
+ *                   fulfillments:
+ *                     type: array
+ *                     items: { type: object }
+ *                   "@ondc/org/linked_order":
+ *                     type: object
+ *     responses:
+ *       202:
+ *         description: Confirm accepted and sent to the network.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 orderId: { type: string, example: od260910a1b2c3d4 }
+ *                 transactionId: { type: string }
+ *                 messageId: { type: string }
+ *                 status: { type: string, enum: [CONFIRM_SENT] }
+ *       400:
+ *         description: Invalid request body.
+ *       409:
+ *         description: Request does not match the initialized transaction.
+ */
 export const createConfirmController =
   (service: ConfirmService) =>
   (request: Request, response: Response): void => {
@@ -82,6 +139,26 @@ export const createConfirmController =
     }
   };
 
+/**
+ * @swagger
+ * /on_confirm:
+ *   post:
+ *     summary: ONDC callback — order confirmation result from an LSP
+ *     description: >
+ *       Called by the LSP/BPP network, not by the frontend. Always responds 200 with
+ *       ACK/NACK; updates the logistics_order row in place with the BPP's returned order.
+ *     tags: [Confirm]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: Standard ONDC /on_confirm envelope (context + message.order, or error).
+ *     responses:
+ *       200:
+ *         description: ACK or NACK.
+ */
 export const createOnConfirmController =
   (service: ConfirmService) =>
   (request: Request, response: Response): void => {

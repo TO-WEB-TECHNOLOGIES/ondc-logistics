@@ -72,6 +72,22 @@ searchRouter.get(
   createSearchOptionsController(searchRepository),
 );
 
+/**
+ * @swagger
+ * /logistics/search/{searchId}/events:
+ *   get:
+ *     summary: SSE stream of /on_search results for a search
+ *     description: text/event-stream — pushes an event once /on_search callbacks are processed, as an alternative to polling GET /logistics/search/{searchId}/options.
+ *     tags: [Search]
+ *     parameters:
+ *       - in: path
+ *         name: searchId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: SSE stream (text/event-stream).
+ */
 searchRouter.get("/search/:searchId/events", (request, response) => {
   searchSseManager.subscribe(request.params.searchId, response);
 });

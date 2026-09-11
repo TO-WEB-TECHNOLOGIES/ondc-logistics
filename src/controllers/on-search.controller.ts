@@ -5,6 +5,35 @@ import {
   SearchValidationError,
 } from "../utils/search-validation.js";
 
+/**
+ * @swagger
+ * /on_search:
+ *   post:
+ *     summary: ONDC callback — catalog results from an LSP
+ *     description: Called by the LSP/BPP network, not by the frontend. Always responds 200 with ACK/NACK.
+ *     tags: [Search]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: Standard ONDC /on_search envelope (context + message.catalog).
+ *     responses:
+ *       200:
+ *         description: ACK or NACK.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: object
+ *                   properties:
+ *                     ack:
+ *                       type: object
+ *                       properties: { status: { type: string, enum: [ACK, NACK] } }
+ */
 export const createOnSearchController =
   (onSearchService: OnSearchService) =>
   async (request: Request, response: Response): Promise<void> => {
