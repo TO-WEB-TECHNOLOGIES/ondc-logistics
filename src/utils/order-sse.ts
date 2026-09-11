@@ -14,7 +14,25 @@ export interface OrderStatusSseEvent {
   updatedAt: string;
 }
 
-export type OrderSseEvent = OrderStatusSseEvent;
+/**
+ * Published on /on_track. Same channel/subscription as order_status (one
+ * SSE connection per order carries both event types, distinguished by
+ * `event`) — reusing the existing GET .../status/events stream rather than
+ * standing up a second endpoint. `path` carries the raw breadcrumb tag list
+ * from the callback as-is (not persisted to the DB — see logistics-order.schema.ts).
+ */
+export interface OrderTrackingSseEvent {
+  event: "order_tracking";
+  orderId: string;
+  url?: string;
+  status?: string;
+  gps?: string;
+  locationTimestamp?: string;
+  path?: Array<{ lat_lng?: string; sequence?: string }>;
+  updatedAt: string;
+}
+
+export type OrderSseEvent = OrderStatusSseEvent | OrderTrackingSseEvent;
 
 interface Subscriber {
   response: Response;

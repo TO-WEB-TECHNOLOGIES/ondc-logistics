@@ -119,6 +119,17 @@ export const logisticsOrder = pgTable(
     }),
     linkedOrderProviderName: varchar("linked_order_provider_name"),
 
+    // Live-tracking snapshot (from /on_track — see docs/ondc/ondc logistics.docx,
+    // "/on_track" section). Only the LATEST known position/status is kept —
+    // the breadcrumb path (tags[code=path], a growing list) is deliberately
+    // NOT persisted here (doesn't fit this table's flat-column, single-row
+    // design); it's forwarded live via SSE only. See track.repository.ts.
+    trackingUrl: varchar("tracking_url"),
+    trackingStatus: varchar("tracking_status"),
+    trackingGps: varchar("tracking_gps"),
+    trackingLocationTimestamp: timestampWithTimezone("tracking_location_timestamp"),
+    trackingUpdatedAt: timestampWithTimezone("tracking_updated_at"),
+
     createdAt: timestampWithTimezone("created_at").defaultNow().notNull(),
     updatedAt: timestampWithTimezone("updated_at").defaultNow().notNull(),
   },

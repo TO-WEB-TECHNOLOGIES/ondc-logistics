@@ -19,12 +19,18 @@ import {
   createStatusController,
 } from "../controllers/status.controller.js";
 import { createOrderStatusController } from "../controllers/order-status.controller.js";
+import {
+  createOnTrackController,
+  createTrackController,
+} from "../controllers/track.controller.js";
+import { createOrderTrackController } from "../controllers/order-track.controller.js";
 import { OnSearchService } from "../services/on-search.service.js";
 import { SearchService } from "../services/search.service.js";
 import { InitService } from "../services/init.service.js";
 import { ConfirmService } from "../services/confirm.service.js";
 import { UpdateService } from "../services/update.service.js";
 import { StatusService } from "../services/status.service.js";
+import { TrackService } from "../services/track.service.js";
 import { GatewayOndcTransport } from "../utils/ondc-transport.js";
 import { DrizzleSearchRepository } from "../repositories/search.repository.js";
 import { DrizzleOnSearchRepository } from "../repositories/on-search.repository.js";
@@ -32,6 +38,7 @@ import { DrizzleInitRepository } from "../repositories/init.repository.js";
 import { DrizzleConfirmRepository } from "../repositories/confirm.repository.js";
 import { DrizzleUpdateRepository } from "../repositories/update.repository.js";
 import { DrizzleStatusRepository } from "../repositories/status.repository.js";
+import { DrizzleTrackRepository } from "../repositories/track.repository.js";
 import { searchSseManager } from "../utils/search-sse.js";
 import { orderSseManager } from "../utils/order-sse.js";
 
@@ -75,6 +82,12 @@ const statusRepository = new DrizzleStatusRepository();
 const statusService = new StatusService({
   transport,
   repository: statusRepository,
+  protocol,
+});
+const trackRepository = new DrizzleTrackRepository();
+const trackService = new TrackService({
+  transport,
+  repository: trackRepository,
   protocol,
 });
 
@@ -157,3 +170,14 @@ statusRouter.get("/orders/:orderId/status/events", (request, response) => {
 
 export const onStatusRouter = express.Router();
 onStatusRouter.post("/on_status", createOnStatusController(statusService));
+
+export const trackRouter = express.Router();
+trackRouter.post("/track", createTrackController(trackService));
+
+trackRouter.get(
+  "/orders/:orderId/track",
+  createOrderTrackController(trackRepository),
+);
+
+export const onTrackRouter = express.Router();
+onTrackRouter.post("/on_track", createOnTrackController(trackService));

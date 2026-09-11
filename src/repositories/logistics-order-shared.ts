@@ -99,6 +99,25 @@ export const buildLogisticsOrderColumns = (order: AnyOrder) => {
 };
 
 /**
+ * Flattens an /on_track message.tracking object into logistics_order's
+ * tracking snapshot columns — latest position/status/url only. The
+ * breadcrumb `path` tags are intentionally excluded (see schema comment);
+ * callers that want them should read them off the raw callback/SSE event,
+ * not the DB.
+ */
+export const buildTrackingColumns = (tracking: AnyOrder) => ({
+  trackingUrl: tracking?.url,
+  trackingStatus: tracking?.status,
+  trackingGps: tracking?.location?.gps,
+  trackingLocationTimestamp: tracking?.location?.time?.timestamp
+    ? new Date(tracking.location.time.timestamp)
+    : undefined,
+  trackingUpdatedAt: tracking?.location?.updated_at
+    ? new Date(tracking.location.updated_at)
+    : undefined,
+});
+
+/**
  * Replaces logistics_order's tags (order-level + the primary fulfillment's
  * tags — e.g. "state"/ready_to_ship, or on_status's tracking/
  * fulfillment_delay/reverseqc_output codes) via the shared tags/tag_values

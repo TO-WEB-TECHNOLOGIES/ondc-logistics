@@ -6,9 +6,11 @@ import {
   onInitRouter,
   onSearchRouter,
   onStatusRouter,
+  onTrackRouter,
   onUpdateRouter,
   searchRouter,
   statusRouter,
+  trackRouter,
   updateRouter,
 } from "./ondc.routes.js";
 
@@ -21,5 +23,13 @@ router.use(
   confirmRouter,
   updateRouter,
   statusRouter,
+  trackRouter,
 );
-router.use(onSearchRouter, onInitRouter, onConfirmRouter, onUpdateRouter, onStatusRouter);
+router.use(
+  onSearchRouter,
+  onInitRouter,
+  onConfirmRouter,
+  onUpdateRouter,
+  onStatusRouter,
+  onTrackRouter,
+);
