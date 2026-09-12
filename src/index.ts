@@ -179,7 +179,7 @@ app.use(
   }),
 );
 
-// Raw OpenAPI JSON — for Postman's Import → Link/Raw text (see docs/update-api.md
+// Raw OpenAPI JSON — for Postman's Import → Link/Raw text (see docs/api/update.md
 // or ask for a Postman collection to be generated from this).
 app.get("/swagger.json", (_req: Request, res: Response) => {
   res.status(200).json(swaggerSpec);

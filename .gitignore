@@ -7,8 +7,13 @@ dist/
 drizzle/meta/
 
 *.log
+logs/
 
 ondc-docs.md
 
 # temporary files
 dump.txt
+
+# private/local agent instructions - not meant to be checked in
+Claude.local.md
+.codex.local.md

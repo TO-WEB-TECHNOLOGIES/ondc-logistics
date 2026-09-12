@@ -21,7 +21,7 @@ const detail = (e: UpdateValidationError) => ({
  *       Single endpoint for all /update kinds — the frontend selects which via
  *       `updateType` (app-specific, never forwarded to ONDC). fulfillmentId is required
  *       on every request and checked against the order's stored fulfillment as an
- *       identity guard. Full request/response examples: docs/update-api.md.
+ *       identity guard. Full request/response examples: docs/api/update.md.
  *     tags: [Update]
  *     requestBody:
  *       required: true

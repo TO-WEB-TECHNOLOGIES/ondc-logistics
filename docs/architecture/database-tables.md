@@ -13,7 +13,7 @@ Provides protocol-level correlation and auditing across `/search`, `/on_search`,
 - `id` is the internal database primary key; `transaction_id` is the ONDC protocol identifier.
 - `message_id` identifies a specific message within the transaction.
 - Index `transaction_id` and `message_id` for efficient message correlation.
-- There is no `request_payload`/`response_payload` JSONB. `/confirm` reconstructs the objects it needs from `init_orders` and its children (see `docs/db/schema.md`) rather than reading a cached blob.
+- There is no `request_payload`/`response_payload` JSONB. `/confirm` reconstructs the objects it needs from `init_orders` and its children (see `docs/architecture/database-schema.md`) rather than reading a cached blob.
 - `action` identifies the API associated with the message, such as `search` or `on_search` .
 - This should remain a shared protocol-level table used by the entire Logistics API lifecycle.
 
@@ -243,7 +243,7 @@ logistics_searches                 (start/end locations, schedule, payload, paym
 ```
 
 `/init` and `/on_init` (and what `/confirm` reconstructs from them) are a
-separate, larger table set — see `docs/db/schema.md` section 6.
+separate, larger table set — see `docs/architecture/database-schema.md` section 6.
 
 # Core Design Principles
 

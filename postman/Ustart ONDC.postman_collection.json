@@ -1,0 +1,459 @@
+{
+  "info": {
+    "_postman_id": "720fd0a9-b34c-4b19-ab9a-e0020f6c8772",
+    "name": "Ustart ONDC",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "41647731"
+  },
+  "item": [
+    {
+      "name": "ONDC-logistics",
+      "item": [
+        {
+          "name": "search",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();\n\nconst searchId = response.searchId;\n\npm.environment.set(\"searchId\", searchId);\n\nconsole.log(\"Saved searchId:\", searchId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"category_id\": \"Immediate Delivery\",\r\n\r\n  \"start\": {\r\n    \"gps\": \"28.9845,77.7064\",\r\n    \"area_code\": \"250001\",\r\n    \"address\": {\r\n      \"name\": \"Pickup Person\",\r\n      \"building\": \"123\",\r\n      \"locality\": \"Sector 1\",\r\n      \"street\": \"Main Road\",\r\n      \"city\": \"Meerut\",\r\n      \"state\": \"Uttar Pradesh\",\r\n      \"country\": \"IND\"\r\n    }\r\n  },\r\n\r\n  \"end\": {\r\n    \"gps\": \"28.6139,77.2090\",\r\n    \"area_code\": \"110001\",\r\n    \"address\": {\r\n      \"name\": \"Delivery Person\",\r\n      \"building\": \"456\",\r\n      \"locality\": \"Connaught Place\",\r\n      \"street\": \"Main Road\",\r\n      \"city\": \"New Delhi\",\r\n      \"state\": \"Delhi\",\r\n      \"country\": \"IND\"\r\n    }\r\n  },\r\n\r\n  \"schedule\": {\r\n    \"days\": \"1,2,3,4,5,6,7\",\r\n    \"range_start\": \"0000\",\r\n    \"range_end\": \"2359\"\r\n  },\r\n\r\n  \"payload\": {\r\n    \"weight\": {\r\n      \"value\": 1,\r\n      \"unit\": \"kilogram\"\r\n    },\r\n    \"dimensions\": {\r\n      \"length\": {\r\n        \"value\": 10,\r\n        \"unit\": \"centimeter\"\r\n      },\r\n      \"breadth\": {\r\n        \"value\": 10,\r\n        \"unit\": \"centimeter\"\r\n      },\r\n      \"height\": {\r\n        \"value\": 10,\r\n        \"unit\": \"centimeter\"\r\n      }\r\n    },\r\n    \"category\": \"Grocery\",\r\n    \"value\": {\r\n      \"amount\": \"100\",\r\n      \"currency\": \"INR\"\r\n    },\r\n    \"dangerous_goods\": false\r\n  }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}logistics/search",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "search"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "sse stream",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/logistics/search/:searchId/events",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "logistics",
+                "search",
+                ":searchId",
+                "events"
+              ],
+              "variable": [
+                {
+                  "key": "searchId",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "on-search",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"context\": {\r\n    \"domain\": \"nic2004:60232\",\r\n    \"country\": \"IND\",\r\n    \"city\": \"std:080\",\r\n    \"action\": \"on_search\",\r\n    \"core_version\": \"1.2.0\",\r\n    \"bap_id\": \"buyer.example.com\",\r\n    \"bap_uri\": \"https://buyer.example.com\",\r\n    \"bpp_id\": \"lsp.example.com\",\r\n    \"bpp_uri\": \"https://lsp.example.com\",\r\n    \"transaction_id\": \"78314977-9162-4a85-a03b-8c67673bb60f\",\r\n    \"message_id\": \"550e8400-e29b-41d4-a716-446655440000\",\r\n    \"timestamp\": \"2026-08-24T04:10:00.000Z\"\r\n  },\r\n  \"message\": {\r\n    \"catalog\": {\r\n      \"bpp/providers\": [\r\n        {\r\n          \"id\": \"LSP001\",\r\n          \"descriptor\": {\r\n            \"name\": \"Test Logistics Provider\",\r\n            \"short_desc\": \"Test LSP\"\r\n          },\r\n          \"categories\": [\r\n            {\r\n              \"id\": \"Standard\",\r\n              \"time\": {\r\n                \"label\": \"enable\",\r\n                \"duration\": \"PT60M\"\r\n              }\r\n            }\r\n          ],\r\n          \"fulfillments\": [\r\n            {\r\n              \"id\": \"F1\",\r\n              \"type\": \"Delivery\"\r\n            }\r\n          ],\r\n          \"locations\": [\r\n            {\r\n              \"id\": \"LOC1\",\r\n              \"gps\": \"12.9716,77.5946\",\r\n              \"address\": {\r\n                \"street\": \"MG Road\",\r\n                \"city\": \"Bengaluru\",\r\n                \"state\": \"KA\",\r\n                \"area_code\": \"560001\"\r\n              }\r\n            }\r\n          ],\r\n          \"items\": [\r\n            {\r\n              \"id\": \"ITEM001\",\r\n              \"category_id\": \"Standard\",\r\n              \"descriptor\": {\r\n                \"code\": \"STD\",\r\n                \"name\": \"Standard Delivery\",\r\n                \"short_desc\": \"Standard delivery service\"\r\n              },\r\n              \"fulfillment_id\": \"F1\",\r\n              \"price\": {\r\n                \"currency\": \"INR\",\r\n                \"value\": \"100.00\"\r\n              },\r\n              \"time\": {\r\n                \"label\": \"enable\",\r\n                \"duration\": \"PT60M\"\r\n              }\r\n            }\r\n          ]\r\n        }\r\n      ]\r\n    }\r\n  }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://ondc-logistics.onrender.com/on_search",
+              "protocol": "https",
+              "host": [
+                "ondc-logistics",
+                "onrender",
+                "com"
+              ],
+              "path": [
+                "on_search"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "init",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();\r\n\r\nconst initTransactionId = res.transactionId;\r\npm.environment.set(\"initTransactionId\", initTransactionId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"search_id\": \"{{searchId}}\",\r\n    \"provider_id\": \"{{providerId}}\",\r\n    \"item_id\": \"{{itemId}}\",\r\n    \"fulfillment_id\": \"{{fulfillmentId}}\",\r\n    \"pickup_contact\": {\r\n      \"phone\": \"9000000000\",\r\n      \"email\": \"store@example.com\"\r\n    },\r\n    \"delivery_contact\": {\r\n      \"phone\": \"9111111111\",\r\n      \"email\": \"buyer@example.com\"\r\n    },\r\n    \"billing\": {\r\n      \"name\": \"Buyer Name\",\r\n      \"email\": \"buyer@example.com\",\r\n      \"phone\": \"9111111111\",\r\n      \"tax_number\": \"GST123456\",\r\n      \"created_at\": \"2026-09-10T08:00:00.000Z\",\r\n      \"updated_at\": \"2026-09-10T08:00:00.000Z\",\r\n      \"address\": {\r\n        \"name\": \"Home\",\r\n        \"building\": \"House 1\",\r\n        \"locality\": \"Koramangala\",\r\n        \"city\": \"Bengaluru\",\r\n        \"state\": \"Karnataka\",\r\n        \"country\": \"India\",\r\n        \"area_code\": \"560001\"\r\n      }\r\n    },\r\n    \"payment\": {\r\n      \"type\": \"ON-FULFILLMENT\",\r\n      \"collected_by\": \"BPP\",\r\n      \"amount\": \"59.00\",\r\n      \"currency\": \"INR\",\r\n      \"settlement_details\": [\r\n        {\r\n          \"settlement_counterparty\": \"lbnp\",\r\n          \"settlement_type\": \"upi\"\r\n        }\r\n      ]\r\n    }\r\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}logistics/init",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "init"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "on-init",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        },
+        {
+          "name": "confirm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();\r\n\r\nconst orderId = response.orderId;\r\n\r\npm.environment.set(\"orderId\", orderId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"initTransactionId\": \"{{initTransactionId}}\",\r\n    \"order\": {\r\n        // fulfillments: id must match a fulfillment id from your /init order.\r\n        // location/contact/type are already known from /init — don't resupply them,\r\n        // just the confirm-only fields the mapper merges in:\r\n        \"fulfillments\": [\r\n            {\r\n                \"id\": \"1\",\r\n                \"start\": {\r\n                    \"time\": {\r\n                        \"duration\": \"PT15M\"\r\n                    }, // required — REQUIRED_MESSAGE_DURATION_29\r\n                     // required — REQUIRED_MESSAGE_NAME\r\n                    \"instructions\": {\r\n                        \"code\": \"2\",\r\n                        \"short_desc\": \"value of PCC\"\r\n                    } // optional\r\n                },\r\n                \"end\": {\r\n                     // required — REQUIRED_MESSAGE_NAME_42\r\n                    \"instructions\": {\r\n                        \"code\": \"3\",\r\n                        \"short_desc\": \"value of DCC\"\r\n                    } // optional\r\n                },\r\n                \"tags\": [\r\n                    // required when any item.category_id is \"Immediate Delivery\"\r\n                    {\r\n                        \"code\": \"state\",\r\n                        \"list\": [\r\n                            {\r\n                                \"code\": \"ready_to_ship\",\r\n                                \"value\": \"yes\"\r\n                            }\r\n                        ]\r\n                    },\r\n                    {\r\n                        \"code\": \"rto_action\",\r\n                        \"list\": [\r\n                            {\r\n                                \"code\": \"return_to_origin\",\r\n                                \"value\": \"no\"\r\n                            }\r\n                        ]\r\n                    }\r\n                ]\r\n            }\r\n        ],\r\n        // required unless every fulfillment.type is \"Batch\" — this NEVER comes from\r\n        // /init or /on_init, only from here:\r\n        \"@ondc/org/linked_order\": {\r\n            \"items\": [\r\n                {\r\n                    \"category_id\": \"Grocery\",\r\n                    \"descriptor\": {\r\n                        \"name\": \"Atta\"\r\n                    },\r\n                    \"quantity\": {\r\n                        \"count\": 2,\r\n                        \"measure\": {\r\n                            \"unit\": \"kilogram\",\r\n                            \"value\": 0.5\r\n                        }\r\n                    },\r\n                    \"price\": {\r\n                        \"currency\": \"INR\",\r\n                        \"value\": \"150.00\"\r\n                    }\r\n                }\r\n            ],\r\n            \"provider\": {\r\n                \"descriptor\": {\r\n                    \"name\": \"Aadishwar Store\"\r\n                },\r\n                \"address\": {\r\n                    \"name\": \"KHB Towers\",\r\n                    \"building\": \"...\",\r\n                    \"locality\": \"...\",\r\n                    \"city\": \"...\",\r\n                    \"state\": \"...\",\r\n                    \"area_code\": \"560070\"\r\n                }\r\n            },\r\n            \"order\": {\r\n                \"id\": \"O1\",\r\n                \"weight\": {\r\n                    \"unit\": \"kilogram\",\r\n                    \"value\": 1\r\n                },\r\n                \"dimensions\": {\r\n                    \"length\": {\r\n                        \"unit\": \"centimeter\",\r\n                        \"value\": 1\r\n                    },\r\n                    \"breadth\": {\r\n                        \"unit\": \"centimeter\",\r\n                        \"value\": 1\r\n                    },\r\n                    \"height\": {\r\n                        \"unit\": \"centimeter\",\r\n                        \"value\": 1\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}logistics/confirm",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "confirm"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "on-confirm",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        },
+        {
+          "name": "search-options",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();\r\n\r\nconst providerId = res.options[0].providerId;\r\nconst itemId = res.options[0].items[0].itemId;\r\nconst fulfillmentId = res.options[0].items[0].fulfillmentId;\r\n\r\npm.environment.set(\"providerId\", providerId);\r\npm.environment.set(\"itemId\", itemId);\r\npm.environment.set(\"fulfillmentId\", fulfillmentId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}logistics/search/{{searchId}}/options",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "search",
+                "{{searchId}}",
+                "options"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "fake-init",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        },
+        {
+          "name": "New Request",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update-linked-order-details",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"orderId\": \"{{orderId}}\",\r\n  \"fulfillmentId\": \"{{fulfillmentId}}\",\r\n  \"updateType\": \"LINKED_ORDER_DETAILS\",\r\n  \"linkedOrder\": {\r\n    \"retailOrderId\": \"O1\",\r\n    \"productName\": \"Atta\",\r\n    \"quantityCount\": 2,\r\n    \"weight\": { \"unit\": \"kilogram\", \"value\": 1 },\r\n    \"dimensions\": {\r\n      \"length\": { \"unit\": \"centimeter\", \"value\": 1 },\r\n      \"breadth\": { \"unit\": \"centimeter\", \"value\": 1 },\r\n      \"height\": { \"unit\": \"centimeter\", \"value\": 1 }\r\n    },\r\n    \"providerName\": \"Aadishwar Store\"\r\n  }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}logistics/update",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "update"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update-start-instructions",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"orderId\": \"{{orderId}}\",\r\n  \"fulfillmentId\": \"{{fulfillmentId}}\",\r\n  \"updateType\": \"START_INSTRUCTION\",\r\n  \"instruction\": {\r\n    \"code\": \"2\",\r\n    \"shortDesc\": \"Ring the bell twice\",\r\n    \"longDesc\": \"Leave with the security guard if no answer\",\r\n    \"images\": [\"https://example.com/pickup_image.png\"]\r\n  }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}logistics/update",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "update"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update-end-instructions",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"orderId\": \"{{orderId}}\",\r\n  \"fulfillmentId\": \"{{fulfillmentId}}\",\r\n  \"updateType\": \"END_INSTRUCTION\",\r\n  \"instruction\": {\r\n    \"code\": \"3\",\r\n    \"shortDesc\": \"Leave at the front desk\",\r\n    \"longDesc\": \"Call before arriving\",\r\n    \"images\": [\"https://example.com/delivery_image.png\"]\r\n  }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}logistics/update",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "update"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update-authentication",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"orderId\": \"{{orderId}}\",\r\n  \"fulfillmentId\": \"{{fulfillmentId}}\",\r\n  \"updateType\": \"START_AUTHENTICATION\",\r\n  \"authorization\": {\r\n    \"type\": \"OTP\",\r\n    \"token\": \"482913\",\r\n    \"validFrom\": \"2026-09-10T12:00:00.000Z\",\r\n    \"validTo\": \"2026-09-10T14:00:00.000Z\"\r\n  }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}logistics/update",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "update"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update-authentication-end",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"orderId\": \"{{orderId}}\",\r\n  \"fulfillmentId\": \"{{fulfillmentId}}\",\r\n  \"updateType\": \"END_AUTHENTICATION\",\r\n  \"authorization\": {\r\n    \"type\": \"OTP\",\r\n    \"token\": \"731204\",\r\n    \"validFrom\": \"2026-09-10T12:00:00.000Z\",\r\n    \"validTo\": \"2026-09-10T14:00:00.000Z\"\r\n  }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}logistics/update",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "update"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update-tag",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"orderId\": \"{{orderId}}\",\r\n  \"fulfillmentId\": \"{{fulfillmentId}}\",\r\n  \"updateType\": \"READY_TO_SHIP\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}logistics/update",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "update"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "track",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"orderId\": \"{{orderId}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}logistics/track",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "track"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "cancel",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"orderId\": \"{{orderId}}\",\r\n  \"cancellationReasonId\": \"011\",\r\n  \"context\": {\r\n    \"transaction_id\": \"{{initTransactionId}}\"\r\n  }\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}logistics/cancel",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "cancel"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
