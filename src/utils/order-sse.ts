@@ -11,6 +11,9 @@ export interface OrderStatusSseEvent {
   state?: string;
   fulfillmentState?: string;
   awbNo?: string;
+  /** Populated when this update came from a confirmed /on_cancel. */
+  cancellationReasonId?: string;
+  cancelledBy?: string;
   updatedAt: string;
 }
 

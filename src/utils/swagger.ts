@@ -7,8 +7,8 @@ const options: swaggerJsdoc.Options = {
       title: "ONDC Logistics Buyer App Platform (BAP) API",
       version: "1.0.0",
       description:
-        "ONDC Logistics App Platform (LBNP/BAP) — app-facing endpoints for /search, /init, /confirm, /update, /status, /track, " +
-        "plus the ONDC callback endpoints (/on_search, /on_init, /on_confirm, /on_update, /on_status, /on_track) the LSP calls back into. " +
+        "ONDC Logistics App Platform (LBNP/BAP) — app-facing endpoints for /search, /init, /confirm, /update, /status, /track, /cancel, " +
+        "plus the ONDC callback endpoints (/on_search, /on_init, /on_confirm, /on_update, /on_status, /on_track, /on_cancel) the LSP calls back into. " +
         "App-facing endpoints take minimal business-level request bodies; the backend builds, signs, and sends the " +
         "full ONDC wire payload.",
     },
@@ -45,6 +45,10 @@ const options: swaggerJsdoc.Options = {
         description:
           "POST /logistics/track, its poll endpoint, and the /on_track callback " +
           "(events also ride the /status SSE stream, event type order_tracking)",
+      },
+      {
+        name: "Cancel",
+        description: "POST /logistics/cancel and the /on_cancel callback",
       },
     ],
   },

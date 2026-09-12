@@ -7,6 +7,7 @@ import type { OndcConfirmRequest } from "../types/confirm/ondc.js";
 import type { OndcUpdateRequest } from "../types/update/ondc.js";
 import type { OndcStatusRequest } from "../types/status/ondc.js";
 import type { OndcTrackRequest } from "../types/track/ondc.js";
+import type { OndcCancelRequest } from "../types/cancel/ondc.js";
 export interface OndcTransport {
   sendSearch(request: OndcSearchRequest): Promise<void>;
   sendInit(request: OndcInitRequest): Promise<void>;
@@ -14,6 +15,7 @@ export interface OndcTransport {
   sendUpdate(request: OndcUpdateRequest): Promise<void>;
   sendStatus(request: OndcStatusRequest): Promise<void>;
   sendTrack(request: OndcTrackRequest): Promise<void>;
+  sendCancel(request: OndcCancelRequest): Promise<void>;
 }
 export class UnconfiguredOndcTransport implements OndcTransport {
   async sendSearch(_request: OndcSearchRequest) {
@@ -42,6 +44,11 @@ export class UnconfiguredOndcTransport implements OndcTransport {
     );
   }
   async sendTrack(_request: OndcTrackRequest) {
+    throw new NotImplementedError(
+      "ONDC transport/signing is not configured yet",
+    );
+  }
+  async sendCancel(_request: OndcCancelRequest) {
     throw new NotImplementedError(
       "ONDC transport/signing is not configured yet",
     );
@@ -119,6 +126,20 @@ export class GatewayOndcTransport implements OndcTransport {
   async sendTrack(request: OndcTrackRequest) {
     await sendOndcRequest({
       action: "track",
+      payload: request as unknown as Record<string, unknown>,
+      baseURL: request.context.bpp_uri,
+      logMeta: {
+        transaction_id: request.context.transaction_id,
+        message_id: request.context.message_id,
+        bap_id: request.context.bap_id,
+        bpp_id: request.context.bpp_id,
+        order_id: request.message.order_id,
+      },
+    });
+  }
+  async sendCancel(request: OndcCancelRequest) {
+    await sendOndcRequest({
+      action: "cancel",
       payload: request as unknown as Record<string, unknown>,
       baseURL: request.context.bpp_uri,
       logMeta: {

@@ -26,6 +26,20 @@ export const logisticsOrder = pgTable(
     orderCreatedAt: timestampWithTimezone("order_created_at"),
     orderUpdatedAt: timestampWithTimezone("order_updated_at"),
 
+    // Cancellation lifecycle (see docs/ondc/ondc logistics.docx, "/cancel"/
+    // "/on_cancel" sections). cancellationStatus tracks OUR outbound attempt
+    // separately from `state`: "pending" once /cancel is sent, "succeeded"
+    // only once /on_cancel confirms it (error-free, order.state === "Cancelled"),
+    // "failed" on a transport error or an errored /on_cancel (NACK-like
+    // rejection). `state` itself is only ever set to "Cancelled" on the
+    // "succeeded" transition — never optimistically on send. cancellationReasonId
+    // / cancelledBy are populated from the confirmed callback's
+    // order.cancellation.{reason.id,cancelled_by} (cancelled_by distinguishes a
+    // buyer-initiated vs LSP-initiated cancellation for audit/UI purposes).
+    cancellationStatus: varchar("cancellation_status"),
+    cancellationReasonId: varchar("cancellation_reason_id"),
+    cancelledBy: varchar("cancelled_by"),
+
     // Item (single/primary item)
     itemId: varchar("item_id"),
     itemCategoryId: varchar("item_category_id"),

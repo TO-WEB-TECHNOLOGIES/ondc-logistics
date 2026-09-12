@@ -1,7 +1,9 @@
 import express from "express";
 import {
+  cancelRouter,
   confirmRouter,
   initRouter,
+  onCancelRouter,
   onConfirmRouter,
   onInitRouter,
   onSearchRouter,
@@ -24,6 +26,7 @@ router.use(
   updateRouter,
   statusRouter,
   trackRouter,
+  cancelRouter,
 );
 router.use(
   onSearchRouter,
@@ -32,4 +35,5 @@ router.use(
   onUpdateRouter,
   onStatusRouter,
   onTrackRouter,
+  onCancelRouter,
 );

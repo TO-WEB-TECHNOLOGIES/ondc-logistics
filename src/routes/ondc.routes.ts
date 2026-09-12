@@ -24,6 +24,10 @@ import {
   createTrackController,
 } from "../controllers/track.controller.js";
 import { createOrderTrackController } from "../controllers/order-track.controller.js";
+import {
+  createCancelController,
+  createOnCancelController,
+} from "../controllers/cancel.controller.js";
 import { OnSearchService } from "../services/on-search.service.js";
 import { SearchService } from "../services/search.service.js";
 import { InitService } from "../services/init.service.js";
@@ -31,6 +35,7 @@ import { ConfirmService } from "../services/confirm.service.js";
 import { UpdateService } from "../services/update.service.js";
 import { StatusService } from "../services/status.service.js";
 import { TrackService } from "../services/track.service.js";
+import { CancelService } from "../services/cancel.service.js";
 import { GatewayOndcTransport } from "../utils/ondc-transport.js";
 import { DrizzleSearchRepository } from "../repositories/search.repository.js";
 import { DrizzleOnSearchRepository } from "../repositories/on-search.repository.js";
@@ -39,6 +44,7 @@ import { DrizzleConfirmRepository } from "../repositories/confirm.repository.js"
 import { DrizzleUpdateRepository } from "../repositories/update.repository.js";
 import { DrizzleStatusRepository } from "../repositories/status.repository.js";
 import { DrizzleTrackRepository } from "../repositories/track.repository.js";
+import { DrizzleCancelRepository } from "../repositories/cancel.repository.js";
 import { searchSseManager } from "../utils/search-sse.js";
 import { orderSseManager } from "../utils/order-sse.js";
 
@@ -88,6 +94,12 @@ const trackRepository = new DrizzleTrackRepository();
 const trackService = new TrackService({
   transport,
   repository: trackRepository,
+  protocol,
+});
+const cancelRepository = new DrizzleCancelRepository();
+const cancelService = new CancelService({
+  transport,
+  repository: cancelRepository,
   protocol,
 });
 
@@ -181,3 +193,9 @@ trackRouter.get(
 
 export const onTrackRouter = express.Router();
 onTrackRouter.post("/on_track", createOnTrackController(trackService));
+
+export const cancelRouter = express.Router();
+cancelRouter.post("/cancel", createCancelController(cancelService));
+
+export const onCancelRouter = express.Router();
+onCancelRouter.post("/on_cancel", createOnCancelController(cancelService));

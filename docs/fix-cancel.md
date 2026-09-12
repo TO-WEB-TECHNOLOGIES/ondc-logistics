@@ -1,0 +1,3 @@
+### Optional (not doing unless asked)
+
+``` Deep RTO quote-diff business logic — deciding whether to ACK vs. NACK-with-62503/62504 based on comparing the RTO quote against the original /on_search catalog — is out of scope for this pass; we'll persist and always ACK, exactly like /on_update currently does for its own differential-cost case. Flagging this so it's a visible, deliberate scope cut rather than a silent gap.```
