@@ -12,6 +12,7 @@ import {
   onUpdateRouter,
   searchRouter,
   statusRouter,
+  streamRouter,
   trackRouter,
   updateRouter,
 } from "./ondc.routes.js";
@@ -20,6 +21,7 @@ export const router = express.Router();
 
 router.use(
   "/logistics",
+  streamRouter,
   searchRouter,
   initRouter,
   confirmRouter,

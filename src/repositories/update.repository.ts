@@ -14,6 +14,7 @@ import {
   type LogisticsOrderRow,
   type Tx,
 } from "./logistics-order-shared.js";
+import { clientStreamManager } from "../utils/client-stream.js";
 
 export type { LogisticsOrderRow };
 export type UpdateCallbackResult =
@@ -301,6 +302,7 @@ export class DrizzleUpdateRepository implements UpdateRepository {
     const orderState = response.error
       ? "failed"
       : ((response.message?.order as any)?.state ?? "unknown");
+    let updatedFields: { state?: string; awbNo?: string } | undefined;
     await this.database.transaction(async (tx) => {
       if (!response.error && response.message?.order && row.orderId) {
         // /on_update carries whatever state/fulfillment fields the LSP
@@ -309,6 +311,10 @@ export class DrizzleUpdateRepository implements UpdateRepository {
         // and not yet parsed further here (see implementation plan).
         const order = response.message.order as any;
         const fulfillment = order.fulfillments?.[0];
+        updatedFields = {
+          state: order.state as string | undefined,
+          awbNo: fulfillment?.["@ondc/org/awb_no"] as string | undefined,
+        };
         await tx
           .update(logisticsOrder)
           .set({
@@ -337,6 +343,22 @@ export class DrizzleUpdateRepository implements UpdateRepository {
         })
         .where(eq(ondcTransactions.id, row.id));
     });
+
+    if (response.error) {
+      clientStreamManager.push(c.transaction_id, "update_error", {
+        orderId: row.orderId,
+        code: response.error.code,
+        message: response.error.message,
+      });
+    } else {
+      clientStreamManager.push(c.transaction_id, "order_updated", {
+        orderId: row.orderId,
+        state: updatedFields?.state,
+        awbNo: updatedFields?.awbNo,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
     console.log("[update.repository] /on_update persisted", {
       transactionId: c.transaction_id,
       orderId: row.orderId,

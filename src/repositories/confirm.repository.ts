@@ -8,6 +8,7 @@ import {
   type AnyOrder,
 } from "./logistics-order-shared.js";
 import { fetchInitOrderSnapshot } from "./init-order-reader.js";
+import { clientStreamManager } from "../utils/client-stream.js";
 import type {
   OndcConfirmRequest,
   OndcOnConfirmResponse,
@@ -294,18 +295,20 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
     const state = response.error
       ? "failed"
       : (response.message?.order?.state ?? "unknown");
+    let columns: ReturnType<typeof buildLogisticsOrderColumns> | undefined;
     await this.database.transaction(async (tx) => {
       if (!response.error && response.message?.order && row.orderId) {
         // Full replace of the flattened columns with the BPP's returned
         // order — the contract's /on_confirm carries the complete order
         // object, so this is the authoritative state going forward.
         const order = response.message.order as unknown as AnyOrder;
+        columns = buildLogisticsOrderColumns(order);
         await tx
           .update(logisticsOrder)
           .set({
             bppId: c.bpp_id,
             bppUri: c.bpp_uri,
-            ...buildLogisticsOrderColumns(order),
+            ...columns,
             updatedAt: new Date(),
           })
           .where(eq(logisticsOrder.orderId, row.orderId));
@@ -326,6 +329,45 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
         })
         .where(eq(ondcTransactions.id, row.id));
     });
+
+    if (response.error) {
+      clientStreamManager.push(c.transaction_id, "confirm_error", {
+        orderId: row.orderId,
+        code: response.error.code,
+        message: response.error.message,
+      });
+    } else if (row.orderId) {
+      clientStreamManager.push(c.transaction_id, "order_confirmed", {
+        orderId: row.orderId,
+        state: columns?.state,
+        providerId: columns?.providerId,
+        item: {
+          itemId: columns?.itemId,
+          name: columns?.itemDescriptorName,
+          quantityCount: columns?.itemQuantityCount,
+        },
+        fulfillment: {
+          fulfillmentId: columns?.fulfillmentId,
+          type: columns?.fulfillmentType,
+          state: columns?.fulfillmentStateCode,
+          awbNo: columns?.awbNo,
+        },
+        quote: {
+          priceAmount: columns?.quotePriceAmount,
+          priceCurrency: columns?.quotePriceCurrency,
+        },
+        billing: {
+          name: columns?.billingName,
+          email: columns?.billingEmail,
+          phone: columns?.billingPhone,
+        },
+        payment: {
+          type: columns?.paymentType,
+          collectedBy: columns?.paymentCollectedBy,
+        },
+      });
+    }
+
     console.log("[confirm.repository] /on_confirm persisted", {
       transactionId: c.transaction_id,
       orderId: row.orderId,

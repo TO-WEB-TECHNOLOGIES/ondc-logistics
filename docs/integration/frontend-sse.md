@@ -1,3 +1,18 @@
+There are now two SSE mechanisms in this backend:
+
+1. The original per-flow streams described below (`GET /logistics/search/:searchId/events`,
+   `GET /logistics/orders/:orderId/status/events`) — still supported, unchanged.
+2. A single unified stream, `GET /logistics/stream/:clientId`, covering the whole order
+   lifecycle (search → init → confirm → status/track/cancel/update) off one connection. See
+   "Unified stream" below — this is the recommended integration going forward and is what
+   closes the on_init gap called out later in this document.
+
+Both are in-memory, single-process, no Redis/queue — same limitation applies to both: nothing
+is replayed on reconnect or after an API restart, and a callback that lands before the frontend
+opens its stream is missed.
+
+## Original per-flow streams
+
 Your frontend should own the SSE connection as part of the search request lifecycle.
 
 Current flow:
@@ -93,20 +108,78 @@ For development, opening SSE immediately after receiving searchId is acceptable.
 
 The second option is the simplest safety net.
 
-Your /on_init callback currently acknowledges the BPP, but it does not notify the frontend. Add either:
+~~Your /on_init callback currently acknowledges the BPP, but it does not notify the frontend.~~
+Resolved: /on_init now pushes an `init_result` (or `init_error`) event on the unified stream
+described below — no separate init-specific endpoint was added, since the same clientId/stream
+already covers it.
 
-GET /logistics/init/:transactionId/events
+## Unified stream
 
-or:
+`GET /logistics/stream/:clientId`
 
-GET /logistics/init/:transactionId
+Open this once, with a freshly generated `clientId` (e.g. `crypto.randomUUID()`), before calling
+`POST /logistics/search`. Pass that same id as `client_id` in the `/search` request body — the
+backend binds it to the search's `transaction_id` there, and every later callback for that
+transaction (on_search, on_init, on_confirm, on_status, on_track, on_cancel, on_update) is
+pushed to this one connection. You do not need to reopen the stream or pass `client_id` again
+for `/init`, `/confirm`, `/status`, `/track`, `/cancel`, or `/update` — they all reuse the
+transaction_id from `/search` by default.
 
-Then the frontend can display:
+Events carry normalized, useful fields — never the raw ONDC callback payload:
 
-INIT_SENT
-INIT_RECEIVED
-INIT_COMPLETED
-INIT_FAILED
+| Source callback | `event` | Payload |
+|---|---|---|
+| `/on_search` | `search_result` | `{ searchId, provider }` — one event per provider, same shape as `GET /logistics/search/{searchId}/options` |
+| `/on_init` | `init_result` | `{ providerId, items[], fulfillments[], quote, quoteBreakups[], cancellationTerms[] }` |
+| `/on_init` (error) | `init_error` | `{ code, message }` |
+| `/on_confirm` | `order_confirmed` | `{ orderId, state, providerId, item, fulfillment, quote, billing, payment }` |
+| `/on_confirm` (error) | `confirm_error` | `{ orderId, code, message }` |
+| `/on_status` | `order_status` | `{ orderId, state, fulfillmentState, awbNo, updatedAt }` |
+| `/on_status` (error) | `status_error` | `{ orderId, code, message }` |
+| `/on_track` | `order_tracking` | `{ orderId, url, status, gps, locationTimestamp, path[], updatedAt }` |
+| `/on_track` (error) | `track_error` | `{ orderId, code, message }` |
+| `/on_cancel` | `order_cancelled` | `{ orderId, state, fulfillmentState, awbNo, cancellationReasonId, cancelledBy, updatedAt }` |
+| `/on_cancel` (error) | `cancel_error` | `{ orderId, code, message }` |
+| `/on_update` | `order_updated` | `{ orderId, state, awbNo, updatedAt }` — reports fields present on the callback, not a diff against the prior value |
+| `/on_update` (error) | `update_error` | `{ orderId, code, message }` |
+
+Every event also carries `transactionId`.
+
+Example:
+
+```js
+const clientId = crypto.randomUUID();
+const stream = new EventSource(`http://localhost:3000/logistics/stream/${clientId}`);
+
+stream.addEventListener("search_result", (e) => {
+  const { provider } = JSON.parse(e.data);
+  // append to catalog options
+});
+stream.addEventListener("init_result", (e) => {
+  const { quote, cancellationTerms } = JSON.parse(e.data);
+  // show quote before the user confirms
+});
+stream.addEventListener("order_confirmed", (e) => {
+  const order = JSON.parse(e.data);
+  // full order summary
+});
+// order_status / order_tracking / order_cancelled / order_updated for post-order updates,
+// plus the matching *_error events.
+
+const startSearch = async () => {
+  const response = await fetch("http://localhost:3000/logistics/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...searchRequest, client_id: clientId }),
+  });
+  return response.json(); // { searchId, transactionId, ... }
+};
+```
+
+Known limitations (same as the per-flow streams above): single-process/in-memory only (no
+Redis/pub-sub — won't fan out across multiple API instances), nothing replayed on reconnect,
+and opening a second stream for the same transaction takes over delivery from the first
+(last-bind-wins).
 
 For ONDC Workbench:
 

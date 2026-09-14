@@ -20,6 +20,7 @@ import {
 } from "../db/schema/index.js";
 import { extractInitOrder } from "../mappers/init-persistence.mapper.js";
 import { fetchSearchAddressNames } from "./init-order-reader.js";
+import { clientStreamManager } from "../utils/client-stream.js";
 import type {
   InitRequest,
   ResolvedInitSelection,
@@ -667,6 +668,7 @@ export class DrizzleInitRepository implements InitRepository {
       this.database,
       c.transaction_id,
     );
+    let extracted: ReturnType<typeof extractInitOrder> | undefined;
     await this.database.transaction(async (tx) => {
       if (response.message?.order) {
         // Replace any prior on_init snapshot (e.g. a corrected callback for
@@ -679,7 +681,7 @@ export class DrizzleInitRepository implements InitRepository {
               eq(initOrders.snapshotType, "on_init"),
             ),
           );
-        const extracted = extractInitOrder(
+        extracted = extractInitOrder(
           response.message.order,
           { bppId: c.bpp_id, bppUri: c.bpp_uri },
           personNames,
@@ -700,6 +702,30 @@ export class DrizzleInitRepository implements InitRepository {
         })
         .where(eq(ondcTransactions.id, row.id));
     });
+
+    if (response.error) {
+      clientStreamManager.push(c.transaction_id, "init_error", {
+        code: response.error.code,
+        message: response.error.message,
+      });
+    } else if (extracted) {
+      clientStreamManager.push(c.transaction_id, "init_result", {
+        providerId: extracted.providerId,
+        items: extracted.items.map((item) => ({
+          itemId: item.itemId,
+          name: item.descriptorName,
+          fulfillmentId: item.fulfillmentId,
+          quantityCount: item.quantityCount,
+        })),
+        fulfillments: extracted.fulfillments.map((f) => ({
+          fulfillmentId: f.fulfillmentId,
+          type: f.type,
+        })),
+        quote: extracted.quote,
+        quoteBreakups: extracted.quoteBreakups,
+        cancellationTerms: extracted.cancellationTerms,
+      });
+    }
     return "processed" as const;
   }
 }

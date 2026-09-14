@@ -47,6 +47,7 @@ import { DrizzleTrackRepository } from "../repositories/track.repository.js";
 import { DrizzleCancelRepository } from "../repositories/cancel.repository.js";
 import { searchSseManager } from "../utils/search-sse.js";
 import { orderSseManager } from "../utils/order-sse.js";
+import { clientStreamManager } from "../utils/client-stream.js";
 
 const protocol = {
   domain: process.env.ONDC_DOMAIN ?? "nic2004:60232",
@@ -101,6 +102,34 @@ const cancelService = new CancelService({
   transport,
   repository: cancelRepository,
   protocol,
+});
+
+export const streamRouter = express.Router();
+
+/**
+ * @swagger
+ * /logistics/stream/{clientId}:
+ *   get:
+ *     summary: Unified SSE stream for a frontend-generated clientId
+ *     description: >
+ *       text/event-stream — a single channel for every async callback
+ *       (on_search, on_init, on_confirm, on_status, on_track, on_cancel,
+ *       on_update) belonging to whichever transaction_id this clientId gets
+ *       bound to. Open this once, before POST /logistics/search, with a
+ *       freshly generated clientId (e.g. a UUID). Events carry normalized,
+ *       useful fields — never the raw ONDC callback payload.
+ *     tags: [Stream]
+ *     parameters:
+ *       - in: path
+ *         name: clientId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: SSE stream (text/event-stream).
+ */
+streamRouter.get("/stream/:clientId", (request, response) => {
+  clientStreamManager.subscribe(request.params.clientId, response);
 });
 
 export const searchRouter = express.Router();

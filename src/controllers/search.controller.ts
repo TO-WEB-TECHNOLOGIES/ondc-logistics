@@ -26,6 +26,13 @@ import { logger, pgErrorInfo } from "../utils/logger.js";
  *             type: object
  *             required: [category_id, start, end, schedule, payload]
  *             properties:
+ *               client_id:
+ *                 type: string
+ *                 description: >
+ *                   Optional. A frontend-generated id for an already-open
+ *                   GET /logistics/stream/{clientId} connection — binds that
+ *                   stream to this search's transaction_id so it receives
+ *                   on_search/on_init/on_confirm/... events for it.
  *               category_id:
  *                 type: string
  *                 example: Immediate Delivery
@@ -88,8 +95,13 @@ export const createSearchController =
   async (request: Request, response: Response): Promise<void> => {
     console.log("[search.controller] incoming /search request");
     try {
+      const clientId =
+        typeof request.body?.client_id === "string"
+          ? request.body.client_id
+          : undefined;
       const result = await searchService.createSearch(
         parseMinimalSearchRequest(request.body),
+        clientId,
       );
       console.log("[search.controller] /search accepted", {
         searchId: result.searchId,

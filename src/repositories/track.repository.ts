@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db1 } from "../db/index.js";
 import { logisticsOrder, ondcTransactions } from "../db/schema/index.js";
 import { orderSseManager } from "../utils/order-sse.js";
+import { clientStreamManager } from "../utils/client-stream.js";
 import {
   buildTrackingColumns,
   loadLogisticsOrder,
@@ -200,6 +201,21 @@ export class DrizzleTrackRepository implements TrackRepository {
         locationTimestamp: tracking?.location?.time?.timestamp,
         path,
         updatedAt: new Date().toISOString(),
+      });
+      clientStreamManager.push(c.transaction_id, "order_tracking", {
+        orderId: row.orderId,
+        url: columns.trackingUrl,
+        status: columns.trackingStatus,
+        gps: columns.trackingGps,
+        locationTimestamp: tracking?.location?.time?.timestamp,
+        path,
+        updatedAt: new Date().toISOString(),
+      });
+    } else if (response.error) {
+      clientStreamManager.push(c.transaction_id, "track_error", {
+        orderId: row.orderId,
+        code: response.error.code,
+        message: response.error.message,
       });
     }
 

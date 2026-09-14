@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db1 } from "../db/index.js";
 import { logisticsOrder, ondcTransactions } from "../db/schema/index.js";
 import { orderSseManager } from "../utils/order-sse.js";
+import { clientStreamManager } from "../utils/client-stream.js";
 import {
   buildLogisticsOrderColumns,
   loadLogisticsOrder,
@@ -340,6 +341,21 @@ export class DrizzleCancelRepository implements CancelRepository {
         cancellationReasonId: order?.cancellation?.reason?.id,
         cancelledBy: order?.cancellation?.cancelled_by,
         updatedAt: new Date().toISOString(),
+      });
+      clientStreamManager.push(c.transaction_id, "order_cancelled", {
+        orderId: resolvedOrderId,
+        state: columns?.state,
+        fulfillmentState: columns?.fulfillmentStateCode,
+        awbNo: columns?.awbNo,
+        cancellationReasonId: order?.cancellation?.reason?.id,
+        cancelledBy: order?.cancellation?.cancelled_by,
+        updatedAt: new Date().toISOString(),
+      });
+    } else if (response.error) {
+      clientStreamManager.push(c.transaction_id, "cancel_error", {
+        orderId: resolvedOrderId,
+        code: response.error.code,
+        message: response.error.message,
       });
     }
 

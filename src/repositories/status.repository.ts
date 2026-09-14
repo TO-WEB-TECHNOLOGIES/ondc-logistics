@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db1 } from "../db/index.js";
 import { logisticsOrder, ondcTransactions } from "../db/schema/index.js";
 import { orderSseManager } from "../utils/order-sse.js";
+import { clientStreamManager } from "../utils/client-stream.js";
 import {
   buildLogisticsOrderColumns,
   loadLogisticsOrder,
@@ -183,6 +184,19 @@ export class DrizzleStatusRepository implements StatusRepository {
         fulfillmentState: columns.fulfillmentStateCode,
         awbNo: columns.awbNo,
         updatedAt: new Date().toISOString(),
+      });
+      clientStreamManager.push(c.transaction_id, "order_status", {
+        orderId: row.orderId,
+        state: columns.state,
+        fulfillmentState: columns.fulfillmentStateCode,
+        awbNo: columns.awbNo,
+        updatedAt: new Date().toISOString(),
+      });
+    } else if (response.error) {
+      clientStreamManager.push(c.transaction_id, "status_error", {
+        orderId: row.orderId,
+        code: response.error.code,
+        message: response.error.message,
       });
     }
 

@@ -9,6 +9,7 @@ import type {
 } from "../types/search/internal.js";
 import type { OndcTransport } from "../utils/ondc-transport.js";
 import type { SearchRepository } from "../repositories/search.repository.js";
+import { clientStreamManager } from "../utils/client-stream.js";
 
 export interface SearchServiceDependencies {
   transport: OndcTransport;
@@ -22,7 +23,10 @@ export interface SearchServiceDependencies {
 export class SearchService {
   constructor(private readonly dependencies: SearchServiceDependencies) {}
 
-  async createSearch(request: SearchRequest): Promise<SearchResponse> {
+  async createSearch(
+    request: SearchRequest,
+    clientId?: string,
+  ): Promise<SearchResponse> {
     const payload = this.createOndcRequest(request);
     // console.log("[search.service] identifiers", {
     //   transactionId: payload.context.transaction_id,
@@ -30,6 +34,9 @@ export class SearchService {
     // });
     console.log(request);
     console.log(payload);
+    if (clientId) {
+      clientStreamManager.bind(payload.context.transaction_id, clientId);
+    }
     const persisted = await this.dependencies.repository.createSearch({
       request,
       payload,

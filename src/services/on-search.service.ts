@@ -1,6 +1,7 @@
 ﻿import type { OndcOnSearchResponse } from "../types/search/ondc.js";
 import type { OnSearchRepository } from "../repositories/on-search.repository.js";
 import { searchSseManager } from "../utils/search-sse.js";
+import { clientStreamManager } from "../utils/client-stream.js";
 
 export interface OnSearchQueue {
   enqueue(callbackId: string, response: OndcOnSearchResponse): Promise<void>;
@@ -29,6 +30,10 @@ export class InProcessOnSearchQueue implements OnSearchQueue {
         for (const provider of result.providers) {
           searchSseManager.publish(result.searchId, {
             event: "search_result",
+            searchId: result.searchId,
+            provider,
+          });
+          clientStreamManager.push(response.context.transaction_id, "search_result", {
             searchId: result.searchId,
             provider,
           });
