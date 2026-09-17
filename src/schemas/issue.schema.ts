@@ -222,7 +222,6 @@ const context = (v: unknown, action: string) => {
   for (const k of [
     "domain",
     "country",
-    "city",
     "core_version",
     "bap_id",
     "bap_uri",
@@ -231,6 +230,10 @@ const context = (v: unknown, action: string) => {
     "timestamp",
   ])
     str(c[k], `context.${k}`);
+  // Real /on_issue|/on_issue_status callbacks from workbench.ondc.tech omit
+  // `city` entirely (confirmed from live traffic) — unlike /init|/on_init,
+  // where it's always present. Validate it only when supplied.
+  if (c.city !== undefined) str(c.city, "context.city");
   if (Number.isNaN(new Date(c.timestamp).getTime()))
     throw new IssueValidationError(
       "must be a valid timestamp",
