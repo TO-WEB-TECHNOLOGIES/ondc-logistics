@@ -5,3 +5,4 @@ export * from "./search-provider.schema.js";
 export * from "./init-order.schema.js";
 export * from "./shared.schema.js";
 export * from "./logistics-order.schema.js";
+export * from "./issue.schema.js";

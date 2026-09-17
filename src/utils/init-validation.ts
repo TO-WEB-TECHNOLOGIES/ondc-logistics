@@ -256,9 +256,24 @@ export const parseMinimalInitRequest = (value: unknown): InitRequest => {
   )
     throw new InitValidationError("must be a decimal value", "payment.amount");
   str(payment.currency, "payment.currency");
-  if (!Array.isArray(payment.settlement_details))
+  if (
+    payment.settlement_details !== undefined &&
+    !Array.isArray(payment.settlement_details)
+  )
     throw new InitValidationError(
       "must be an array",
+      "payment.settlement_details",
+    );
+  const normalizedPaymentType = String(payment.type)
+    .toUpperCase()
+    .replace(/_/g, "-");
+  if (
+    normalizedPaymentType === "ON-FULFILLMENT" &&
+    (!Array.isArray(payment.settlement_details) ||
+      payment.settlement_details.length === 0)
+  )
+    throw new InitValidationError(
+      "is required and must be a non-empty array when payment.type is ON-FULFILLMENT",
       "payment.settlement_details",
     );
   return {
@@ -295,7 +310,7 @@ export const parseMinimalInitRequest = (value: unknown): InitRequest => {
       collectedBy: payment.collected_by,
       amount: payment.amount,
       currency: payment.currency,
-      settlementDetails: payment.settlement_details,
+      settlementDetails: payment.settlement_details ?? [],
     },
   };
 };

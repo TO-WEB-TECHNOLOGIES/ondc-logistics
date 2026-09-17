@@ -16,6 +16,7 @@ import {
   trackRouter,
   updateRouter,
 } from "./ondc.routes.js";
+import { issueRouter, onIssueRouter } from "./issue.routes.js";
 
 export const router = express.Router();
 
@@ -29,6 +30,7 @@ router.use(
   statusRouter,
   trackRouter,
   cancelRouter,
+  issueRouter,
 );
 router.use(
   onSearchRouter,
@@ -38,4 +40,5 @@ router.use(
   onStatusRouter,
   onTrackRouter,
   onCancelRouter,
+  onIssueRouter,
 );

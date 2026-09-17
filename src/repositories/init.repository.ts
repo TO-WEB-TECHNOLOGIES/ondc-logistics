@@ -589,6 +589,19 @@ export class DrizzleInitRepository implements InitRepository {
   }
 
   async create(payload: OndcInitRequest) {
+    const payment = payload.message.order.payment as
+      | Record<string, unknown>
+      | undefined;
+    const normalizedPaymentType = String(payment?.type ?? "")
+      .toUpperCase()
+      .replace(/_/g, "-");
+    if (normalizedPaymentType === "ON-FULFILLMENT") {
+      const settlementDetails = payment?.["@ondc/org/settlement_details"];
+      if (!Array.isArray(settlementDetails) || settlementDetails.length === 0)
+        throw new Error(
+          "payment.@ondc/org/settlement_details is required and must be non-empty when payment.type is ON-FULFILLMENT",
+        );
+    }
     const personNames = await fetchSearchAddressNames(
       this.database,
       payload.context.transaction_id,

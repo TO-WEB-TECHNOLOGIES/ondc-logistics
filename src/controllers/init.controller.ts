@@ -67,7 +67,11 @@ const validation = (error: InitValidationError) => ({
  *                       area_code: { type: string }
  *               payment:
  *                 type: object
- *                 required: [type, collected_by, amount, currency, settlement_details]
+ *                 description: >
+ *                   settlement_details is required (non-empty) when type is
+ *                   ON-FULFILLMENT; optional/omittable for ON-ORDER and
+ *                   POST-FULFILLMENT.
+ *                 required: [type, collected_by, amount, currency]
  *                 properties:
  *                   type: { type: string, example: ON-FULFILLMENT }
  *                   collected_by: { type: string, example: BPP }

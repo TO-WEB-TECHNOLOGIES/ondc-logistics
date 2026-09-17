@@ -8,6 +8,10 @@ import type { OndcUpdateRequest } from "../types/update/ondc.js";
 import type { OndcStatusRequest } from "../types/status/ondc.js";
 import type { OndcTrackRequest } from "../types/track/ondc.js";
 import type { OndcCancelRequest } from "../types/cancel/ondc.js";
+import type {
+  OndcIssueRequest,
+  OndcIssueStatusRequest,
+} from "../schemas/issue.schema.js";
 export interface OndcTransport {
   sendSearch(request: OndcSearchRequest): Promise<void>;
   sendInit(request: OndcInitRequest): Promise<void>;
@@ -16,6 +20,8 @@ export interface OndcTransport {
   sendStatus(request: OndcStatusRequest): Promise<void>;
   sendTrack(request: OndcTrackRequest): Promise<void>;
   sendCancel(request: OndcCancelRequest): Promise<void>;
+  sendIssue(request: OndcIssueRequest): Promise<void>;
+  sendIssueStatus(request: OndcIssueStatusRequest): Promise<void>;
 }
 export class UnconfiguredOndcTransport implements OndcTransport {
   async sendSearch(_request: OndcSearchRequest) {
@@ -49,6 +55,16 @@ export class UnconfiguredOndcTransport implements OndcTransport {
     );
   }
   async sendCancel(_request: OndcCancelRequest) {
+    throw new NotImplementedError(
+      "ONDC transport/signing is not configured yet",
+    );
+  }
+  async sendIssue(_request: OndcIssueRequest) {
+    throw new NotImplementedError(
+      "ONDC transport/signing is not configured yet",
+    );
+  }
+  async sendIssueStatus(_request: OndcIssueStatusRequest) {
     throw new NotImplementedError(
       "ONDC transport/signing is not configured yet",
     );
@@ -148,6 +164,32 @@ export class GatewayOndcTransport implements OndcTransport {
         bap_id: request.context.bap_id,
         bpp_id: request.context.bpp_id,
         order_id: request.message.order_id,
+      },
+    });
+  }
+  async sendIssue(request: OndcIssueRequest) {
+    await sendOndcRequest({
+      action: "issue",
+      payload: request as unknown as Record<string, unknown>,
+      baseURL: request.context.bpp_uri,
+      logMeta: {
+        transaction_id: request.context.transaction_id,
+        message_id: request.context.message_id,
+        bap_id: request.context.bap_id,
+        bpp_id: request.context.bpp_id,
+      },
+    });
+  }
+  async sendIssueStatus(request: OndcIssueStatusRequest) {
+    await sendOndcRequest({
+      action: "issue_status",
+      payload: request as unknown as Record<string, unknown>,
+      baseURL: request.context.bpp_uri,
+      logMeta: {
+        transaction_id: request.context.transaction_id,
+        message_id: request.context.message_id,
+        bap_id: request.context.bap_id,
+        bpp_id: request.context.bpp_id,
       },
     });
   }

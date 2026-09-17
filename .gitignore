@@ -17,3 +17,7 @@ dump.txt
 # private/local agent instructions - not meant to be checked in
 Claude.local.md
 .codex.local.md
+
+src/json
+src/reference
+API_FLOW_GUIDE.md
