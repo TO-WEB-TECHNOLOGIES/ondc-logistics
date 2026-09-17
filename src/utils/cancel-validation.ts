@@ -1,4 +1,7 @@
-import { isValidBnpCancellationReason } from "../constants/cancellation-reason-codes.js";
+import {
+  getCancellationReason,
+  isValidBnpCancellationReason,
+} from "../constants/cancellation-reason-codes.js";
 import type { CancelRequest } from "../types/cancel/internal.js";
 import type {
   OndcCancelRequest,
@@ -30,11 +33,15 @@ export const parseCancelRequest = (value: unknown): CancelRequest => {
   const x = record(value, "request body");
   const orderId = str(x.orderId, "orderId");
   const cancellationReasonId = str(x.cancellationReasonId, "cancellationReasonId");
-  if (!isValidBnpCancellationReason(cancellationReasonId))
+  if (!isValidBnpCancellationReason(cancellationReasonId)) {
+    const existing = getCancellationReason(cancellationReasonId);
     throw new CancelValidationError(
-      "not a reason code this NP may send in /cancel",
+      existing
+        ? `'${cancellationReasonId}' (${existing.reason}) is ${existing.whoCanUse}-only — not a reason this NP may send in /cancel`
+        : `unknown cancellation_reason_id '${cancellationReasonId}'`,
       "cancellationReasonId",
     );
+  }
 
   const context =
     x.context !== undefined

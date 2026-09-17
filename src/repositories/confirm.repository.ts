@@ -178,16 +178,28 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
         ttl: payload.context.ttl,
       });
 
-      // order.id is minted fresh per attempt today (see loadInitialized), so
-      // this is always a first insert for this order, not a repeat write.
+      // order.id is reused across /confirm retries for the same
+      // initTransactionId (see loadInitialized's existingOrder lookup), but
+      // message_id is always fresh (no caller-pinned override), so the
+      // dedupe check above never matches on retry. Upsert on the order_id
+      // primary key instead of a bare insert so a retry (e.g. resending
+      // /confirm after fixing a prior NACK) refreshes the row with the
+      // latest attempt's data rather than crashing on a duplicate key.
       const order = payload.message.order as unknown as AnyOrder;
-      await tx.insert(logisticsOrder).values({
+      const logisticsOrderValues = {
         orderId: order.id,
         transactionId: payload.context.transaction_id,
         bppId: payload.context.bpp_id,
         bppUri: payload.context.bpp_uri,
         ...buildLogisticsOrderColumns(order),
-      });
+      };
+      await tx
+        .insert(logisticsOrder)
+        .values(logisticsOrderValues)
+        .onConflictDoUpdate({
+          target: logisticsOrder.orderId,
+          set: { ...logisticsOrderValues, updatedAt: new Date() },
+        });
       await syncLogisticsOrderTags(tx, order.id, order);
     });
     return true;

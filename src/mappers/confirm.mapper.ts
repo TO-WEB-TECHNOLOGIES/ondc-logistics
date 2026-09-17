@@ -9,8 +9,22 @@
  * transaction) stays in confirm.service.ts.
  */
 import type { OndcConfirmOrder, OndcConfirmRequest } from "../types/confirm/ondc.js";
+import type { ConfirmRequest } from "../types/confirm/internal.js";
 import type { OndcInitFulfillment, OndcInitOrder } from "../types/init/ondc.js";
 import type { OndcContext } from "../types/search/ondc.js";
+
+/**
+ * Translates the minimal public ConfirmRequest into the ONDC-shaped partial
+ * order buildConfirmOrder expects as `suppliedOrder`. `linkedOrder` and
+ * `fulfillments` are the only fields the caller can supply today (see
+ * types/confirm/internal.ts) — tags/created_at are left unset so
+ * buildConfirmOrder falls through to the initialized transaction's values
+ * for those.
+ */
+export const toSuppliedOrder = (input: ConfirmRequest): Record<string, any> => ({
+  ...(input.linkedOrder ? { "@ondc/org/linked_order": input.linkedOrder } : {}),
+  ...(input.fulfillments ? { fulfillments: input.fulfillments } : {}),
+});
 
 /**
  * Merges an array of stored objects with a caller-supplied array of the same

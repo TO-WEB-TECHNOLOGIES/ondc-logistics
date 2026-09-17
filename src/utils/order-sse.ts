@@ -13,6 +13,8 @@ export interface OrderStatusSseEvent {
   awbNo?: string;
   /** Populated when this update came from a confirmed /on_cancel. */
   cancellationReasonId?: string;
+  /** Human-readable reason text (constants/cancellation-reason-codes.ts) for the code above. */
+  cancellationReasonText?: string;
   cancelledBy?: string;
   updatedAt: string;
 }

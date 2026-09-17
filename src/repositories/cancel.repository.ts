@@ -3,6 +3,7 @@ import { db1 } from "../db/index.js";
 import { logisticsOrder, ondcTransactions } from "../db/schema/index.js";
 import { orderSseManager } from "../utils/order-sse.js";
 import { clientStreamManager } from "../utils/client-stream.js";
+import { getCancellationReasonText } from "../constants/cancellation-reason-codes.js";
 import {
   buildLogisticsOrderColumns,
   loadLogisticsOrder,
@@ -332,13 +333,16 @@ export class DrizzleCancelRepository implements CancelRepository {
     });
 
     if (confirmed) {
+      const cancellationReasonId = order?.cancellation?.reason?.id;
+      const cancellationReasonText = getCancellationReasonText(cancellationReasonId);
       orderSseManager.publish(resolvedOrderId, {
         event: "order_status",
         orderId: resolvedOrderId,
         state: columns?.state,
         fulfillmentState: columns?.fulfillmentStateCode,
         awbNo: columns?.awbNo,
-        cancellationReasonId: order?.cancellation?.reason?.id,
+        cancellationReasonId,
+        cancellationReasonText,
         cancelledBy: order?.cancellation?.cancelled_by,
         updatedAt: new Date().toISOString(),
       });
@@ -347,7 +351,8 @@ export class DrizzleCancelRepository implements CancelRepository {
         state: columns?.state,
         fulfillmentState: columns?.fulfillmentStateCode,
         awbNo: columns?.awbNo,
-        cancellationReasonId: order?.cancellation?.reason?.id,
+        cancellationReasonId,
+        cancellationReasonText,
         cancelledBy: order?.cancellation?.cancelled_by,
         updatedAt: new Date().toISOString(),
       });

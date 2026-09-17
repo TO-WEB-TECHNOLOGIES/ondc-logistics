@@ -1,24 +1,19 @@
 import type { OndcConfirmOrder } from "./ondc.js";
 
-export interface ConfirmOrderInput {
-  id?: string;
-  items?: Array<Record<string, unknown>>;
-  provider?: Record<string, unknown>;
-  fulfillments?: Array<Record<string, unknown>>;
-  quote?: Record<string, unknown>;
-  billing?: Record<string, unknown>;
-  payment?: Record<string, unknown>;
-  tags?: Array<Record<string, unknown>>;
-  "@ondc/org/linked_order"?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-/** Public API DTO. The ONDC payload is generated separately by ConfirmService. */
+/**
+ * Public API DTO. Deliberately minimal — provider/items/quote/billing/
+ * payment are never supplied by the caller; they always come from the
+ * stored /init + /on_init transaction (see confirm.service.ts's
+ * loadInitialized). `linkedOrder` and `fulfillments` are the confirm-only
+ * fields this NP actually needs to pass through (maps to
+ * @ondc/org/linked_order and per-fulfillment confirm-only fields — see
+ * confirm.mapper.ts's toSuppliedOrder/mergeConfirmFulfillments). The ONDC
+ * payload itself is generated separately by ConfirmService.
+ */
 export interface ConfirmRequest {
   initTransactionId: string;
-  context?: { transaction_id?: string; message_id?: string };
-  message?: { order?: ConfirmOrderInput };
-  order?: ConfirmOrderInput;
+  linkedOrder?: Record<string, unknown>;
+  fulfillments?: Array<Record<string, unknown>>;
 }
 
 export type GeneratedConfirmOrder = OndcConfirmOrder;

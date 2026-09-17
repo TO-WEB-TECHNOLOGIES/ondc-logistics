@@ -17,10 +17,12 @@ const detail = (e: ConfirmValidationError) => ({
  *   post:
  *     summary: Confirm a logistics order
  *     description: >
- *       Loads the persisted /init + /on_init state, validates the request against it,
- *       mints an order_id (generateOrderId), builds and sends the full ONDC /confirm
- *       payload, and persists the resulting logistics_order row. Idempotent per
- *       (transaction_id, message_id, action, order_id).
+ *       Loads the persisted /init + /on_init state, mints an order_id
+ *       (generateOrderId), builds and sends the full ONDC /confirm payload
+ *       from that state, and persists the resulting logistics_order row.
+ *       Idempotent per (transaction_id, action, order_id). Provider, items,
+ *       quote, billing, and payment always come from the initialized
+ *       transaction — they cannot be supplied or overridden here.
  *     tags: [Confirm]
  *     requestBody:
  *       required: true
@@ -33,24 +35,19 @@ const detail = (e: ConfirmValidationError) => ({
  *               initTransactionId:
  *                 type: string
  *                 description: transaction_id from the prior /logistics/init call.
- *               context:
- *                 type: object
- *                 properties:
- *                   transaction_id: { type: string }
- *                   message_id: { type: string }
- *               order:
+ *               linkedOrder:
  *                 type: object
  *                 description: >
- *                   Confirm-only fields not present in /init (per fulfillment: start.time,
- *                   start/end.instructions, tags; plus @ondc/org/linked_order). Everything
- *                   else (provider, items, quote, billing, payment) comes from the
- *                   initialized transaction and cannot be overridden here.
- *                 properties:
- *                   fulfillments:
- *                     type: array
- *                     items: { type: object }
- *                   "@ondc/org/linked_order":
- *                     type: object
+ *                   Optional — maps to @ondc/org/linked_order. Never present in /init or
+ *                   /on_init per the contract, so this is the only place to supply it.
+ *               fulfillments:
+ *                 type: array
+ *                 items: { type: object }
+ *                 description: >
+ *                   Optional — per-fulfillment confirm-only fields not present in /init
+ *                   (start.time, start/end.instructions, tags, @ondc/org/awb_no). Matched
+ *                   onto the initialized fulfillments by id; identity fields (location,
+ *                   contact, person) always come from the initialized transaction.
  *     responses:
  *       202:
  *         description: Confirm accepted and sent to the network.

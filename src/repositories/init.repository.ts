@@ -400,6 +400,7 @@ export class DrizzleInitRepository implements InitRepository {
               id: searchProviderFulfillments.id,
               fulfillmentId: searchProviderFulfillments.fulfillmentId,
               type: searchProviderFulfillments.type,
+              pickupDuration: searchProviderFulfillments.pickupDuration,
             })
             .from(searchProviderFulfillments)
             .where(eq(searchProviderFulfillments.providerRowId, providerRow.id)),
@@ -523,6 +524,7 @@ export class DrizzleInitRepository implements InitRepository {
                 id: fulfillment.fulfillmentId,
                 type: fulfillment.type ?? undefined,
                 tags: fulfillmentTagsByRowId.get(fulfillment.id) ?? [],
+                pickupDuration: fulfillment.pickupDuration ?? undefined,
               },
               searchEnvelope: {
                 start: {

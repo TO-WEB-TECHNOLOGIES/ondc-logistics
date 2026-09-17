@@ -149,31 +149,23 @@ const requireAcceptance = (order: any) => {
 };
 export const parseConfirmRequest = (value: unknown): ConfirmRequest => {
   const x = record(value, "request body");
-  const result: ConfirmRequest = {
+  return {
     initTransactionId: str(x.initTransactionId, "initTransactionId"),
+    // Opaque passthrough — same as today's @ondc/org/linked_order, no
+    // internal shape is verified anywhere else in this codebase either.
+    ...(x.linkedOrder !== undefined
+      ? { linkedOrder: record(x.linkedOrder, "linkedOrder") }
+      : {}),
+    // Opaque passthrough per entry — mergeConfirmFulfillments (confirm.mapper.ts)
+    // picks out the confirm-only fields it recognizes and matches by id.
+    ...(x.fulfillments !== undefined
+      ? {
+          fulfillments: arr(x.fulfillments, "fulfillments").map((f, i) =>
+            record(f, `fulfillments[${i}]`),
+          ),
+        }
+      : {}),
   };
-
-  if (x.context !== undefined) {
-    const c = record(x.context, "context");
-    if (c.action !== undefined && c.action !== "confirm")
-      throw new ConfirmValidationError("must be confirm", "context.action");
-    result.context = {
-      ...(c.transaction_id !== undefined
-        ? { transaction_id: str(c.transaction_id, "context.transaction_id") }
-        : {}),
-      ...(c.message_id !== undefined
-        ? { message_id: str(c.message_id, "context.message_id") }
-        : {}),
-    };
-  }
-  if (x.message !== undefined) {
-    const m = record(x.message, "message");
-    if (m.order !== undefined)
-      result.message = { order: record(m.order, "message.order") };
-  }
-  if (x.order !== undefined) result.order = record(x.order, "order");
-
-  return result;
 };
 export const validateConfirmPayload = (value: OndcConfirmRequest): void => {
   if (value.context.action !== "confirm")

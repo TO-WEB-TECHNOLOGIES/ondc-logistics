@@ -6,6 +6,7 @@ import {
   parseOnCancelResponse,
   parseCancelRequest,
 } from "../utils/cancel-validation.js";
+import { getCancellationReasonText } from "../constants/cancellation-reason-codes.js";
 
 const detail = (e: CancelValidationError) => ({
   path: e.path ?? "request",
@@ -68,7 +69,10 @@ export const createCancelController =
         .createCancel(input)
         .then((result) => {
           console.log("[cancel.controller] /cancel accepted", result);
-          response.status(202).json(result);
+          response.status(202).json({
+            ...result,
+            reasonText: getCancellationReasonText(input.cancellationReasonId),
+          });
         })
         .catch((error) => {
           console.log("[cancel.controller] /cancel failed", {

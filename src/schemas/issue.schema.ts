@@ -139,7 +139,7 @@ export interface OndcOnIssueResponse {
     update_target?: { path: string; action: string }[];
     issue: OndcIssueObject;
   };
-  error?: { code: string; message?: string };
+  error?: { code: string | number; message?: string };
 }
 
 export interface OndcIssueStatusRequest {
@@ -157,7 +157,7 @@ export interface OndcOnIssueStatusResponse {
     update_target?: { path: string; action: string }[];
     issue: OndcIssueObject;
   };
-  error?: { code: string; message?: string };
+  error?: { code: string | number; message?: string };
 }
 
 // ── Internal request types (BFF-facing) ─────────────────────────────────────
@@ -212,6 +212,17 @@ const str = (v: unknown, p: string): string => {
 };
 const arr = (v: unknown, p: string): unknown[] => {
   if (!Array.isArray(v)) throw new IssueValidationError("must be an array", p);
+  return v;
+};
+// error.code has been observed as both a string (ONDC network NACK codes
+// like "63002") and a plain number (workbench.ondc.tech's business-rule
+// rejections, e.g. 400) — accept either, just require it be present.
+const errorCode = (v: unknown, p: string): string | number => {
+  if (
+    (typeof v !== "string" || !v.trim()) &&
+    (typeof v !== "number" || Number.isNaN(v))
+  )
+    throw new IssueValidationError("must be a non-empty string or number", p);
   return v;
 };
 
@@ -463,7 +474,7 @@ export const parseOnIssueResponse = (value: unknown): OndcOnIssueResponse => {
   context(x.context, "on_issue");
   if (x.error !== undefined) {
     const e = record(x.error, "error");
-    str(e.code, "error.code");
+    errorCode(e.code, "error.code");
     return value as OndcOnIssueResponse;
   }
   const m = record(x.message, "message");
@@ -478,7 +489,7 @@ export const parseOnIssueStatusResponse = (
   context(x.context, "on_issue_status");
   if (x.error !== undefined) {
     const e = record(x.error, "error");
-    str(e.code, "error.code");
+    errorCode(e.code, "error.code");
     return value as OndcOnIssueStatusResponse;
   }
   const m = record(x.message, "message");

@@ -74,6 +74,7 @@ export const mapInitRequestToOndc = (
       location: { gps: start.gps, address: address(start.address) },
       authorization: { type: start.authorizationType },
       contact: request.pickupContact,
+      ...(f.pickupDuration ? { time: { duration: f.pickupDuration } } : {}),
     },
     end: {
       location: { gps: end.gps, address: address(end.address) },
@@ -106,11 +107,11 @@ export const mapInitRequestToOndc = (
           id: selected.provider.id,
           ...(selected.providerLocations.length
             ? {
-                locations: selected.providerLocations.map((l) => ({
-                  id: l.id,
-                  ...(l.gps ? { gps: l.gps } : {}),
-                  ...(l.address ? { address: address(l.address) } : {}),
-                })),
+                // Per contract, /init's provider.locations[] is id-only (the
+                // BPP already has full location detail from /on_search) —
+                // sending gps/address here gets NACKed as unexpected
+                // additional properties.
+                locations: selected.providerLocations.map((l) => ({ id: l.id })),
               }
             : {}),
         },

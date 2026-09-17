@@ -58,6 +58,8 @@ export interface ResolvedInitFulfillment {
   id: string;
   type?: string;
   tags: OndcTag[];
+  /** From /on_search's fulfillment.start.time.duration (search_provider_fulfillments.pickup_duration). */
+  pickupDuration?: string;
 }
 export interface ResolvedInitSelection {
   searchTransactionId: string;
