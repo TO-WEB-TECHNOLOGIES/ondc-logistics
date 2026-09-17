@@ -63,22 +63,69 @@ export interface OndcIssueDescriptor {
   media?: { url: string }[];
 }
 
+/**
+ * The real IGM 2.0 shape actually sent by workbench.ondc.tech (confirmed
+ * against live /on_issue and /on_issue_status payloads) — NOT the flat
+ * `actions[]` shape in src/json/on_issue.json. Each entry embeds the acting
+ * party's contact info directly (`updated_by`) rather than referencing a
+ * shared `actors[]` list, and there is no explicit per-action `id`.
+ */
+export interface OndcIssueActionUpdatedBy {
+  org?: { name?: string };
+  person?: { name?: string };
+  contact?: { phone?: string; email?: string };
+}
+export interface OndcIssueActionEntry {
+  cascaded_level?: number;
+  complainant_action?: string;
+  respondent_action?: string;
+  short_desc?: string;
+  updated_at: string;
+  updated_by?: OndcIssueActionUpdatedBy;
+}
+export interface OndcIssueActions {
+  complainant_actions?: OndcIssueActionEntry[];
+  respondent_actions?: OndcIssueActionEntry[];
+}
+
+/** Also observed live — resolution terms once the BPP proposes/executes one. */
+export interface OndcIssueResolution {
+  action_triggered?: string;
+  short_desc?: string;
+  long_desc?: string;
+  refund_amount?: string;
+}
+/** Observed live but not deeply modeled/persisted yet — kept loose. */
+export interface OndcIssueResolutionProvider {
+  respondent_info?: {
+    organization?: unknown;
+    resolution_support?: unknown;
+    type?: string;
+  };
+}
+
 export interface OndcIssueObject {
   id: string;
-  status: "OPEN" | "PROCESSING" | "RESOLVED" | "CLOSED";
-  level: "ISSUE" | "GRIEVANCE" | "DISPUTE";
+  // Present on the flat/older sample shape (src/json/*.json); ABSENT on the
+  // real IGM 2.0 payloads observed from workbench.ondc.tech, which instead
+  // carry `issue_actions`/`resolution` below. Both shapes are tolerated.
+  status?: "OPEN" | "PROCESSING" | "RESOLVED" | "CLOSED";
+  level?: "ISSUE" | "GRIEVANCE" | "DISPUTE";
   created_at: string;
   updated_at: string;
   expected_response_time?: { duration: string };
   expected_resolution_time?: { duration: string };
-  refs: OndcIssueRef[];
-  actors: OndcIssueActor[];
-  source_id: string;
-  complainant_id: string;
+  refs?: OndcIssueRef[];
+  actors?: OndcIssueActor[];
+  source_id?: string;
+  complainant_id?: string;
   respondent_ids?: string[];
-  descriptor: OndcIssueDescriptor;
-  last_action_id: string;
-  actions: OndcIssueAction[];
+  descriptor?: OndcIssueDescriptor;
+  last_action_id?: string;
+  actions?: OndcIssueAction[];
+  issue_actions?: OndcIssueActions;
+  resolution?: OndcIssueResolution;
+  resolution_provider?: OndcIssueResolutionProvider;
 }
 
 export interface OndcIssueRequest {
@@ -327,36 +374,86 @@ export const parseCheckIssueStatusRequest = (
   };
 };
 
+// Only `id`/`created_at`/`updated_at` are unconditionally required — the rest
+// depends on which of the two observed shapes this callback carries (see
+// OndcIssueObject's comment): the old flat shape (status/level/refs/actors/
+// descriptor/actions), the real IGM 2.0 shape (issue_actions), or a partial
+// update that legitimately omits both (e.g. just a resolution/resolution_provider
+// patch). At least one of {actions, issue_actions, resolution} must be present
+// so an empty/no-op callback still gets rejected.
 const issueObject = (v: unknown, p = "message.issue"): OndcIssueObject => {
   const o = record(v, p);
   str(o.id, `${p}.id`);
-  str(o.status, `${p}.status`);
-  str(o.level, `${p}.level`);
-  const refs = arr(o.refs, `${p}.refs`);
-  refs.forEach((r, i) => {
-    const x = record(r, `${p}.refs[${i}]`);
-    str(x.ref_id, `${p}.refs[${i}].ref_id`);
-    str(x.ref_type, `${p}.refs[${i}].ref_type`);
-  });
-  const actors = arr(o.actors, `${p}.actors`);
-  actors.forEach((a, i) => {
-    const x = record(a, `${p}.actors[${i}]`);
-    str(x.id, `${p}.actors[${i}].id`);
-    str(x.type, `${p}.actors[${i}].type`);
-  });
-  const descriptor = record(o.descriptor, `${p}.descriptor`);
-  str(descriptor.code, `${p}.descriptor.code`);
-  const actions = arr(o.actions, `${p}.actions`);
-  actions.forEach((a, i) => {
-    const x = record(a, `${p}.actions[${i}]`);
-    str(x.id, `${p}.actions[${i}].id`);
-    const d = record(x.descriptor, `${p}.actions[${i}].descriptor`);
-    str(d.code, `${p}.actions[${i}].descriptor.code`);
-    str(x.updated_at, `${p}.actions[${i}].updated_at`);
-    str(x.action_by, `${p}.actions[${i}].action_by`);
-  });
+  str(o.created_at, `${p}.created_at`);
+  str(o.updated_at, `${p}.updated_at`);
+
+  if (o.refs !== undefined)
+    arr(o.refs, `${p}.refs`).forEach((r, i) => {
+      const x = record(r, `${p}.refs[${i}]`);
+      str(x.ref_id, `${p}.refs[${i}].ref_id`);
+      str(x.ref_type, `${p}.refs[${i}].ref_type`);
+    });
+  if (o.actors !== undefined)
+    arr(o.actors, `${p}.actors`).forEach((a, i) => {
+      const x = record(a, `${p}.actors[${i}]`);
+      str(x.id, `${p}.actors[${i}].id`);
+      str(x.type, `${p}.actors[${i}].type`);
+    });
+  if (o.descriptor !== undefined)
+    str(record(o.descriptor, `${p}.descriptor`).code, `${p}.descriptor.code`);
+  if (o.actions !== undefined)
+    arr(o.actions, `${p}.actions`).forEach((a, i) => {
+      const x = record(a, `${p}.actions[${i}]`);
+      str(x.id, `${p}.actions[${i}].id`);
+      const d = record(x.descriptor, `${p}.actions[${i}].descriptor`);
+      str(d.code, `${p}.actions[${i}].descriptor.code`);
+      str(x.updated_at, `${p}.actions[${i}].updated_at`);
+      str(x.action_by, `${p}.actions[${i}].action_by`);
+    });
+
+  const issueActionEntry = (e: unknown, entryPath: string) => {
+    const x = record(e, entryPath);
+    str(x.updated_at, `${entryPath}.updated_at`);
+    if (x.complainant_action === undefined && x.respondent_action === undefined)
+      throw new IssueValidationError(
+        "must have complainant_action or respondent_action",
+        entryPath,
+      );
+  };
+  if (o.issue_actions !== undefined) {
+    const ia = record(o.issue_actions, `${p}.issue_actions`);
+    if (ia.complainant_actions !== undefined)
+      arr(ia.complainant_actions, `${p}.issue_actions.complainant_actions`).forEach(
+        (e, i) => issueActionEntry(e, `${p}.issue_actions.complainant_actions[${i}]`),
+      );
+    if (ia.respondent_actions !== undefined)
+      arr(ia.respondent_actions, `${p}.issue_actions.respondent_actions`).forEach(
+        (e, i) => issueActionEntry(e, `${p}.issue_actions.respondent_actions[${i}]`),
+      );
+  }
+  if (o.resolution !== undefined) record(o.resolution, `${p}.resolution`);
+
+  if (
+    o.actions === undefined &&
+    o.issue_actions === undefined &&
+    o.resolution === undefined
+  )
+    throw new IssueValidationError(
+      "must carry actions, issue_actions, or resolution",
+      p,
+    );
+
   return o as OndcIssueObject;
 };
+
+/**
+ * workbench.ondc.tech has been observed sending /on_issue_status as a
+ * top-level JSON array containing a single callback object, instead of the
+ * bare object every other ONDC callback in this codebase uses. Tolerate
+ * both: an array is split into its individual callback items.
+ */
+export const toCallbackItems = (value: unknown): unknown[] =>
+  Array.isArray(value) ? value : [value];
 
 export const parseOnIssueResponse = (value: unknown): OndcOnIssueResponse => {
   const x = record(value, "callback body");

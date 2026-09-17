@@ -1,0 +1,10 @@
+ALTER TABLE "issue_actions" ADD COLUMN "side" varchar;--> statement-breakpoint
+ALTER TABLE "issue_actions" ADD COLUMN "cascaded_level" integer;--> statement-breakpoint
+ALTER TABLE "issue_actions" ADD COLUMN "actor_org_name" varchar;--> statement-breakpoint
+ALTER TABLE "issue_actions" ADD COLUMN "actor_person_name" varchar;--> statement-breakpoint
+ALTER TABLE "issue_actions" ADD COLUMN "actor_phone" varchar;--> statement-breakpoint
+ALTER TABLE "issue_actions" ADD COLUMN "actor_email" varchar;--> statement-breakpoint
+ALTER TABLE "issues" ADD COLUMN "resolution_action_triggered" varchar;--> statement-breakpoint
+ALTER TABLE "issues" ADD COLUMN "resolution_short_desc" varchar;--> statement-breakpoint
+ALTER TABLE "issues" ADD COLUMN "resolution_long_desc" varchar;--> statement-breakpoint
+ALTER TABLE "issues" ADD COLUMN "resolution_refund_amount" numeric(18, 2);

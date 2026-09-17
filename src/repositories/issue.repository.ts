@@ -9,6 +9,7 @@ import {
 } from "../db/schema/index.js";
 import { loadLogisticsOrder, type LogisticsOrderRow } from "./logistics-order-shared.js";
 import type {
+  OndcIssueObject,
   OndcIssueRequest,
   OndcIssueStatusRequest,
   OndcOnIssueResponse,
@@ -110,6 +111,95 @@ const refQuantityCount = (ref: { tags?: { descriptor: { code: string }; list: { 
     ?.find((t) => t.descriptor.code === "message.order.items")
     ?.list.find((l) => l.descriptor.code === "quantity.selected.count")?.value;
 
+/** One action extracted from either observed callback shape — see issue_actions column comments in db/schema/issue.schema.ts. */
+interface IncomingAction {
+  actionId: string;
+  descriptorCode: string;
+  descriptorName?: string;
+  shortDesc?: string;
+  updatedAt: string;
+  actionBy?: string;
+  actorDetailsName?: string;
+  side?: "complainant" | "respondent";
+  cascadedLevel?: number;
+  actorOrgName?: string;
+  actorPersonName?: string;
+  actorPhone?: string;
+  actorEmail?: string;
+}
+
+/**
+ * Merges the flat shape (issue.actions[], src/json/on_issue.json) and the
+ * real IGM 2.0 shape confirmed from live workbench.ondc.tech traffic
+ * (issue.issue_actions.{complainant_actions,respondent_actions}[], no
+ * per-action id — synthesized as "<side>-<index>", actor info embedded
+ * inline via `updated_by` instead of referenced by id).
+ */
+const collectIncomingActions = (issue: OndcIssueObject): IncomingAction[] => {
+  const result: IncomingAction[] = [];
+  for (const a of issue.actions ?? [])
+    result.push({
+      actionId: a.id,
+      descriptorCode: a.descriptor.code,
+      descriptorName: a.descriptor.name,
+      shortDesc: a.descriptor.short_desc,
+      updatedAt: a.updated_at,
+      actionBy: a.action_by,
+      actorDetailsName: a.actor_details?.name,
+    });
+  (issue.issue_actions?.complainant_actions ?? []).forEach((e, i) =>
+    result.push({
+      actionId: `complainant-${i}`,
+      descriptorCode: e.complainant_action ?? "UNKNOWN",
+      shortDesc: e.short_desc,
+      updatedAt: e.updated_at,
+      side: "complainant",
+      cascadedLevel: e.cascaded_level,
+      actorOrgName: e.updated_by?.org?.name,
+      actorPersonName: e.updated_by?.person?.name,
+      actorPhone: e.updated_by?.contact?.phone,
+      actorEmail: e.updated_by?.contact?.email,
+    }),
+  );
+  (issue.issue_actions?.respondent_actions ?? []).forEach((e, i) =>
+    result.push({
+      actionId: `respondent-${i}`,
+      descriptorCode: e.respondent_action ?? "UNKNOWN",
+      shortDesc: e.short_desc,
+      updatedAt: e.updated_at,
+      side: "respondent",
+      cascadedLevel: e.cascaded_level,
+      actorOrgName: e.updated_by?.org?.name,
+      actorPersonName: e.updated_by?.person?.name,
+      actorPhone: e.updated_by?.contact?.phone,
+      actorEmail: e.updated_by?.contact?.email,
+    }),
+  );
+  return result;
+};
+
+/** Only-defined-fields patch for the `issues` row from either callback shape. */
+const buildIssuePatch = (
+  issue: OndcIssueObject,
+  bpp?: { bppId?: string; bppUri?: string },
+) => ({
+  ...(bpp?.bppId ? { bppId: bpp.bppId } : {}),
+  ...(bpp?.bppUri ? { bppUri: bpp.bppUri } : {}),
+  ...(issue.status ? { status: issue.status } : {}),
+  ...(issue.level ? { level: issue.level } : {}),
+  ...(issue.last_action_id ? { lastActionId: issue.last_action_id } : {}),
+  ...(issue.respondent_ids ? { respondentIds: issue.respondent_ids } : {}),
+  ...(issue.resolution
+    ? {
+        resolutionActionTriggered: issue.resolution.action_triggered,
+        resolutionShortDesc: issue.resolution.short_desc,
+        resolutionLongDesc: issue.resolution.long_desc,
+        resolutionRefundAmount: issue.resolution.refund_amount,
+      }
+    : {}),
+  updatedAt: new Date(),
+});
+
 export class DrizzleIssueRepository implements IssueRepository {
   constructor(private readonly database: typeof db1 = db1) {}
 
@@ -198,6 +288,16 @@ export class DrizzleIssueRepository implements IssueRepository {
     if (existing.length > 0) return { created: false };
 
     const issue = payload.message.issue;
+    // This method only ever receives payloads WE built (buildIssuePayload,
+    // the flat outbound shape) — descriptor/status/level are always present
+    // there, unlike the more permissive inbound OndcIssueObject type shared
+    // with /on_issue|/on_issue_status.
+    if (!issue.descriptor || !issue.status || !issue.level)
+      throw new Error("outbound /issue payload is missing descriptor/status/level");
+    const descriptor = issue.descriptor;
+    const refs = issue.refs ?? [];
+    const actors = issue.actors ?? [];
+
     console.log("[issue.repository] persisting /issue (create)", {
       issueId: issue.id,
       orderId,
@@ -215,13 +315,13 @@ export class DrizzleIssueRepository implements IssueRepository {
           bppId: payload.context.bpp_id,
           bppUri: payload.context.bpp_uri,
           categoryCode,
-          descriptorCode: issue.descriptor.code,
+          descriptorCode: descriptor.code,
           status: issue.status,
           level: issue.level,
-          shortDesc: issue.descriptor.short_desc,
-          longDesc: issue.descriptor.long_desc,
-          additionalDescUrl: issue.descriptor.additional_desc?.url,
-          additionalDescContentType: issue.descriptor.additional_desc?.content_type,
+          shortDesc: descriptor.short_desc,
+          longDesc: descriptor.long_desc,
+          additionalDescUrl: descriptor.additional_desc?.url,
+          additionalDescContentType: descriptor.additional_desc?.content_type,
           sourceId: issue.source_id,
           complainantId: issue.complainant_id,
           expectedResponseDuration: issue.expected_response_time?.duration,
@@ -230,9 +330,9 @@ export class DrizzleIssueRepository implements IssueRepository {
         })
         .returning({ id: issues.id });
 
-      if (issue.refs.length)
+      if (refs.length)
         await tx.insert(issueRefs).values(
-          issue.refs.map((r) => ({
+          refs.map((r) => ({
             issueId: row.id,
             refId: r.ref_id,
             refType: r.ref_type,
@@ -240,9 +340,9 @@ export class DrizzleIssueRepository implements IssueRepository {
           })),
         );
 
-      if (issue.actors.length)
+      if (actors.length)
         await tx.insert(issueActors).values(
-          issue.actors.map((a) => ({
+          actors.map((a) => ({
             issueId: row.id,
             actorId: a.id,
             actorType: a.type,
@@ -526,7 +626,9 @@ export class DrizzleIssueRepository implements IssueRepository {
       }
     }
 
-    const incomingActions = response.message?.issue?.actions ?? [];
+    const incomingActions = response.message?.issue
+      ? collectIncomingActions(response.message.issue)
+      : [];
     const existingActionIds = new Set(
       (
         await this.database
@@ -535,36 +637,33 @@ export class DrizzleIssueRepository implements IssueRepository {
           .where(eq(issueActions.issueId, issueRow.id))
       ).map((a) => a.actionId),
     );
-    const newActions = incomingActions.filter((a) => !existingActionIds.has(a.id));
+    const newActions = incomingActions.filter((a) => !existingActionIds.has(a.actionId));
 
     await this.database.transaction(async (tx) => {
       if (newActions.length)
         await tx.insert(issueActions).values(
           newActions.map((a) => ({
             issueId: issueRow.id,
-            actionId: a.id,
-            descriptorCode: a.descriptor.code,
-            descriptorName: a.descriptor.name,
-            shortDesc: a.descriptor.short_desc,
-            updatedAt: new Date(a.updated_at),
-            actionBy: a.action_by,
-            actorDetailsName: a.actor_details?.name,
+            actionId: a.actionId,
+            side: a.side,
+            cascadedLevel: a.cascadedLevel,
+            descriptorCode: a.descriptorCode,
+            descriptorName: a.descriptorName,
+            shortDesc: a.shortDesc,
+            updatedAt: new Date(a.updatedAt),
+            actionBy: a.actionBy,
+            actorDetailsName: a.actorDetailsName,
+            actorOrgName: a.actorOrgName,
+            actorPersonName: a.actorPersonName,
+            actorPhone: a.actorPhone,
+            actorEmail: a.actorEmail,
           })),
         );
 
       if (!response.error && response.message?.issue) {
-        const issue = response.message.issue;
         await tx
           .update(issues)
-          .set({
-            bppId: c.bpp_id,
-            bppUri: c.bpp_uri,
-            status: issue.status,
-            level: issue.level,
-            lastActionId: issue.last_action_id,
-            ...(issue.respondent_ids ? { respondentIds: issue.respondent_ids } : {}),
-            updatedAt: new Date(),
-          })
+          .set(buildIssuePatch(response.message.issue, { bppId: c.bpp_id, bppUri: c.bpp_uri }))
           .where(eq(issues.id, issueRow.id));
       }
 
@@ -674,7 +773,9 @@ export class DrizzleIssueRepository implements IssueRepository {
           .limit(1)
       : [];
 
-    const incomingActions = response.message?.issue?.actions ?? [];
+    const incomingActions = response.message?.issue
+      ? collectIncomingActions(response.message.issue)
+      : [];
     const existingActionIds = issueRow
       ? new Set(
           (
@@ -685,34 +786,33 @@ export class DrizzleIssueRepository implements IssueRepository {
           ).map((a) => a.actionId),
         )
       : new Set<string>();
-    const newActions = incomingActions.filter((a) => !existingActionIds.has(a.id));
+    const newActions = incomingActions.filter((a) => !existingActionIds.has(a.actionId));
 
     await this.database.transaction(async (tx) => {
       if (issueRow && newActions.length)
         await tx.insert(issueActions).values(
           newActions.map((a) => ({
             issueId: issueRow.id,
-            actionId: a.id,
-            descriptorCode: a.descriptor.code,
-            descriptorName: a.descriptor.name,
-            shortDesc: a.descriptor.short_desc,
-            updatedAt: new Date(a.updated_at),
-            actionBy: a.action_by,
-            actorDetailsName: a.actor_details?.name,
+            actionId: a.actionId,
+            side: a.side,
+            cascadedLevel: a.cascadedLevel,
+            descriptorCode: a.descriptorCode,
+            descriptorName: a.descriptorName,
+            shortDesc: a.shortDesc,
+            updatedAt: new Date(a.updatedAt),
+            actionBy: a.actionBy,
+            actorDetailsName: a.actorDetailsName,
+            actorOrgName: a.actorOrgName,
+            actorPersonName: a.actorPersonName,
+            actorPhone: a.actorPhone,
+            actorEmail: a.actorEmail,
           })),
         );
 
       if (issueRow && !response.error && response.message?.issue) {
-        const issue = response.message.issue;
         await tx
           .update(issues)
-          .set({
-            status: issue.status,
-            level: issue.level,
-            lastActionId: issue.last_action_id,
-            ...(issue.respondent_ids ? { respondentIds: issue.respondent_ids } : {}),
-            updatedAt: new Date(),
-          })
+          .set(buildIssuePatch(response.message.issue))
           .where(eq(issues.id, issueRow.id));
       }
 

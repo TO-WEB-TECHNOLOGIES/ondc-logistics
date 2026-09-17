@@ -101,7 +101,9 @@ export class IssueService {
       now,
     });
 
-    const initialAction = payload.message.issue.actions[0];
+    // buildIssuePayload always populates a single initial "OPEN" action.
+    const initialAction = payload.message.issue.actions?.[0];
+    if (!initialAction) throw new IssueValidationError("failed to build initial action");
     const { created } = await this.dependencies.repository.createIssue({
       payload,
       orderId: input.orderId,

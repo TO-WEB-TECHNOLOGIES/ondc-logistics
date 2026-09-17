@@ -8,6 +8,7 @@ import {
   parseOnIssueResponse,
   parseOnIssueStatusResponse,
   parseUpdateIssueRequest,
+  toCallbackItems,
 } from "../schemas/issue.schema.js";
 
 const detail = (e: IssueValidationError) => ({
@@ -157,44 +158,61 @@ export const createOnIssueController =
   (request: Request, response: Response): void => {
     console.log("[on-issue.controller] incoming /on_issue request");
     try {
-      const callback = parseOnIssueResponse(request.body);
-      console.log("[on-issue.controller] /on_issue validated", {
-        transactionId: callback.context.transaction_id,
-        messageId: callback.context.message_id,
-        bppId: callback.context.bpp_id,
-        issueId: callback.message?.issue?.id,
-        hasError: Boolean(callback.error),
-      });
-      void service
-        .handleOnIssue(callback)
-        .then((result) => {
-          console.log("[on-issue.controller] /on_issue result", {
-            transactionId: callback.context.transaction_id,
-            issueId: callback.message?.issue?.id,
-            result,
-          });
-        })
-        .catch((error) => {
-          console.log("[on-issue.controller] processing failed", {
-            transactionId: callback.context.transaction_id,
-            error: error instanceof Error ? (error.stack ?? error.message) : error,
-          });
-        });
+      // workbench.ondc.tech has been observed sending this as either a bare
+      // callback object or a JSON array wrapping a single one — tolerate both.
+      const items = toCallbackItems(request.body);
+      const validated: ReturnType<typeof parseOnIssueResponse>[] = [];
+      let firstError: IssueValidationError | undefined;
+      for (const item of items) {
+        try {
+          validated.push(parseOnIssueResponse(item));
+        } catch (error) {
+          if (!(error instanceof IssueValidationError)) throw error;
+          firstError ??= error;
+          console.log("[on-issue.controller] /on_issue item validation failed", detail(error));
+        }
+      }
 
-      // ONDC requires an immediate ACK; async processing continues above.
-      response.status(200).json({ message: { ack: { status: "ACK" } } });
-    } catch (error) {
-      if (error instanceof IssueValidationError) {
-        console.log("[on-issue.controller] validation failed", detail(error));
+      if (validated.length === 0 && firstError) {
+        console.log("[on-issue.controller] all items failed validation", detail(firstError));
         response.status(200).json(
           ondcNack({
             type: "JSON-SCHEMA-ERROR",
             code: "63002",
-            message: error.message,
+            message: firstError.message,
           }),
         );
         return;
       }
+
+      for (const callback of validated) {
+        console.log("[on-issue.controller] /on_issue validated", {
+          transactionId: callback.context.transaction_id,
+          messageId: callback.context.message_id,
+          bppId: callback.context.bpp_id,
+          issueId: callback.message?.issue?.id,
+          hasError: Boolean(callback.error),
+        });
+        void service
+          .handleOnIssue(callback)
+          .then((result) => {
+            console.log("[on-issue.controller] /on_issue result", {
+              transactionId: callback.context.transaction_id,
+              issueId: callback.message?.issue?.id,
+              result,
+            });
+          })
+          .catch((error) => {
+            console.log("[on-issue.controller] processing failed", {
+              transactionId: callback.context.transaction_id,
+              error: error instanceof Error ? (error.stack ?? error.message) : error,
+            });
+          });
+      }
+
+      // ONDC requires an immediate ACK; async processing continues above.
+      response.status(200).json({ message: { ack: { status: "ACK" } } });
+    } catch (error) {
       console.log("[on-issue.controller] unexpected failure", error);
       response.status(500).json({
         error: { code: "ON_ISSUE_FAILED", message: "Unable to process callback" },
@@ -310,43 +328,67 @@ export const createOnIssueStatusController =
   (request: Request, response: Response): void => {
     console.log("[on-issue-status.controller] incoming /on_issue_status request");
     try {
-      const callback = parseOnIssueStatusResponse(request.body);
-      console.log("[on-issue-status.controller] /on_issue_status validated", {
-        transactionId: callback.context.transaction_id,
-        messageId: callback.context.message_id,
-        bppId: callback.context.bpp_id,
-        issueId: callback.message?.issue?.id,
-        hasError: Boolean(callback.error),
-      });
-      void service
-        .handleOnIssueStatus(callback)
-        .then((result) => {
-          console.log("[on-issue-status.controller] /on_issue_status result", {
-            transactionId: callback.context.transaction_id,
-            issueId: callback.message?.issue?.id,
-            result,
-          });
-        })
-        .catch((error) => {
-          console.log("[on-issue-status.controller] processing failed", {
-            transactionId: callback.context.transaction_id,
-            error: error instanceof Error ? (error.stack ?? error.message) : error,
-          });
-        });
+      // workbench.ondc.tech sends this as a JSON array wrapping a single
+      // callback object (confirmed from live traffic) — tolerate a bare
+      // object too, in case another BPP sends the un-wrapped form.
+      const items = toCallbackItems(request.body);
+      const validated: ReturnType<typeof parseOnIssueStatusResponse>[] = [];
+      let firstError: IssueValidationError | undefined;
+      for (const item of items) {
+        try {
+          validated.push(parseOnIssueStatusResponse(item));
+        } catch (error) {
+          if (!(error instanceof IssueValidationError)) throw error;
+          firstError ??= error;
+          console.log(
+            "[on-issue-status.controller] /on_issue_status item validation failed",
+            detail(error),
+          );
+        }
+      }
 
-      response.status(200).json({ message: { ack: { status: "ACK" } } });
-    } catch (error) {
-      if (error instanceof IssueValidationError) {
-        console.log("[on-issue-status.controller] validation failed", detail(error));
+      if (validated.length === 0 && firstError) {
+        console.log(
+          "[on-issue-status.controller] all items failed validation",
+          detail(firstError),
+        );
         response.status(200).json(
           ondcNack({
             type: "JSON-SCHEMA-ERROR",
             code: "63002",
-            message: error.message,
+            message: firstError.message,
           }),
         );
         return;
       }
+
+      for (const callback of validated) {
+        console.log("[on-issue-status.controller] /on_issue_status validated", {
+          transactionId: callback.context.transaction_id,
+          messageId: callback.context.message_id,
+          bppId: callback.context.bpp_id,
+          issueId: callback.message?.issue?.id,
+          hasError: Boolean(callback.error),
+        });
+        void service
+          .handleOnIssueStatus(callback)
+          .then((result) => {
+            console.log("[on-issue-status.controller] /on_issue_status result", {
+              transactionId: callback.context.transaction_id,
+              issueId: callback.message?.issue?.id,
+              result,
+            });
+          })
+          .catch((error) => {
+            console.log("[on-issue-status.controller] processing failed", {
+              transactionId: callback.context.transaction_id,
+              error: error instanceof Error ? (error.stack ?? error.message) : error,
+            });
+          });
+      }
+
+      response.status(200).json({ message: { ack: { status: "ACK" } } });
+    } catch (error) {
       console.log("[on-issue-status.controller] unexpected failure", error);
       response.status(500).json({
         error: {
