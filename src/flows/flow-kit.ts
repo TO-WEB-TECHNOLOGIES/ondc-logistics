@@ -1,15 +1,13 @@
 /**
- * End-to-end ONDC workbench flow runner.
- * Run: npm run test:flow   (server must be running; FLOW_BASE_URL defaults to http://localhost:3000)
- *
- * Sends each request, then waits (no timeout) for the matching callback event
- * on the unified SSE stream GET /logistics/stream/:clientId before moving on.
- * Request bodies mirror postman/Ustart.postman_collection.json.
+ * Shared helpers for the standalone workbench flow runners in src/flows.
+ * Every flow runs against the deployed Render service, sends each request,
+ * then waits (no timeout) for the matching callback event on the unified SSE
+ * stream GET /logistics/stream/:clientId before moving on.
  */
 import { randomUUID } from "node:crypto";
 
-const BASE_URL = (process.env.FLOW_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-const clientId = randomUUID();
+export const BASE_URL = "https://ondc-logistics.onrender.com";
+export const clientId = randomUUID();
 
 interface StreamEvent {
   event: string;
@@ -19,9 +17,10 @@ interface StreamEvent {
 const buffer: StreamEvent[] = [];
 let notify: (() => void) | undefined;
 
-const log = (step: string, msg: string) => console.log(`[flow] ${step.padEnd(22)} ${msg}`);
+export const log = (step: string, msg: string) =>
+  console.log(`[flow] ${step.padEnd(22)} ${msg}`);
 
-async function openStream(): Promise<void> {
+export async function openStream(): Promise<void> {
   const res = await fetch(`${BASE_URL}/logistics/stream/${clientId}`);
   if (!res.ok || !res.body) throw new Error(`SSE connect failed: ${res.status}`);
   void (async () => {
@@ -54,7 +53,7 @@ async function openStream(): Promise<void> {
 }
 
 /** Waits (indefinitely) for the next `event`; any `<x>_error` event aborts the flow. */
-async function waitFor(step: string, event: string): Promise<Record<string, any>> {
+export async function waitFor(step: string, event: string): Promise<Record<string, any>> {
   log(step, `waiting for SSE "${event}"...`);
   const started = Date.now();
   for (;;) {
@@ -74,7 +73,11 @@ async function waitFor(step: string, event: string): Promise<Record<string, any>
 }
 
 /** Waits (indefinitely) until `count` events named `event` have arrived, returning them in order. */
-async function waitForCount(step: string, event: string, count: number): Promise<Record<string, any>[]> {
+export async function waitForCount(
+  step: string,
+  event: string,
+  count: number,
+): Promise<Record<string, any>[]> {
   const results: Record<string, any>[] = [];
   for (let i = 1; i <= count; i++) {
     results.push(await waitFor(`${step} (${i}/${count})`, event));
@@ -82,7 +85,7 @@ async function waitForCount(step: string, event: string, count: number): Promise
   return results;
 }
 
-async function post(step: string, path: string, body: unknown): Promise<Record<string, any>> {
+export async function post(step: string, path: string, body: unknown): Promise<Record<string, any>> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -94,11 +97,14 @@ async function post(step: string, path: string, body: unknown): Promise<Record<s
   return json;
 }
 
-async function main() {
-  await openStream();
-  log("stream", `connected clientId=${clientId} base=${BASE_URL}`);
+export interface ConfirmedOrder {
+  orderId: string;
+  fulfillmentId: string;
+  initTransactionId: string;
+}
 
-  // 1-2. SEARCH -> ON_SEARCH
+/** Steps 1-6: SEARCH, ON_SEARCH, INIT, ON_INIT, CONFIRM, ON_CONFIRM. */
+export async function runSearchInitConfirm(): Promise<ConfirmedOrder> {
   const search = await post("1 search", "/logistics/search", {
     client_id: clientId,
     category_id: "Standard Delivery",
@@ -129,7 +135,6 @@ async function main() {
   const fulfillmentId: string = item.fulfillmentId ?? searchResult.provider.fulfillments?.[0]?.fulfillmentId;
   log("2 on_search", `provider=${providerId} item=${itemId} fulfillment=${fulfillmentId}`);
 
-  // 3-4. INIT -> ON_INIT
   const init = await post("3 init", "/logistics/init", {
     search_id: searchId,
     provider_id: providerId,
@@ -151,7 +156,6 @@ async function main() {
   await waitFor("4 on_init", "init_result");
   const initTransactionId: string = init.transactionId;
 
-  // 5-6. CONFIRM -> ON_CONFIRM
   await post("5 confirm", "/logistics/confirm", {
     initTransactionId,
     fulfillments: [
@@ -177,65 +181,24 @@ async function main() {
   });
   const confirmed = await waitFor("6 on_confirm", "order_confirmed");
   const orderId: string = confirmed.orderId;
-  const confirmedFulfillmentId: string = confirmed.fulfillment?.fulfillmentId ?? fulfillmentId;
   log("6 on_confirm", `orderId=${orderId}`);
-
-  // 7-8. UPDATE -> ON_UPDATE
-  await post("7 update", "/logistics/update", {
+  return {
     orderId,
-    fulfillmentId: confirmedFulfillmentId,
-    updateType: "LINKED_ORDER_DETAILS",
-    linkedOrder: {
-      retailOrderId: "O1",
-      productName: "Atta",
-      quantityCount: 2,
-      weight: { unit: "kilogram", value: 1 },
-      dimensions: { length: { unit: "centimeter", value: 1 }, breadth: { unit: "centimeter", value: 1 }, height: { unit: "centimeter", value: 1 } },
-      providerName: "Aadishwar Store",
-    },
-  });
-  await waitFor("8 on_update", "order_updated");
-
-  // 9-10. ON_STATUS x2 (pushed by workbench)
-  await waitForCount("9-10 on_status", "order_status", 2);
-
-  // 11-12. TRACK -> ON_TRACK
-  await post("11 track", "/logistics/track", { orderId });
-  await waitFor("12 on_track", "order_tracking");
-
-  // 13-14. ON_STATUS x2
-  await waitForCount("13-14 on_status", "order_status", 2);
-
-  // 15-16. ISSUE -> ON_ISSUE
-  const issue = await post("15 issue", "/logistics/issue", {
-    order_id: orderId,
-    category_code: "ITEM_QUALITY",
-    descriptor_long_desc: "The biryani was cold and salty.",
-    descriptor_additional_desc_url: "https://buyerapp.com/additional-details/desc.txt",
-    images: [{ url: "https://buyerapp.com/images/img1.png", size_type: "xs" }],
-    media: [{ url: "https://buyerapp.com/media/video1.mp4" }],
-    items: [{ id: "I1", quantity: 2 }],
-  });
-  await waitFor("16 on_issue", "issue_updated");
-  const issueId: string = issue.issueId;
-
-  // 17. ISSUE_STATUS -> ON_ISSUE_STATUS
-  await post("17 issue_status", "/logistics/issue_status", { issue_id: issueId });
-  await waitFor("17 on_issue_status", "issue_status_updated");
-
-  // 18. ISSUE (update) -> ON_ISSUE
-  await post("18 issue", "/logistics/issue", {
-    issue_id: issueId,
-    action_code: "CLOSED",
-    descriptor_long_desc: "Attached the invoice and photos as requested.",
-  });
-  await waitFor("18 on_issue", "issue_updated");
-
-  log("done", "flow completed successfully");
-  process.exit(0);
+    fulfillmentId: confirmed.fulfillment?.fulfillmentId ?? fulfillmentId,
+    initTransactionId,
+  };
 }
 
-main().catch((error) => {
-  console.error("[flow] FAILED:", error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+/** Opens the SSE stream, runs `flow`, exits 0 on success / 1 on failure. */
+export async function runFlow(name: string, flow: () => Promise<void>): Promise<never> {
+  try {
+    await openStream();
+    log("stream", `${name}: connected clientId=${clientId} base=${BASE_URL}`);
+    await flow();
+    log("done", "flow completed successfully");
+    process.exit(0);
+  } catch (error) {
+    console.error("[flow] FAILED:", error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+}

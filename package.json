@@ -6,7 +6,12 @@
   "main": "index.js",
   "scripts": {
     "test": "echo 'Error: no test specified' && exit 1",
-    "test:flow": "tsx src/flows/ondc-workbench.flow.ts",
+    "flow:baseline-igm": "tsx src/flows/ondc-baseline-igm.flow.ts",
+    "flow:cancellation": "tsx src/flows/ondc-buyer-cancellation.flow.ts",
+    "flow:baseline": "tsx src/flows/ondc-baseline.flow.ts",
+    "flow:baseline-no-rts": "tsx src/flows/ondc-baseline-withoutRTS.flow.ts",
+    "flow:rto": "tsx src/flows/ondc-rto.flow.ts",
+    "keep-alive": "tsx src/flows/keep-alive.cron.ts",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "build": "tsc && tsc-alias",
