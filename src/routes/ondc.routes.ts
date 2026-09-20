@@ -48,6 +48,7 @@ import { DrizzleCancelRepository } from "../repositories/cancel.repository.js";
 import { searchSseManager } from "../utils/search-sse.js";
 import { orderSseManager } from "../utils/order-sse.js";
 import { clientStreamManager } from "../utils/client-stream.js";
+import { noApiLogMiddleware } from "../middlewares/no-api-log.middleware.js";
 
 const protocol = {
   domain: process.env.ONDC_DOMAIN ?? "nic2004:60232",
@@ -161,25 +162,25 @@ searchRouter.get("/search/:searchId/events", (request, response) => {
 });
 
 export const onSearchRouter = express.Router();
-onSearchRouter.post("/on_search", createOnSearchController(onSearchService));
+onSearchRouter.post("/on_search", noApiLogMiddleware, createOnSearchController(onSearchService));
 
 export const initRouter = express.Router();
 initRouter.post("/init", createInitController(initService));
 
 export const onInitRouter = express.Router();
-onInitRouter.post("/on_init", createOnInitController(initService));
+onInitRouter.post("/on_init", noApiLogMiddleware, createOnInitController(initService));
 
 export const confirmRouter = express.Router();
 confirmRouter.post("/confirm", createConfirmController(confirmService));
 
 export const onConfirmRouter = express.Router();
-onConfirmRouter.post("/on_confirm", createOnConfirmController(confirmService));
+onConfirmRouter.post("/on_confirm", noApiLogMiddleware, createOnConfirmController(confirmService));
 
 export const updateRouter = express.Router();
 updateRouter.post("/update", createUpdateController(updateService));
 
 export const onUpdateRouter = express.Router();
-onUpdateRouter.post("/on_update", createOnUpdateController(updateService));
+onUpdateRouter.post("/on_update", noApiLogMiddleware, createOnUpdateController(updateService));
 
 export const statusRouter = express.Router();
 statusRouter.post("/status", createStatusController(statusService));
@@ -210,7 +211,7 @@ statusRouter.get("/orders/:orderId/status/events", (request, response) => {
 });
 
 export const onStatusRouter = express.Router();
-onStatusRouter.post("/on_status", createOnStatusController(statusService));
+onStatusRouter.post("/on_status", noApiLogMiddleware, createOnStatusController(statusService));
 
 export const trackRouter = express.Router();
 trackRouter.post("/track", createTrackController(trackService));
@@ -221,10 +222,10 @@ trackRouter.get(
 );
 
 export const onTrackRouter = express.Router();
-onTrackRouter.post("/on_track", createOnTrackController(trackService));
+onTrackRouter.post("/on_track", noApiLogMiddleware, createOnTrackController(trackService));
 
 export const cancelRouter = express.Router();
 cancelRouter.post("/cancel", createCancelController(cancelService));
 
 export const onCancelRouter = express.Router();
-onCancelRouter.post("/on_cancel", createOnCancelController(cancelService));
+onCancelRouter.post("/on_cancel", noApiLogMiddleware, createOnCancelController(cancelService));

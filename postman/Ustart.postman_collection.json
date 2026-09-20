@@ -1,7 +1,7 @@
 {
   "info": {
-    "_postman_id": "720fd0a9-b34c-4b19-ab9a-e0020f6c8772",
-    "name": "Ustart ONDC",
+    "_postman_id": "444de8d1-360f-457b-9dc3-f3ff9c87bcea",
+    "name": "Ustart",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "41647731"
   },
@@ -27,7 +27,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"category_id\": \"Immediate Delivery\",\r\n\r\n  \"start\": {\r\n    \"gps\": \"28.9845,77.7064\",\r\n    \"area_code\": \"250001\",\r\n    \"address\": {\r\n      \"name\": \"Pickup Person\",\r\n      \"building\": \"123\",\r\n      \"locality\": \"Sector 1\",\r\n      \"street\": \"Main Road\",\r\n      \"city\": \"Meerut\",\r\n      \"state\": \"Uttar Pradesh\",\r\n      \"country\": \"IND\"\r\n    }\r\n  },\r\n\r\n  \"end\": {\r\n    \"gps\": \"28.6139,77.2090\",\r\n    \"area_code\": \"110001\",\r\n    \"address\": {\r\n      \"name\": \"Delivery Person\",\r\n      \"building\": \"456\",\r\n      \"locality\": \"Connaught Place\",\r\n      \"street\": \"Main Road\",\r\n      \"city\": \"New Delhi\",\r\n      \"state\": \"Delhi\",\r\n      \"country\": \"IND\"\r\n    }\r\n  },\r\n\r\n  \"schedule\": {\r\n    \"days\": \"1,2,3,4,5,6,7\",\r\n    \"range_start\": \"0000\",\r\n    \"range_end\": \"2359\"\r\n  },\r\n\r\n  \"payload\": {\r\n    \"weight\": {\r\n      \"value\": 1,\r\n      \"unit\": \"kilogram\"\r\n    },\r\n    \"dimensions\": {\r\n      \"length\": {\r\n        \"value\": 10,\r\n        \"unit\": \"centimeter\"\r\n      },\r\n      \"breadth\": {\r\n        \"value\": 10,\r\n        \"unit\": \"centimeter\"\r\n      },\r\n      \"height\": {\r\n        \"value\": 10,\r\n        \"unit\": \"centimeter\"\r\n      }\r\n    },\r\n    \"category\": \"Grocery\",\r\n    \"value\": {\r\n      \"amount\": \"100\",\r\n      \"currency\": \"INR\"\r\n    },\r\n    \"dangerous_goods\": false\r\n  }\r\n}",
+              "raw": "{\r\n    \"client_id\": \"{{clientId}}\",\r\n    \"category_id\": \"Standard Delivery\",\r\n    \"start\": {\r\n        \"gps\": \"28.9845,77.7064\",\r\n        \"area_code\": \"250001\",\r\n        \"address\": {\r\n            \"name\": \"Pickup Person\",\r\n            \"building\": \"123\",\r\n            \"locality\": \"Sector 1\",\r\n            \"street\": \"Main Road\",\r\n            \"city\": \"Meerut\",\r\n            \"state\": \"Uttar Pradesh\",\r\n            \"country\": \"IND\"\r\n        }\r\n    },\r\n    \"end\": {\r\n        \"gps\": \"28.6139,77.2090\",\r\n        \"area_code\": \"110001\",\r\n        \"address\": {\r\n            \"name\": \"Delivery Person\",\r\n            \"building\": \"456\",\r\n            \"locality\": \"Connaught Place\",\r\n            \"street\": \"Main Road\",\r\n            \"city\": \"New Delhi\",\r\n            \"state\": \"Delhi\",\r\n            \"country\": \"IND\"\r\n        }\r\n    },\r\n    \"schedule\": {\r\n        \"days\": \"1,2,3,4,5,6,7\",\r\n        \"range_start\": \"0000\",\r\n        \"range_end\": \"2359\"\r\n    },\r\n    \"payload\": {\r\n        \"weight\": {\r\n            \"value\": 1,\r\n            \"unit\": \"kilogram\"\r\n        },\r\n        \"dimensions\": {\r\n            \"length\": {\r\n                \"value\": 10,\r\n                \"unit\": \"centimeter\"\r\n            },\r\n            \"breadth\": {\r\n                \"value\": 10,\r\n                \"unit\": \"centimeter\"\r\n            },\r\n            \"height\": {\r\n                \"value\": 10,\r\n                \"unit\": \"centimeter\"\r\n            }\r\n        },\r\n        \"category\": \"Grocery\",\r\n        \"value\": {\r\n            \"amount\": \"100\",\r\n            \"currency\": \"INR\"\r\n        },\r\n        \"dangerous_goods\": false\r\n    }\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -124,7 +124,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"search_id\": \"{{searchId}}\",\r\n    \"provider_id\": \"{{providerId}}\",\r\n    \"item_id\": \"{{itemId}}\",\r\n    \"fulfillment_id\": \"{{fulfillmentId}}\",\r\n    \"pickup_contact\": {\r\n      \"phone\": \"9000000000\",\r\n      \"email\": \"store@example.com\"\r\n    },\r\n    \"delivery_contact\": {\r\n      \"phone\": \"9111111111\",\r\n      \"email\": \"buyer@example.com\"\r\n    },\r\n    \"billing\": {\r\n      \"name\": \"Buyer Name\",\r\n      \"email\": \"buyer@example.com\",\r\n      \"phone\": \"9111111111\",\r\n      \"tax_number\": \"GST123456\",\r\n      \"created_at\": \"2026-09-10T08:00:00.000Z\",\r\n      \"updated_at\": \"2026-09-10T08:00:00.000Z\",\r\n      \"address\": {\r\n        \"name\": \"Home\",\r\n        \"building\": \"House 1\",\r\n        \"locality\": \"Koramangala\",\r\n        \"city\": \"Bengaluru\",\r\n        \"state\": \"Karnataka\",\r\n        \"country\": \"India\",\r\n        \"area_code\": \"560001\"\r\n      }\r\n    },\r\n    \"payment\": {\r\n      \"type\": \"ON-FULFILLMENT\",\r\n      \"collected_by\": \"BPP\",\r\n      \"amount\": \"59.00\",\r\n      \"currency\": \"INR\",\r\n      \"settlement_details\": [\r\n        {\r\n          \"settlement_counterparty\": \"lbnp\",\r\n          \"settlement_type\": \"upi\"\r\n        }\r\n      ]\r\n    }\r\n  }",
+              "raw": "{\r\n    \"search_id\": \"{{searchId}}\",\r\n    \"provider_id\": \"{{providerId}}\",\r\n    \"item_id\": \"{{itemId}}\",\r\n    \"fulfillment_id\": \"{{fulfillmentId}}\",\r\n    \"pickup_contact\": {\r\n        \"phone\": \"9000000000\",\r\n        \"email\": \"store@example.com\"\r\n    },\r\n    \"delivery_contact\": {\r\n        \"phone\": \"9111111111\",\r\n        \"email\": \"buyer@example.com\"\r\n    },\r\n    \"billing\": {\r\n        \"name\": \"Buyer Name\",\r\n        \"email\": \"buyer@example.com\",\r\n        \"phone\": \"9111111111\",\r\n        \"tax_number\": \"GST123456\",\r\n        \"created_at\": \"2026-09-10T08:00:00.000Z\",\r\n        \"updated_at\": \"2026-09-10T08:00:00.000Z\",\r\n        \"address\": {\r\n            \"name\": \"Home\",\r\n            \"building\": \"House 1\",\r\n            \"locality\": \"Koramangala\",\r\n            \"city\": \"Bengaluru\",\r\n            \"state\": \"Karnataka\",\r\n            \"country\": \"India\",\r\n            \"area_code\": \"560001\"\r\n        }\r\n    },\r\n    \"payment\": {\r\n        \"type\": \"ON-ORDER\",\r\n        \"collected_by\": \"BAP\",\r\n        \"amount\": \"120.00\",\r\n        \"currency\": \"INR\"\r\n    }\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -169,7 +169,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"initTransactionId\": \"{{initTransactionId}}\",\r\n    \"order\": {\r\n        // fulfillments: id must match a fulfillment id from your /init order.\r\n        // location/contact/type are already known from /init — don't resupply them,\r\n        // just the confirm-only fields the mapper merges in:\r\n        \"fulfillments\": [\r\n            {\r\n                \"id\": \"1\",\r\n                \"start\": {\r\n                    \"time\": {\r\n                        \"duration\": \"PT15M\"\r\n                    }, // required — REQUIRED_MESSAGE_DURATION_29\r\n                     // required — REQUIRED_MESSAGE_NAME\r\n                    \"instructions\": {\r\n                        \"code\": \"2\",\r\n                        \"short_desc\": \"value of PCC\"\r\n                    } // optional\r\n                },\r\n                \"end\": {\r\n                     // required — REQUIRED_MESSAGE_NAME_42\r\n                    \"instructions\": {\r\n                        \"code\": \"3\",\r\n                        \"short_desc\": \"value of DCC\"\r\n                    } // optional\r\n                },\r\n                \"tags\": [\r\n                    // required when any item.category_id is \"Immediate Delivery\"\r\n                    {\r\n                        \"code\": \"state\",\r\n                        \"list\": [\r\n                            {\r\n                                \"code\": \"ready_to_ship\",\r\n                                \"value\": \"yes\"\r\n                            }\r\n                        ]\r\n                    },\r\n                    {\r\n                        \"code\": \"rto_action\",\r\n                        \"list\": [\r\n                            {\r\n                                \"code\": \"return_to_origin\",\r\n                                \"value\": \"no\"\r\n                            }\r\n                        ]\r\n                    }\r\n                ]\r\n            }\r\n        ],\r\n        // required unless every fulfillment.type is \"Batch\" — this NEVER comes from\r\n        // /init or /on_init, only from here:\r\n        \"@ondc/org/linked_order\": {\r\n            \"items\": [\r\n                {\r\n                    \"category_id\": \"Grocery\",\r\n                    \"descriptor\": {\r\n                        \"name\": \"Atta\"\r\n                    },\r\n                    \"quantity\": {\r\n                        \"count\": 2,\r\n                        \"measure\": {\r\n                            \"unit\": \"kilogram\",\r\n                            \"value\": 0.5\r\n                        }\r\n                    },\r\n                    \"price\": {\r\n                        \"currency\": \"INR\",\r\n                        \"value\": \"150.00\"\r\n                    }\r\n                }\r\n            ],\r\n            \"provider\": {\r\n                \"descriptor\": {\r\n                    \"name\": \"Aadishwar Store\"\r\n                },\r\n                \"address\": {\r\n                    \"name\": \"KHB Towers\",\r\n                    \"building\": \"...\",\r\n                    \"locality\": \"...\",\r\n                    \"city\": \"...\",\r\n                    \"state\": \"...\",\r\n                    \"area_code\": \"560070\"\r\n                }\r\n            },\r\n            \"order\": {\r\n                \"id\": \"O1\",\r\n                \"weight\": {\r\n                    \"unit\": \"kilogram\",\r\n                    \"value\": 1\r\n                },\r\n                \"dimensions\": {\r\n                    \"length\": {\r\n                        \"unit\": \"centimeter\",\r\n                        \"value\": 1\r\n                    },\r\n                    \"breadth\": {\r\n                        \"unit\": \"centimeter\",\r\n                        \"value\": 1\r\n                    },\r\n                    \"height\": {\r\n                        \"unit\": \"centimeter\",\r\n                        \"value\": 1\r\n                    }\r\n                }\r\n            }\r\n        }\r\n    }\r\n}",
+              "raw": "{\r\n    \"initTransactionId\": \"{{initTransactionId}}\",\r\n    \"fulfillments\": [\r\n        {\r\n            \"id\": \"1\",\r\n            // \"@ondc/org/awb_no\": \"AWB123456789\",\r\n            \"start\": {\r\n                \"instructions\": {\r\n                    \"code\": \"2\",\r\n                    \"name\": \"Handle with care\",\r\n                    \"short_desc\": \"Fragile item\"\r\n                }\r\n            },\r\n            \"end\": {\r\n                \"instructions\": {\r\n                    \"code\": \"2\",\r\n                    \"name\": \"Leave at door\",\r\n                    \"short_desc\": \"Contactless delivery\"\r\n                }\r\n            },\r\n            \"tags\": [\r\n                {\r\n                    \"code\": \"state\",\r\n                    \"list\": [\r\n                        {\r\n                            \"code\": \"ready_to_ship\",\r\n                            \"value\": \"yes\"\r\n                        }\r\n                    ]\r\n                }\r\n            ]\r\n        }\r\n    ],\r\n    \"linkedOrder\": {\r\n        \"items\": [\r\n            {\r\n                \"descriptor\": {\r\n                    \"name\": \"Fast delivery\"\r\n                },\r\n                \"quantity\": {\r\n                    \"count\": 1,\r\n                    \"measure\": {\r\n                        \"unit\": \"kilogram\",\r\n                        \"value\": 1\r\n                    }\r\n                },\r\n                \"price\": {\r\n                    \"currency\": \"INR\",\r\n                    \"value\": \"500.00\"\r\n                }\r\n            }\r\n        ],\r\n        \"provider\": {\r\n            \"descriptor\": {\r\n                \"name\": \"Store Name\"\r\n            },\r\n            \"address\": {\r\n                \"name\": \"Store Name\",\r\n                \"building\": \"123\",\r\n                \"locality\": \"Sector 1\",\r\n                \"city\": \"Meerut\",\r\n                \"state\": \"Uttar Pradesh\",\r\n                \"area_code\": \"250001\"\r\n            }\r\n        },\r\n        \"order\": {\r\n            \"id\": \"retail-order-id-123\",\r\n            \"weight\": {\r\n                \"unit\": \"kilogram\",\r\n                \"value\": 1\r\n            },\r\n            \"dimensions\": {\r\n                \"length\": {\r\n                    \"unit\": \"centimeter\",\r\n                    \"value\": 10\r\n                },\r\n                \"breadth\": {\r\n                    \"unit\": \"centimeter\",\r\n                    \"value\": 10\r\n                },\r\n                \"height\": {\r\n                    \"unit\": \"centimeter\",\r\n                    \"value\": 10\r\n                }\r\n            }\r\n        }\r\n    }\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -434,7 +434,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"orderId\": \"{{orderId}}\",\r\n  \"cancellationReasonId\": \"011\",\r\n  \"context\": {\r\n    \"transaction_id\": \"{{initTransactionId}}\"\r\n  }\r\n}",
+              "raw": "{\r\n  \"orderId\": \"{{orderId}}\",\r\n  \"cancellationReasonId\": \"051\",\r\n  \"context\": {\r\n    \"transaction_id\": \"{{initTransactionId}}\"\r\n  }\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -452,8 +452,132 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "stream",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"clientId\", pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}logistics/stream/{{clientId}}",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "stream",
+                "{{clientId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "issue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();\r\n\r\nconst issueId = res.issueId;\r\n\r\npm.environment.set(\"issueId\", issueId)"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"order_id\": \"{{orderId}}\",\r\n  \"category_code\": \"ITEM_QUALITY\",\r\n  \"descriptor_long_desc\": \"The biryani was cold and salty.\",\r\n  \"descriptor_additional_desc_url\": \"https://buyerapp.com/additional-details/desc.txt\",\r\n  \"images\": [\r\n    { \"url\": \"https://buyerapp.com/images/img1.png\", \"size_type\": \"xs\" }\r\n  ],\r\n  \"media\": [\r\n    { \"url\": \"https://buyerapp.com/media/video1.mp4\" }\r\n  ],\r\n  \"items\": [\r\n    { \"id\": \"I1\", \"quantity\": 2 }\r\n  ]\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}logistics/issue",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "issue"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "issue-update",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"issue_id\": \"{{issueId}}\",\r\n  \"action_code\": \"CLOSED\",\r\n  \"descriptor_long_desc\": \"Attached the invoice and photos as requested.\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}logistics/issue",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "issue"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "issue-status",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"issue_id\": \"iss260910a1b2c3d4\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}logistics/issue_status",
+              "host": [
+                "{{baseUrl}}logistics"
+              ],
+              "path": [
+                "issue_status"
+              ]
+            }
+          },
+          "response": []
         }
       ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "clientId",
+      "value": ""
     }
   ]
 }

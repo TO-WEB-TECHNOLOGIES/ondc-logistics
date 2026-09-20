@@ -26,6 +26,9 @@ const SUBSCRIBER_ID = process.env.SUBSCRIBER_ID!;
 // APP CONFIGURATION
 const ENV = (process.env.ENV || "PREPROD") as "PROD" | "PREPROD";
 
+// Network Observability (NO) API — ONDC compliance transaction-log push
+const NO_ANALYTICS_TOKEN = process.env.NO_ANALYTICS_TOKEN || "";
+
 const REGISTRY_URL =
   ENV === "PROD"
     ? process.env.PROD_REGISTRY_URL || "https://registry.ondc.org/"
@@ -49,4 +52,5 @@ export {
   REGISTRY_URL,
   GATEWAY_URL,
   SUBSCRIBER_ID,
+  NO_ANALYTICS_TOKEN,
 };

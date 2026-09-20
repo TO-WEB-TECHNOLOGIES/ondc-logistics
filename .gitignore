@@ -19,5 +19,5 @@ Claude.local.md
 .codex.local.md
 
 src/json
-src/reference
+src/reference/*
 API_FLOW_GUIDE.md

@@ -7,6 +7,7 @@ import {
   issues,
   ondcTransactions,
 } from "../db/schema/index.js";
+import { clientStreamManager } from "../utils/client-stream.js";
 import { loadLogisticsOrder, type LogisticsOrderRow } from "./logistics-order-shared.js";
 import type {
   OndcIssueObject,
@@ -710,6 +711,20 @@ export class DrizzleIssueRepository implements IssueRepository {
       issueId: incomingIssueId,
       newActionCount: newActions.length,
     });
+    if (response.error) {
+      clientStreamManager.push(c.transaction_id, "issue_error", {
+        issueId: incomingIssueId,
+        orderId: issueRow.orderId,
+        code: response.error.code,
+        message: response.error.message,
+      });
+    } else {
+      clientStreamManager.push(c.transaction_id, "issue_updated", {
+        issueId: incomingIssueId,
+        orderId: issueRow.orderId,
+        newActionCount: newActions.length,
+      });
+    }
     return "processed";
   }
 
@@ -842,6 +857,20 @@ export class DrizzleIssueRepository implements IssueRepository {
       issueId: incomingIssueId,
       newActionCount: newActions.length,
     });
+    if (response.error) {
+      clientStreamManager.push(c.transaction_id, "issue_status_error", {
+        issueId: incomingIssueId,
+        orderId: pending.orderId,
+        code: response.error.code,
+        message: response.error.message,
+      });
+    } else {
+      clientStreamManager.push(c.transaction_id, "issue_status_updated", {
+        issueId: incomingIssueId,
+        orderId: pending.orderId,
+        newActionCount: newActions.length,
+      });
+    }
     return "processed";
   }
 }

@@ -8,6 +8,7 @@ import {
 import { IssueService } from "../services/issue.service.js";
 import { DrizzleIssueRepository } from "../repositories/issue.repository.js";
 import { GatewayOndcTransport } from "../utils/ondc-transport.js";
+import { noApiLogMiddleware } from "../middlewares/no-api-log.middleware.js";
 
 const protocol = {
   domain: process.env.ONDC_DOMAIN ?? "nic2004:60232",
@@ -31,5 +32,5 @@ issueRouter.post("/issue", createIssueController(issueService));
 issueRouter.post("/issue_status", createIssueStatusController(issueService));
 
 export const onIssueRouter = express.Router();
-onIssueRouter.post("/on_issue", createOnIssueController(issueService));
-onIssueRouter.post("/on_issue_status", createOnIssueStatusController(issueService));
+onIssueRouter.post("/on_issue", noApiLogMiddleware, createOnIssueController(issueService));
+onIssueRouter.post("/on_issue_status", noApiLogMiddleware, createOnIssueStatusController(issueService));
