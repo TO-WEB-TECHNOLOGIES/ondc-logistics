@@ -82,10 +82,10 @@ src/
 drizzle/          generated SQL migrations (see db:generate/db:migrate)
 docs/
   ondc/           authoritative ONDC Logistics API Contract — do not modify
-  architecture/   database schema/tables, /search → /on_search design
+  architecture/   database schema/tables, /search → /on_search design, sentry.md (pending rollout)
   api/            per-endpoint request/response reference
   integration/    frontend integration notes (SSE ownership)
-  testing/        manual smoke-test scripts (PowerShell/curl)
+  testing/        manual smoke-test scripts (PowerShell/curl); automated-flows.md (src/flows runners)
 postman/          Postman collection for manual API testing
 ```
 
