@@ -22,3 +22,6 @@ src/json
 src/reference/*
 API_FLOW_GUIDE.md
 src/flows/keep-alive.cron.ts
+
+reports/
+tasks/
