@@ -293,16 +293,22 @@ export async function runSearchInitConfirm(): Promise<ConfirmedOrder> {
     client_id: clientId,
     category_id: "Standard Delivery",
     start: {
-      gps: "28.9845,77.7064",
+      gps: "28.984500,77.706400",
       area_code: "250001",
       address: { name: "Pickup Person", building: "123", locality: "Sector 1", street: "Main Road", city: "Meerut", state: "Uttar Pradesh", country: "IND" },
     },
     end: {
-      gps: "28.6139,77.2090",
+      gps: "28.613900,77.209000",
       area_code: "110001",
       address: { name: "Delivery Person", building: "456", locality: "Connaught Place", street: "Main Road", city: "New Delhi", state: "Delhi", country: "IND" },
     },
-    schedule: { days: "1,2,3,4,5,6,7", range_start: "0000", range_end: "2359" },
+    schedule: {
+      days: "1,2,3,4,5,6,7",
+      range_start: "0000",
+      range_end: "2359",
+      duration: "PT30M",
+      holidays: ["2026-01-26", "2026-08-15"],
+    },
     payload: {
       weight: { value: 1, unit: "kilogram" },
       dimensions: { length: { value: 10, unit: "centimeter" }, breadth: { value: 10, unit: "centimeter" }, height: { value: 10, unit: "centimeter" } },
@@ -310,6 +316,7 @@ export async function runSearchInitConfirm(): Promise<ConfirmedOrder> {
       value: { amount: "100", currency: "INR" },
       dangerous_goods: false,
     },
+    payment: { type: "POST-FULFILLMENT", collection_amount: "300.00" },
   });
   const searchResult = await waitFor("2 on_search", "search_result");
   const searchId: string = searchResult.searchId ?? search.searchId;

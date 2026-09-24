@@ -35,6 +35,10 @@ export const mapSearchRequestToOndc = (
     provider: {
       time: {
         days: request.schedule!.days,
+        duration: request.schedule!.duration,
+        schedule: request.schedule!.holidays
+          ? { holidays: request.schedule!.holidays }
+          : undefined,
         range: {
           start: request.schedule!.rangeStart,
           end: request.schedule!.rangeEnd,

@@ -28,6 +28,25 @@ const requiredString = (value: unknown, field: string): string => {
 };
 const optionalString = (value: unknown, field: string) =>
   value === undefined ? undefined : requiredString(value, field);
+const optionalStringArray = (
+  value: unknown,
+  field: string,
+): string[] | undefined => {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value))
+    throw new SearchValidationError(`${field} must be an array`);
+  return value.map((entry, i) => requiredString(entry, `${field}[${i}]`));
+};
+const GPS_PATTERN = /^-?\d{1,3}\.\d{6}, ?-?\d{1,3}\.\d{6}$/;
+const gpsString = (value: unknown, field: string): string => {
+  const gps = requiredString(value, field);
+  if (!GPS_PATTERN.test(gps))
+    throw new SearchValidationError(
+      `${field} must match pattern ${GPS_PATTERN.source} (lat,lng each with exactly 6 decimal digits)`,
+    );
+  return gps;
+};
+const PAYMENT_TYPES = ["ON-ORDER", "ON-FULFILLMENT", "POST-FULFILLMENT"];
 const decimalInput = (value: unknown, field: string): DecimalInput => {
   if (
     (typeof value !== "string" && typeof value !== "number") ||
@@ -84,7 +103,7 @@ const location = (value: unknown, field: "start" | "end"): SearchLocation => {
       })();
   return {
     type: field,
-    gps: requiredString(
+    gps: gpsString(
       l.gps,
       `message.intent.fulfillment.${field}.location.gps`,
     ),
@@ -439,7 +458,7 @@ export const parseMinimalSearchRequest = (value: unknown): SearchRequest => {
     start: {
       type: "start",
 
-      gps: requiredString(start.gps, "start.gps"),
+      gps: gpsString(start.gps, "start.gps"),
 
       address: {
         name: requiredString(startAddress.name, "start.address.name"),
@@ -469,7 +488,7 @@ export const parseMinimalSearchRequest = (value: unknown): SearchRequest => {
     end: {
       type: "end",
 
-      gps: requiredString(end.gps, "end.gps"),
+      gps: gpsString(end.gps, "end.gps"),
 
       address: {
         name: requiredString(endAddress.name, "end.address.name"),
@@ -496,7 +515,13 @@ export const parseMinimalSearchRequest = (value: unknown): SearchRequest => {
       rangeStart: requiredString(schedule.range_start, "schedule.range_start"),
 
       rangeEnd: requiredString(schedule.range_end, "schedule.range_end"),
+
+      duration: optionalString(schedule.duration, "schedule.duration"),
+
+      holidays: optionalStringArray(schedule.holidays, "schedule.holidays"),
     },
+
+    payment: parseMinimalPayment(value.payment),
 
     payload: {
       weight: {
@@ -566,4 +591,23 @@ const requiredBoolean = (value: unknown, path: string): boolean => {
   }
 
   return value;
+};
+
+const parseMinimalPayment = (value: unknown): SearchPayment | undefined => {
+  if (value === undefined) return undefined;
+  const p = isRecord(value)
+    ? value
+    : (() => {
+        throw new SearchValidationError("payment must be an object");
+      })();
+  const type = requiredString(p.type, "payment.type");
+  if (!PAYMENT_TYPES.includes(type))
+    throw new SearchValidationError("payment.type is invalid");
+  return {
+    type,
+    collectionAmount:
+      p.collection_amount === undefined
+        ? undefined
+        : decimalInput(p.collection_amount, "payment.collection_amount"),
+  };
 };
