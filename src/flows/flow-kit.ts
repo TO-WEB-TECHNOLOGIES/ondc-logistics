@@ -571,7 +571,22 @@ export async function runSearchInitConfirm(): Promise<ConfirmedOrder> {
       updated_at: "2026-09-10T08:00:00.000Z",
       address: { name: "Home", building: "House 1", locality: "Koramangala", city: "Bengaluru", state: "Karnataka", country: "India", area_code: "560001" },
     },
-    payment: { type: "ON-ORDER", collected_by: "BAP", amount: "120.00", currency: "INR" },
+    payment: {
+      type: "ON-ORDER",
+      collected_by: "BAP",
+      amount: "120.00",
+      currency: "INR",
+      settlement_details: [
+        {
+          settlement_counterparty: "buyer-app",
+          settlement_type: "upi",
+          beneficiary_name: "Buyer App Pvt Ltd",
+          upi_address: "buyerapp@oksbi",
+          settlement_bank_account_no: "1234567890",
+          settlement_ifsc_code: "SBIN0000001",
+        },
+      ],
+    },
   });
   await waitFor("4 on_init", "init_result");
   const initTransactionId: string = init.transactionId;
@@ -583,16 +598,24 @@ export async function runSearchInitConfirm(): Promise<ConfirmedOrder> {
     fulfillments: [
       {
         id: "1",
-        start: { instructions: { code: "2", name: "Handle with care", short_desc: "Fragile item" } },
-        end: { instructions: { code: "2", name: "Leave at door", short_desc: "Contactless delivery" } },
+        // Contract: start code "2" carries the PCC, end code "3" the DCC, in short_desc.
+        start: {
+          instructions: {
+            code: "2",
+            short_desc: "123456",
+            long_desc: "additional instructions for pickup",
+            additional_desc: { content_type: "text/html", url: "https://example.com/pickup_instructions.htm" },
+          },
+        },
+        end: { instructions: { code: "3", short_desc: "654321", long_desc: "additional instructions for delivery" } },
         tags: [{ code: "state", list: [{ code: "ready_to_ship", value: "yes" }] }],
       },
     ],
     linkedOrder: {
-      items: [{ descriptor: { name: "Fast delivery" }, quantity: { count: 1, measure: { unit: "kilogram", value: 1 } }, price: { currency: "INR", value: "500.00" } }],
+      items: [{ category_id: "Grocery", descriptor: { name: "Fast delivery" }, quantity: { count: 1, measure: { unit: "kilogram", value: 1 } }, price: { currency: "INR", value: "500.00" } }],
       provider: {
         descriptor: { name: "Store Name" },
-        address: { name: "Store Name", building: "123", locality: "Sector 1", city: "Meerut", state: "Uttar Pradesh", area_code: "250001" },
+        address: { name: "Store Name", building: "123", locality: "Sector 1", city: "Meerut", state: "Uttar Pradesh", country: "IND", area_code: "250001" },
       },
       order: {
         id: "retail-order-id-123",

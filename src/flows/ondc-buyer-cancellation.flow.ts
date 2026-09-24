@@ -10,7 +10,7 @@ void runFlow("ondc-buyer-cancellation", async () => {
   // 7-8. CANCEL -> ON_CANCEL
   await post("7 cancel", "/logistics/cancel", {
     orderId,
-    cancellationReasonId: "051",
+    cancellationReasonId: "004",
     context: { transaction_id: initTransactionId },
   });
   await waitFor("8 on_cancel", "order_cancelled");

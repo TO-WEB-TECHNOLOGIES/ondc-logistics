@@ -134,7 +134,10 @@ export const mapInitRequestToOndc = (
           type: request.payment.type,
           collected_by: request.payment.collectedBy,
           "@ondc/org/collection_amount": String(request.payment.amount),
-          "@ondc/org/settlement_details": request.payment.settlementDetails,
+          // Omit rather than send `[]` — the validator rejects an empty array.
+          ...(request.payment.settlementDetails.length > 0
+            ? { "@ondc/org/settlement_details": request.payment.settlementDetails }
+            : {}),
         },
       },
     },

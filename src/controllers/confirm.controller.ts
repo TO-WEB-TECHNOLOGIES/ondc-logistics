@@ -5,7 +5,7 @@ import {
   parseConfirmRequest,
   parseOnConfirmResponse,
 } from "../utils/confirm-validation.js";
-import { ondcNack } from "../utils/ondc-error-response.js";
+import { ondcNack, syncResponseContext } from "../utils/ondc-error-response.js";
 const detail = (e: ConfirmValidationError) => ({
   path: e.path ?? "request",
   message: e.message,
@@ -179,33 +179,36 @@ export const createOnConfirmController =
             result,
           });
           if (result === "not_found") {
-            response.status(200).json(
-              ondcNack({
+            response.status(200).json({
+              ...syncResponseContext(request.body),
+              ...ondcNack({
                 type: "CONTEXT-ERROR",
                 code: "63002",
                 message: "confirm transaction not found",
               }),
-            );
+            });
             return;
           }
           if (result === "invalid_order") {
-            response.status(200).json(
-              ondcNack({
+            response.status(200).json({
+              ...syncResponseContext(request.body),
+              ...ondcNack({
                 type: "CONTEXT-ERROR",
                 code: "63002",
                 message: "on_confirm order.id does not match confirm order.id",
               }),
-            );
+            });
             return;
           }
           if (result === "invalid_bpp") {
-            response.status(200).json(
-              ondcNack({
+            response.status(200).json({
+              ...syncResponseContext(request.body),
+              ...ondcNack({
                 type: "CONTEXT-ERROR",
                 code: "63002",
                 message: "on_confirm bpp_id does not match confirm bpp_id",
               }),
-            );
+            });
             return;
           }
         })
@@ -226,6 +229,7 @@ export const createOnConfirmController =
         console.log("[on-confirm.controller] BEFORE RESPONSE");
 
         response.status(200).json({
+          ...syncResponseContext(request.body),
           message: {
             ack: {
               status: "ACK",
@@ -237,13 +241,14 @@ export const createOnConfirmController =
     } catch (error) {
       if (error instanceof ConfirmValidationError) {
         console.log("[on-confirm.controller] validation failed", detail(error));
-        response.status(200).json(
-          ondcNack({
+        response.status(200).json({
+          ...syncResponseContext(request.body),
+          ...ondcNack({
             type: "JSON-SCHEMA-ERROR",
             code: "63002",
             message: error.message,
           }),
-        );
+        });
         return;
       }
       console.log("[on-confirm.controller] unexpected failure", error);

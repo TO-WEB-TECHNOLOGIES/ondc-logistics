@@ -6,6 +6,7 @@ import {
   parseMinimalInitRequest,
   parseOnInitResponse,
 } from "../utils/init-validation.js";
+import { syncResponseContext } from "../utils/ondc-error-response.js";
 const validation = (error: InitValidationError) => ({
   path: error.path ?? "request",
   message: error.message,
@@ -195,6 +196,7 @@ export const createOnInitController =
               transactionId: callback.context.transaction_id,
             });
             response.status(200).json({
+              ...syncResponseContext(request.body),
               message: { ack: { status: "NACK" } },
               error: {
                 type: "CONTEXT-ERROR",
@@ -208,7 +210,10 @@ export const createOnInitController =
             transactionId: callback.context.transaction_id,
             result,
           });
-          response.status(200).json({ message: { ack: { status: "ACK" } } });
+          response.status(200).json({
+            ...syncResponseContext(request.body),
+            message: { ack: { status: "ACK" } },
+          });
         })
         .catch((error) => {
           console.log("[on-init.controller] processing failed", {
@@ -228,6 +233,7 @@ export const createOnInitController =
           validation(error),
         );
         response.status(200).json({
+          ...syncResponseContext(request.body),
           message: { ack: { status: "NACK" } },
           error: {
             type: "JSON-SCHEMA-ERROR",
