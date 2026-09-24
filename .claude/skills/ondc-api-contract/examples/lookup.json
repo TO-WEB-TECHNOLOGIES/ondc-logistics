@@ -1,0 +1,29 @@
+{
+  "lookup_request": {
+    "subscriber_id": "lsp.com",
+    "domain": "nic2004:60232",
+    "ukId": "UKID1",
+    "country": "IND",
+    "city": "std:080",
+    "type": "BPP"
+  },
+  "lookup_response": [
+    {
+      "subscriber_id": "logistics_buyer.com",
+      "status": "SUBSCRIBED",
+      "ukId": "UKID1",
+      "subscriber_url": "https://logistics_buyer.com/ondc",
+      "country": "IND",
+      "domain": "nic2004:60232",
+      "valid_from": "2023-05-23T00:00:00.000Z",
+      "valid_until": "2027-05-23T00:00:00.000Z",
+      "type": "BPP",
+      "signing_public_key": "9V6WbbMwWy953zUIIICOOQq4nk8zHHJRhrZ19juApL4=",
+      "encr_public_key": "MCowBQYDK2VuAyEATDpic13936lmOrDdzMpQox0KWXMwb9sqsdd6fcD1LHM=",
+      "created": "2023-05-23T00:00:00.000Z",
+      "updated": "2023-05-23T00:00:00.000Z",
+      "br_id": "br_id1",
+      "city": "std:080"
+    }
+  ]
+}

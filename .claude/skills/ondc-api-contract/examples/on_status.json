@@ -1,0 +1,445 @@
+{
+  "context": {
+    "domain": "nic2004:60232",
+    "country": "IND",
+    "city": "std:080",
+    "action": "on_status",
+    "core_version": "1.2.0",
+    "bap_id": "logistics_buyer.com",
+    "bap_uri": "https://logistics_buyer.com/ondc",
+    "bpp_id": "lsp.com",
+    "bpp_uri": "https://lsp.com/ondc",
+    "transaction_id": "T1",
+    "message_id": "M7",
+    "timestamp": "2023-06-07T00:00:30.000Z"
+  },
+  "message": {
+    "order": {
+      "id": "O2",
+      "state": "Completed",
+      "cancellation": {
+        "cancelled_by": "buyerNP.com",
+        "reason": {
+          "id": "011"
+        }
+      },
+      "provider": {
+        "id": "P1",
+        "locations": [
+          {
+            "id": "L1"
+          }
+        ]
+      },
+      "items": [
+        {
+          "id": "I1",
+          "fulfillment_id": "1",
+          "category_id": "Same Day Delivery",
+          "descriptor": {
+            "code": "P2P"
+          },
+          "time": {
+            "label": "TAT",
+            "duration": "PT45M",
+            "timestamp": "2023-06-06"
+          }
+        },
+        {
+          "id": "I2",
+          "fulfillment_id": "1-RTO",
+          "category_id": "Same Day Delivery",
+          "descriptor": {
+            "code": "P2P"
+          },
+          "time": {
+            "label": "TAT",
+            "duration": "PT45M",
+            "timestamp": "2023-06-06"
+          }
+        }
+      ],
+      "quote": {
+        "price": {
+          "currency": "INR",
+          "value": "108.50"
+        },
+        "breakup": [
+          {
+            "@ondc/org/item_id": "I1",
+            "@ondc/org/title_type": "delivery",
+            "price": {
+              "currency": "INR",
+              "value": "50.00"
+            }
+          },
+          {
+            "@ondc/org/item_id": "I1",
+            "@ondc/org/title_type": "tax",
+            "price": {
+              "currency": "INR",
+              "value": "9.00"
+            }
+          },
+          {
+            "@ondc/org/item_id": "I2",
+            "@ondc/org/title_type": "rto",
+            "price": {
+              "currency": "INR",
+              "value": "20.00"
+            }
+          },
+          {
+            "@ondc/org/item_id": "I1",
+            "@ondc/org/title_type": "diff",
+            "price": {
+              "currency": "INR",
+              "value": "25.0"
+            }
+          },
+          {
+            "@ondc/org/item_id": "I1",
+            "@ondc/org/title_type": "tax_diff",
+            "price": {
+              "currency": "INR",
+              "value": "4.5"
+            }
+          }
+        ]
+      },
+      "fulfillments": [
+        {
+          "id": "1",
+          "type": "Delivery",
+          "@ondc/org/awb_no": "1227262193237777",
+          "state": {
+            "descriptor": {
+              "code": "Order-picked-up",
+              "short_desc": "pickup or delivery failed reason code"
+            }
+          },
+          "tracking": false,
+          "start": {
+            "person": {
+              "name": "person_name"
+            },
+            "location": {
+              "gps": "12.453544,77.928379",
+              "address": {
+                "name": "name",
+                "building": "My house or building name",
+                "locality": "My street name",
+                "city": "Bengaluru",
+                "state": "Karnataka",
+                "country": "India",
+                "area_code": "560041"
+              }
+            },
+            "contact": {
+              "phone": "9886098860",
+              "email": "abcd.efgh@gmail.com"
+            },
+            "time": {
+              "duration": "PT15M",
+              "range": {
+                "start": "2023-06-06T22:30:00.000Z",
+                "end": "2023-06-06T22:45:00.000Z"
+              },
+              "timestamp": "2023-06-06T22:30:00.000Z"
+            },
+            "instructions": {
+              "code": "2",
+              "name": "ONDC order",
+              "short_desc": "value of PCC",
+              "long_desc": "additional instructions for pickup",
+              "images": [
+                "link to downloadable shipping label",
+                "https://lsp.com/pickup_image.png",
+                "https://lsp.com/rider_location.png"
+              ],
+              "additional_desc": {
+                "content_type": "text/html",
+                "url": "https://reverse_qc_sop_form.htm"
+              }
+            },
+            "authorization": {
+              "type": "OTP",
+              "token": "OTP code",
+              "valid_from": "2023-06-07T12:00:00.000Z",
+              "valid_to": "2023-06-07T14:00:00.000Z"
+            }
+          },
+          "end": {
+            "person": {
+              "name": "person_name"
+            },
+            "location": {
+              "gps": "12.453544,77.928379",
+              "address": {
+                "name": "My house or building #",
+                "building": "My house or building name",
+                "locality": "My street name",
+                "city": "Bengaluru",
+                "state": "Karnataka",
+                "country": "India",
+                "area_code": "560076"
+              }
+            },
+            "contact": {
+              "phone": "9886098860",
+              "email": "abcd.efgh@gmail.com"
+            },
+            "time": {
+              "range": {
+                "start": "2023-06-06T23:00:00.000Z",
+                "end": "2023-06-06T23:15:00.000Z"
+              },
+              "timestamp": "2023-06-06T23:00:00.000Z"
+            },
+            "instructions": {
+              "code": "3",
+              "name": "ONDC order",
+              "short_desc": "value of DCC",
+              "long_desc": "additional instructions for delivery",
+              "images": [
+                "https://lsp.com/delivery_image.png",
+                "https://lsp.com/rider_location.png"
+              ]
+            },
+            "authorization": {
+              "type": "OTP",
+              "token": "OTP code",
+              "valid_from": "2023-06-07T12:00:00.000Z",
+              "valid_to": "2023-06-07T14:00:00.000Z"
+            }
+          },
+          "agent": {
+            "name": "agent_name",
+            "phone": "9886098860"
+          },
+          "vehicle": {
+            "registration": "3LVJ945"
+          },
+          "@ondc/org/ewaybillno": "EBN1",
+          "@ondc/org/ebnexpirydate": "2023-06-30T12:00:00.000Z",
+          "tags": [
+            {
+              "code": "reverseqc_output",
+              "list": [
+                {
+                  "code": "P001",
+                  "value": "Atta"
+                },
+                {
+                  "code": "P003",
+                  "value": "1"
+                },
+                {
+                  "code": "Q001",
+                  "value": "Y"
+                }
+              ]
+            },
+            {
+              "code": "fulfillment_delay",
+              "list": [
+                {
+                  "code": "state",
+                  "value": "Order-picked-up"
+                },
+                {
+                  "code": "reason_id",
+                  "value": "002"
+                },
+                {
+                  "code": "timestamp",
+                  "value": "2023-06-06T22:00:00.000Z"
+                }
+              ]
+            },
+            {
+              "code": "tracking",
+              "list": [
+                {
+                  "code": "gps_enabled",
+                  "value": "yes"
+                },
+                {
+                  "code": "url_enabled",
+                  "value": "no"
+                },
+                {
+                  "code": "url",
+                  "value": "https://sellerNP.com/ondc/tracking_url"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1-RTO",
+          "type": "RTO",
+          "state": {
+            "descriptor": {
+              "code": "RTO-Initiated"
+            }
+          },
+          "start": {
+            "time": {
+              "range": {
+                "start": "2023-06-06T23:00:00.000Z",
+                "end": "2023-06-06T23:00:00.000Z"
+              },
+              "timestamp": "2023-06-06T23:00:00.000Z"
+            }
+          },
+          "agent": {
+            "name": "agent_name",
+            "phone": "9886098860"
+          }
+        }
+      ],
+      "payment": {
+        "@ondc/org/collection_amount": "300.00",
+        "type": "POST-FULFILLMENT",
+        "collected_by": "BPP",
+        "status": "PAID",
+        "time": {
+          "timestamp": "2023-06-07T10:00:00.000Z"
+        },
+        "@ondc/org/settlement_details": [
+          {
+            "settlement_counterparty": "buyer-app",
+            "settlement_type": "upi",
+            "upi_address": "gft@oksbi",
+            "settlement_bank_account_no": "XXXXXXXXXX",
+            "settlement_ifsc_code": "XXXXXXXXX",
+            "settlement_status": "PAID",
+            "settlement_reference": "XXXXXXXXX",
+            "settlement_timestamp": "2023-02-10T00:00:00.000Z"
+          }
+        ]
+      },
+      "billing": {
+        "name": "ONDC Seller NP",
+        "address": {
+          "name": "My building #",
+          "building": "My building name",
+          "locality": "My street name",
+          "city": "Bengaluru",
+          "state": "Karnataka",
+          "country": "India",
+          "area_code": "560076"
+        },
+        "tax_number": "XXXXXXXXXXXXXXX",
+        "phone": "9886098860",
+        "email": "abcd.efgh@gmail.com"
+      },
+      "@ondc/org/linked_order": {
+        "items": [
+          {
+            "category_id": "Grocery",
+            "descriptor": {
+              "name": "Atta"
+            },
+            "quantity": {
+              "count": 2,
+              "measure": {
+                "unit": "kilogram",
+                "value": 0.5
+              }
+            },
+            "price": {
+              "currency": "INR",
+              "value": "150.00"
+            }
+          }
+        ],
+        "provider": {
+          "descriptor": {
+            "name": "Aadishwar Store"
+          },
+          "address": {
+            "name": "KHB Towers",
+            "building": "Building or House No",
+            "street": "6th Block",
+            "locality": "Koramangala",
+            "city": "Bengaluru",
+            "state": "Karnataka",
+            "area_code": "560070"
+          }
+        },
+        "order": {
+          "id": "O1",
+          "weight": {
+            "unit": "kilogram",
+            "value": 1
+          },
+          "dimensions": {
+            "length": {
+              "unit": "centimeter",
+              "value": 1
+            },
+            "breadth": {
+              "unit": "centimeter",
+              "value": 1
+            },
+            "height": {
+              "unit": "centimeter",
+              "value": 1
+            }
+          }
+        }
+      },
+      "tags": [
+        {
+          "code": "diff_dim",
+          "list": [
+            {
+              "code": "unit",
+              "value": "centimeter"
+            },
+            {
+              "code": "length",
+              "value": "1.5"
+            },
+            {
+              "code": "breadth",
+              "value": "1.5"
+            },
+            {
+              "code": "height",
+              "value": "1.5"
+            }
+          ]
+        },
+        {
+          "code": "diff_weight",
+          "list": [
+            {
+              "code": "unit",
+              "value": "kilogram"
+            },
+            {
+              "code": "weight",
+              "value": "1.5"
+            }
+          ]
+        },
+        {
+          "code": "diff_proof",
+          "list": [
+            {
+              "code": "type",
+              "value": "image"
+            },
+            {
+              "code": "url",
+              "value": "https://lsp.com/sorter/images1.png"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

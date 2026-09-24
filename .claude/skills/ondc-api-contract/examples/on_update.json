@@ -1,0 +1,323 @@
+{
+  "context": {
+    "domain": "nic2004:60232",
+    "country": "IND",
+    "city": "std:080",
+    "action": "on_update",
+    "core_version": "1.2.0",
+    "bap_id": "logistics_buyer.com",
+    "bap_uri": "https://logistics_buyer.com/ondc",
+    "bpp_id": "lsp.com",
+    "bpp_uri": "https://lsp.com/ondc",
+    "transaction_id": "T1",
+    "message_id": "M4",
+    "timestamp": "2023-06-06T22:30:30.000Z"
+  },
+  "message": {
+    "order": {
+      "id": "O2",
+      "state": "In-progress",
+      "provider": {
+        "id": "P1",
+        "locations": [
+          {
+            "id": "L1"
+          }
+        ]
+      },
+      "items": [
+        {
+          "id": "I1",
+          "fulfillment_id": "1",
+          "category_id": "Same Day Delivery",
+          "descriptor": {
+            "code": "P2P"
+          },
+          "time": {
+            "label": "TAT",
+            "duration": "PT45M",
+            "timestamp": "2023-06-06"
+          }
+        }
+      ],
+      "quote": {
+        "price": {
+          "currency": "INR",
+          "value": "88.50"
+        },
+        "breakup": [
+          {
+            "@ondc/org/item_id": "I1",
+            "@ondc/org/title_type": "delivery",
+            "price": {
+              "currency": "INR",
+              "value": "50.0"
+            }
+          },
+          {
+            "@ondc/org/item_id": "I1",
+            "@ondc/org/title_type": "tax",
+            "price": {
+              "currency": "INR",
+              "value": "9.0"
+            }
+          },
+          {
+            "@ondc/org/item_id": "I1",
+            "@ondc/org/title_type": "diff",
+            "price": {
+              "currency": "INR",
+              "value": "25.0"
+            }
+          },
+          {
+            "@ondc/org/item_id": "I1",
+            "@ondc/org/title_type": "tax_diff",
+            "price": {
+              "currency": "INR",
+              "value": "4.5"
+            }
+          }
+        ]
+      },
+      "fulfillments": [
+        {
+          "id": "1",
+          "type": "Delivery",
+          "state": {
+            "descriptor": {
+              "code": "Order-picked-up"
+            }
+          },
+          "@ondc/org/awb_no": "1227262193237777",
+          "tracking": false,
+          "start": {
+            "person": {
+              "name": "Ramu"
+            },
+            "location": {
+              "gps": "12.453544,77.928379",
+              "address": {
+                "name": "name",
+                "building": "My house or building name",
+                "locality": "My street name",
+                "city": "Bengaluru",
+                "state": "Karnataka",
+                "country": "India",
+                "area_code": "560041"
+              }
+            },
+            "contact": {
+              "phone": "9886098860",
+              "email": "abcd.efgh@gmail.com"
+            },
+            "time": {
+              "duration": "PT15M",
+              "range": {
+                "start": "2023-06-06T23:45:00.000Z",
+                "end": "2023-06-07T00:00:00.000Z"
+              },
+              "timestamp": "2023-06-07T00:00:00.000Z"
+            },
+            "instructions": {
+              "code": "2",
+              "short_desc": "value of PCC",
+              "long_desc": "additional instructions for pickup",
+              "images": [
+                "link to downloadable shipping label (required for P2H2P)",
+                "https://lsp.com/pickup_image.png",
+                "https://lsp.com/rider_location.png"
+              ],
+              "additional_desc": {
+                "content_type": "text/html",
+                "url": "https://reverse_qc_sop_form.htm"
+              }
+            }
+          },
+          "end": {
+            "person": {
+              "name": "person_name"
+            },
+            "location": {
+              "gps": "12.453544,77.928379",
+              "address": {
+                "name": "My house or building #",
+                "building": "My house or building name",
+                "locality": "My street name",
+                "city": "Bengaluru",
+                "state": "Karnataka",
+                "country": "India",
+                "area_code": "560076"
+              }
+            },
+            "contact": {
+              "phone": "9886098860",
+              "email": "abcd.efgh@gmail.com"
+            },
+            "instructions": {
+              "code": "3",
+              "short_desc": "value of DCC",
+              "long_desc": "additional instructions for delivery",
+              "images": [
+                "https://lsp.com/delivery_image.png",
+                "https://lsp.com/rider_location.png"
+              ]
+            },
+            "time": {
+              "range": {
+                "start": "2023-06-07T02:00:00.000Z",
+                "end": "2023-06-07T02:15:00.000Z"
+              }
+            }
+          },
+          "agent": {
+            "name": "person_name",
+            "phone": "9886098860"
+          },
+          "vehicle": {
+            "registration": "3LVJ945"
+          },
+          "@ondc/org/ewaybillno": "EBN1",
+          "@ondc/org/ebnexpirydate": "2023-06-30T12:00:00.000Z"
+        }
+      ],
+      "billing": {
+        "name": "ONDC sellerNP",
+        "address": {
+          "name": "My building no",
+          "building": "My building name",
+          "locality": "My street name",
+          "city": "Bengaluru",
+          "state": "Karnataka",
+          "country": "India",
+          "area_code": "560076"
+        },
+        "tax_number": "XXXXXXXXXXXXXXX",
+        "phone": "9886098860",
+        "email": "abcd.efgh@gmail.com",
+        "created_at": "2023-06-06T21:30:00.000Z",
+        "updated_at": "2023-06-06T21:30:00.000Z"
+      },
+      "payment": {
+        "@ondc/org/collection_amount": "300.00",
+        "collected_by": "BPP",
+        "type": "ON-FULFILLMENT",
+        "@ondc/org/settlement_details": [
+          {
+            "settlement_counterparty": "buyer-app",
+            "settlement_type": "upi",
+            "upi_address": "gft@oksbi",
+            "settlement_bank_account_no": "XXXXXXXXXX",
+            "settlement_ifsc_code": "XXXXXXXXX"
+          }
+        ]
+      },
+      "@ondc/org/linked_order": {
+        "items": [
+          {
+            "category_id": "Grocery",
+            "descriptor": {
+              "name": "Atta"
+            },
+            "quantity": {
+              "count": 2,
+              "measure": {
+                "unit": "kilogram",
+                "value": 0.5
+              }
+            },
+            "price": {
+              "currency": "INR",
+              "value": "150.00"
+            }
+          }
+        ],
+        "provider": {
+          "descriptor": {
+            "name": "Aadishwar Store"
+          },
+          "address": {
+            "name": "KHB Towers",
+            "building": "Building or House No",
+            "street": "6th Block",
+            "locality": "Koramangala",
+            "city": "Bengaluru",
+            "state": "Karnataka",
+            "area_code": "560070"
+          }
+        },
+        "order": {
+          "id": "O1",
+          "weight": {
+            "unit": "kilogram",
+            "value": 1
+          },
+          "dimensions": {
+            "length": {
+              "unit": "centimeter",
+              "value": 1
+            },
+            "breadth": {
+              "unit": "centimeter",
+              "value": 1
+            },
+            "height": {
+              "unit": "centimeter",
+              "value": 1
+            }
+          }
+        }
+      },
+      "tags": [
+        {
+          "code": "diff_dim",
+          "list": [
+            {
+              "code": "unit",
+              "value": "centimeter"
+            },
+            {
+              "code": "length",
+              "value": "1.5"
+            },
+            {
+              "code": "breadth",
+              "value": "1.5"
+            },
+            {
+              "code": "height",
+              "value": "1.5"
+            }
+          ]
+        },
+        {
+          "code": "diff_weight",
+          "list": [
+            {
+              "code": "unit",
+              "value": "kilogram"
+            },
+            {
+              "code": "weight",
+              "value": "1.5"
+            }
+          ]
+        },
+        {
+          "code": "diff_proof",
+          "list": [
+            {
+              "code": "type",
+              "value": "image"
+            },
+            {
+              "code": "url",
+              "value": "https://lsp.com/sorter/images1.png"
+            }
+          ]
+        }
+      ],
+      "updated_at": "2023-06-07T23:00:30.000Z"
+    }
+  }
+}

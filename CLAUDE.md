@@ -299,6 +299,22 @@ has one.
 Before creating a new document, search the repository for an existing
 document covering the same subject.
 
+### Changelog (required for every approved implementation)
+
+After completing an approved implementation (workflow step 12 above),
+add a changelog entry before reporting the task done:
+
+- Changes under `src/` (including `src/flows/*` automated flow
+  scripts) → add an entry to `changelogs/` (git-tracked).
+- Changes only under `test/` or `tasks/` → add an entry to
+  `changelogs/local/` (gitignored).
+- A task touching both → one entry in each directory.
+
+Filename: `YYYY-MM-DD-<short-slug>.md`, following
+`changelogs/_template.md`. This applies to every approved task,
+including small fixes — see `Claude.local.md` for the exception that
+overrides the general documentation policy for this specific rule.
+
 ------------------------------------------------------------------------
 
 ## 14. RESPONSE FORMAT
@@ -322,7 +338,8 @@ After approval:
 
 ### Implementation
 
-Summarize changes actually made.
+Summarize changes actually made. Note the changelog entry file(s)
+added (see §13).
 
 ### Validation
 

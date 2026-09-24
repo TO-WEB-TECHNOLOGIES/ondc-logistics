@@ -1,0 +1,13 @@
+{
+  "sender_subscriber_id": "logistics_buyer.com",
+  "request_id": "123456789",
+  "timestamp": "2023-01-26T19:00:00.000Z",
+  "search_parameters": {
+    "domain": "nic2004:60232",
+    "subscriber_id": "lsp.com",
+    "country": "IND",
+    "type": "sellerApp",
+    "city": "std:080"
+  },
+  "signature": ""
+}

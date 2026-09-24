@@ -1,0 +1,20 @@
+{
+  "context": {
+    "domain": "nic2004:60232",
+    "country": "IND",
+    "city": "std:080",
+    "action": "status",
+    "core_version": "1.2.0",
+    "bap_id": "logistics_buyer.com",
+    "bap_uri": "https://logistics_buyer.com/ondc",
+    "bpp_id": "lsp.com",
+    "bpp_uri": "https://lsp.com/ondc",
+    "transaction_id": "T1",
+    "message_id": "M7",
+    "timestamp": "2023-06-07T00:00:00.000Z",
+    "ttl": "PT30S"
+  },
+  "message": {
+    "order_id": "O2"
+  }
+}

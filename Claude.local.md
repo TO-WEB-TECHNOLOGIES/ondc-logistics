@@ -192,3 +192,22 @@ This includes:
 Focus only on the actual implementation and required code/schema/config changes.
 
 If documentation would normally be recommended, mention it as an optional follow-up, but do not create or modify it unless I explicitly ask.
+
+### Exception: changelog entries are required
+
+The bullet list above lists `changelogs` as excluded — that exclusion is
+overridden by this exception. Starting 2026-09-24, every approved
+implementation task MUST add a changelog entry. This is a standing
+instruction, not automatic/speculative doc creation, so it is not blocked
+by the rest of this policy.
+
+- If the task changes anything under `src/` (including `src/flows/*`),
+  add an entry to `changelogs/` (git-tracked).
+- If the task only changes `test/` or `tasks/`, add an entry to
+  `changelogs/local/` (gitignored).
+- If a task touches both, add one entry to each directory.
+- Filename: `YYYY-MM-DD-<short-slug>.md`. Use the template in
+  `changelogs/_template.md` / `changelogs/local/_template.md`.
+- No test files, fixtures, or other artifacts should be created to
+  produce the changelog entry — it's a short markdown summary of what
+  was actually implemented and validated, written after the fact.

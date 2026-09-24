@@ -1,0 +1,117 @@
+{
+  "context": {
+    "domain": "nic2004:60232",
+    "country": "IND",
+    "city": "std:080",
+    "action": "update",
+    "core_version": "1.2.0",
+    "bap_id": "logistics_buyer.com",
+    "bap_uri": "https://logistics_buyer.com/ondc",
+    "bpp_id": "lsp.com",
+    "bpp_uri": "https://lsp.com/ondc",
+    "transaction_id": "T1",
+    "message_id": "M4",
+    "timestamp": "2023-06-06T22:30:00.000Z",
+    "ttl": "PT30S"
+  },
+  "message": {
+    "update_target": "fulfillment",
+    "order": {
+      "id": "O2",
+      "items": [
+        {
+          "id": "I1",
+          "category_id": "Same Day Delivery",
+          "descriptor": {
+            "code": "P2P"
+          }
+        }
+      ],
+      "fulfillments": [
+        {
+          "id": "1",
+          "type": "Delivery",
+          "@ondc/org/awb_no": "1227262193237777",
+          "start": {
+            "instructions": {
+              "code": "2",
+              "short_desc": "value of PCC",
+              "long_desc": "additional instructions for pickup",
+              "additional_desc": {
+                "content_type": "text/html",
+                "url": "https://reverse_qc_sop_form.htm"
+              }
+            },
+            "authorization": {
+              "type": "OTP",
+              "token": "OTP code",
+              "valid_from": "2023-06-06T12:00:00.000Z",
+              "valid_to": "2023-06-06T14:00:00.000Z"
+            }
+          },
+          "end": {
+            "instructions": {
+              "code": "2",
+              "short_desc": "value of DCC",
+              "long_desc": "additional instructions for delivery"
+            }
+          },
+          "tags": [
+            {
+              "code": "state",
+              "list": [
+                {
+                  "code": "ready_to_ship",
+                  "value": "yes"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "@ondc/org/linked_order": {
+        "items": [
+          {
+            "category_id": "Grocery",
+            "descriptor": {
+              "name": "Atta"
+            },
+            "quantity": {
+              "count": 2,
+              "measure": {
+                "unit": "kilogram",
+                "value": 0.5
+              }
+            },
+            "price": {
+              "currency": "INR",
+              "value": "150.00"
+            }
+          }
+        ],
+        "order": {
+          "id": "O1",
+          "weight": {
+            "unit": "kilogram",
+            "value": 1
+          },
+          "dimensions": {
+            "length": {
+              "unit": "centimeter",
+              "value": 1
+            },
+            "breadth": {
+              "unit": "centimeter",
+              "value": 1
+            },
+            "height": {
+              "unit": "centimeter",
+              "value": 1
+            }
+          }
+        }
+      },
+      "updated_at": "2023-06-06T23:00:00.000Z"
+    }
+  }
+}

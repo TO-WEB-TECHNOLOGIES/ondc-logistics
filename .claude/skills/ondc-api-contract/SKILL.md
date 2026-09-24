@@ -9,6 +9,28 @@ Keep ONDC Logistics wire behavior contract-first.
 Use the repository's authoritative ONDC Logistics contract. The project
 reference is ONDC Logistics API Contract v1.2.5.
 
+## Example payloads
+
+`examples/` holds the v1.2.5 contract's illustrative JSON payload for
+each action, extracted verbatim from `docs/ondc/ondc logistics.docx`:
+`lookup.json`, `vlookup.json`, `search.json`, `on_search.json`,
+`init.json`, `on_init.json`, `confirm.json`, `on_confirm.json`,
+`update.json`, `on_update.json`, `cancel.json`, `on_cancel.json`,
+`track.json`, `on_track.json`, `status.json`, `on_status.json`.
+`on_search.json`, `on_cancel.json`, and `lookup.json` contain more than
+one named example (e.g. `on_cancel.json` has `standard_cancellation`
+and `rto_cancellation`).
+
+Check here first for a concrete example of an action's shape before
+opening the docx. These are single illustrative examples, not the full
+schema — they don't show every optional field, enum, or edge case, so
+still consult the docx/contract for anything not covered here.
+
+Two typos in the source docx's JSON were corrected here so the files
+parse as valid JSON: a missing comma in `update.json`
+(`start.instructions`) and a trailing comma in `on_status.json`
+(`fulfillments[0].state.descriptor`). No other content was changed.
+
 The contract defines: - JSON request/response structures, - mandatory
 and optional attributes, - enumerations, - expected API behavior, -
 signing/verification, - registry lookup, - asynchronous request/callback

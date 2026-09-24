@@ -19,9 +19,10 @@ Claude.local.md
 .codex.local.md
 
 src/json
+src/flows
 src/reference/*
 API_FLOW_GUIDE.md
-src/flows/keep-alive.cron.ts
 
 reports/
 tasks/
+changelogs/
