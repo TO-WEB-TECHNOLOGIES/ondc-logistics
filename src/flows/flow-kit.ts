@@ -10,8 +10,15 @@
  *                                recent-event timeline and JSON dump in reports/flow-runs/
  *   FLOW_DEBUG=full | 1 | true   + full request/response/event payloads and stack traces
  *   FLOW_STEP_DELAY_MS           pause after a callback before the next request (default 3000)
- *                                — gives the server time to ACK the callback to the workbench,
- *                                like the natural delay between clicks in Postman
+ *                                — callback events already arrive only after the server ACKed
+ *                                the callback; this is an extra breather, like the natural
+ *                                delay between clicks in Postman
+ *
+ * Every request waits for the server's HTTP response, which only arrives once the workbench
+ * ACKed our ONDC request. The server re-sends on the same transaction_id/message_id when the
+ * workbench does not answer within ONDC_ACK_TIMEOUT_MS (server env), so a POST can take up to
+ * (1 + ONDC_ACK_RETRIES) x that. A workbench NACK (ONDC_NACK) or no answer on any attempt
+ * (ONDC_ACK_TIMEOUT) stops the flow.
  *   FLOW_WAIT_TIMEOUT_MS         overrides every SSE wait limit (defaults: 120s for callbacks
  *                                answering our request, 600s for workbench-pushed events)
  */
@@ -50,8 +57,8 @@ export const PUSH_WAIT_MS = envMs("FLOW_WAIT_TIMEOUT_MS", 600_000);
 /** Events the workbench pushes on its own schedule rather than in reply to our request. */
 const PUSHED_EVENTS = new Set(["order_status"]);
 const RETRY_DELAY_MS = 5_000;
-/** Server-side axios limit for outbound ONDC calls (src/utils/v1/axios.ts). */
-const OUTBOUND_TIMEOUT_MS = 30_000;
+/** Server-side submission failures (src/utils/ondc-error-response.ts ondcSubmissionFailure) — never retried here. */
+const ONDC_SUBMISSION_CODES = new Set(["ONDC_NACK", "ONDC_ACK_TIMEOUT"]);
 const WAIT_HEARTBEAT_MS = 30_000;
 const FAILURE_EVENT_TAIL = 8;
 
@@ -380,19 +387,22 @@ export async function waitForCount(
 
 // ─── Requests ────────────────────────────────────────────────────────────────
 
-/** Pauses after a callback so the server can ACK it to the workbench before our next request. */
+/** Pauses after a callback before our next request (the server has already ACKed the callback). */
 async function settle(step: string): Promise<void> {
   if (lastCallbackAt === undefined) return;
   const remaining = STEP_DELAY_MS - (Date.now() - lastCallbackAt);
   lastCallbackAt = undefined;
   if (remaining <= 0) return;
-  debug(step, `pausing ${secs(remaining)} so the server can ACK the previous callback`);
+  debug(step, `pausing ${secs(remaining)} before the next request`);
   await sleep(remaining);
 }
 
-function httpHint(status: number, durationMs: number): string | undefined {
-  if (status >= 500 && durationMs >= OUTBOUND_TIMEOUT_MS - 1_000 && durationMs <= OUTBOUND_TIMEOUT_MS + 15_000) {
-    return "Took ~30s: the server's outbound call to the ONDC gateway/workbench most likely hit its 30s axios timeout (src/utils/v1/axios.ts). The workbench did not answer in time — it may be busy with a previous run or still waiting on a callback ACK. Check the server logs for this transaction.";
+function httpHint(status: number, code: string | undefined): string | undefined {
+  if (code === "ONDC_NACK") {
+    return "The workbench/LSP rejected our ONDC request with a sync NACK — the ondc code/message above come from it. The flow stops here; fix the payload/state and rerun.";
+  }
+  if (code === "ONDC_ACK_TIMEOUT") {
+    return "The server re-sent the request on the same transaction_id/message_id but the workbench never answered any attempt within ONDC_ACK_TIMEOUT_MS (server env). It may be busy with a previous run — check the server logs for this transaction.";
   }
   if (status >= 500) return "Server-side failure — check the Render service logs around this timestamp.";
   if (status === 409) return "The request does not match the stored transaction/order state — an earlier callback may not be persisted yet, or ids from an earlier step are wrong.";
@@ -470,13 +480,17 @@ async function postOnce(step: string, path: string, body: unknown): Promise<{ js
     const err = isJson && json.error && typeof json.error === "object" ? (json.error as Record<string, any>) : undefined;
     const details: [string, string][] = [["response", `HTTP ${res.status} after ${secs(durationMs)}`]];
     if (err?.code || err?.message) details.push(["error", [err.code, err.message].filter(Boolean).join(" — ")]);
+    const ondc = Array.isArray(err?.details) ? err.details[0] : undefined;
+    if (err?.code === "ONDC_NACK" && ondc) {
+      details.push(["ondc", [ondc.ondcType, ondc.ondcCode, ondc.ondcMessage].filter(Boolean).join(" — ") || "(no error body)"]);
+    }
     if (err?.path) details.push(["path", String(err.path)]);
     if (Array.isArray(err?.details) && err.details.length) details.push(["details", truncate(JSON.stringify(err.details), 400)]);
     if (!err) details.push(["body", truncate(isJson ? JSON.stringify(json) : text || "(empty)", 400)]);
     throw new FlowError(step, `POST ${path} failed`, {
       details,
-      hint: httpHint(res.status, durationMs),
-      retryable: res.status >= 500,
+      hint: httpHint(res.status, err?.code),
+      retryable: res.status >= 500 && !ONDC_SUBMISSION_CODES.has(err?.code),
     });
   }
   if (!isJson) debug(step, `non-JSON response body: ${truncate(text, 300)}`);

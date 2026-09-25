@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { CancelService } from "../services/cancel.service.js";
-import { ondcNack } from "../utils/ondc-error-response.js";
+import { ondcNack, ondcSubmissionFailure } from "../utils/ondc-error-response.js";
 import {
   CancelValidationError,
   parseOnCancelResponse,
@@ -79,6 +79,11 @@ export const createCancelController =
           console.log("[cancel.controller] /cancel failed", {
             error: error instanceof Error ? error.message : error,
           });
+          const submission = ondcSubmissionFailure(error);
+          if (submission) {
+            response.status(submission.status).json(submission.body);
+            return;
+          }
           if (error instanceof CancelValidationError) {
             response.status(409).json({
               error: {

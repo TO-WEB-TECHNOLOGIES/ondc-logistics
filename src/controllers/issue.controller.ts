@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { IssueService } from "../services/issue.service.js";
-import { ondcNack } from "../utils/ondc-error-response.js";
+import { ondcNack, ondcSubmissionFailure } from "../utils/ondc-error-response.js";
 import {
   IssueValidationError,
   parseCheckIssueStatusRequest,
@@ -65,6 +65,11 @@ export const createIssueController =
             console.log("[issue.controller] /issue (update) failed", {
               error: error instanceof Error ? error.message : error,
             });
+            const submission = ondcSubmissionFailure(error);
+            if (submission) {
+              response.status(submission.status).json(submission.body);
+              return;
+            }
             if (error instanceof IssueValidationError) {
               response.status(409).json({
                 error: {
@@ -97,6 +102,11 @@ export const createIssueController =
           console.log("[issue.controller] /issue (create) failed", {
             error: error instanceof Error ? error.message : error,
           });
+          const submission = ondcSubmissionFailure(error);
+          if (submission) {
+            response.status(submission.status).json(submission.body);
+            return;
+          }
           if (error instanceof IssueValidationError) {
             response.status(409).json({
               error: {
@@ -269,6 +279,11 @@ export const createIssueStatusController =
           console.log("[issue.controller] /issue_status failed", {
             error: error instanceof Error ? error.message : error,
           });
+          const submission = ondcSubmissionFailure(error);
+          if (submission) {
+            response.status(submission.status).json(submission.body);
+            return;
+          }
           if (error instanceof IssueValidationError) {
             response.status(409).json({
               error: {

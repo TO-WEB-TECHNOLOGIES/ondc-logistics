@@ -6,6 +6,7 @@ import {
   SearchValidationError,
 } from "../utils/search-validation.js";
 import { logger, pgErrorInfo } from "../utils/logger.js";
+import { ondcSubmissionFailure } from "../utils/ondc-error-response.js";
 
 /**
  * @swagger
@@ -117,6 +118,11 @@ export const createSearchController =
         response.status(400).json({
           error: { code: "INVALID_SEARCH_REQUEST", message: error.message },
         });
+        return;
+      }
+      const submission = ondcSubmissionFailure(error);
+      if (submission) {
+        response.status(submission.status).json(submission.body);
         return;
       }
       logger.error("search", "Search request failed.", pgErrorInfo(error));

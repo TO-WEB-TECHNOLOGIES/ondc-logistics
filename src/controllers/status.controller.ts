@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { StatusService } from "../services/status.service.js";
-import { ondcNack } from "../utils/ondc-error-response.js";
+import { ondcNack, ondcSubmissionFailure } from "../utils/ondc-error-response.js";
 import {
   StatusValidationError,
   parseOnStatusResponse,
@@ -74,6 +74,11 @@ export const createStatusController =
           console.log("[status.controller] /status failed", {
             error: error instanceof Error ? error.message : error,
           });
+          const submission = ondcSubmissionFailure(error);
+          if (submission) {
+            response.status(submission.status).json(submission.body);
+            return;
+          }
           if (error instanceof StatusValidationError) {
             response.status(409).json({
               error: {

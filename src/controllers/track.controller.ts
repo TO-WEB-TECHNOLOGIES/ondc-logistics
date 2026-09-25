@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { TrackService } from "../services/track.service.js";
-import { ondcNack } from "../utils/ondc-error-response.js";
+import { ondcNack, ondcSubmissionFailure } from "../utils/ondc-error-response.js";
 import {
   TrackValidationError,
   parseOnTrackResponse,
@@ -76,6 +76,11 @@ export const createTrackController =
           console.log("[track.controller] /track failed", {
             error: error instanceof Error ? error.message : error,
           });
+          const submission = ondcSubmissionFailure(error);
+          if (submission) {
+            response.status(submission.status).json(submission.body);
+            return;
+          }
           if (error instanceof TrackValidationError) {
             response.status(409).json({
               error: {

@@ -11,6 +11,7 @@ import {
   ondcInternalErrorNack,
   ondcNack,
   syncResponseContext,
+  ondcSubmissionFailure,
 } from "../utils/ondc-error-response.js";
 import { createCallbackStream } from "../utils/streams/callback-stream.js";
 const detail = (e: ConfirmValidationError) => ({
@@ -89,6 +90,11 @@ export const createConfirmController =
           console.log("[confirm.controller] /confirm failed", {
             error: error instanceof Error ? error.message : error,
           });
+          const submission = ondcSubmissionFailure(error);
+          if (submission) {
+            response.status(submission.status).json(submission.body);
+            return;
+          }
           if (error instanceof ConfirmValidationError) {
             response.status(409).json({
               error: {

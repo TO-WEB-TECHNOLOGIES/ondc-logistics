@@ -1,3 +1,5 @@
+import { OndcAckTimeoutError, OndcNackError } from "./ondc-requests.js";
+
 export type OndcNetworkError = { type?: string; code: string; message: string };
 
 /** Network-facing ONDC errors are deliberately whitelisted. Diagnostic fields stay in logs. */
@@ -44,3 +46,53 @@ export const ondcInternalErrorNack = (body: unknown) => ({
     message: "Internal error while processing callback; retry",
   }),
 });
+
+/**
+ * Maps an outbound-submission failure from sendOndcRequest to the app-level
+ * HTTP response for our own /logistics/* endpoints (not an ONDC wire body).
+ * Returns undefined for any other error so callers keep their existing mapping.
+ */
+export const ondcSubmissionFailure = (
+  error: unknown,
+): { status: number; body: Record<string, unknown> } | undefined => {
+  if (error instanceof OndcNackError) {
+    return {
+      status: 502,
+      body: {
+        error: {
+          code: "ONDC_NACK",
+          message: `Counterparty NACKed /${error.action}`,
+          details: [
+            {
+              ondcType: error.nack.type,
+              ondcCode: error.nack.code,
+              ondcMessage: error.nack.message,
+              ondcPath: error.nack.path,
+              httpStatus: error.httpStatus,
+              attempts: error.attempts,
+            },
+          ],
+        },
+      },
+    };
+  }
+  if (error instanceof OndcAckTimeoutError) {
+    return {
+      status: 502,
+      body: {
+        error: {
+          code: "ONDC_ACK_TIMEOUT",
+          message: `No ACK/NACK for /${error.action} after ${error.attempts} attempt(s) of ${error.timeoutMs}ms`,
+          details: [
+            {
+              attempts: error.attempts,
+              timeoutMs: error.timeoutMs,
+              last: error.lastError,
+            },
+          ],
+        },
+      },
+    };
+  }
+  return undefined;
+};

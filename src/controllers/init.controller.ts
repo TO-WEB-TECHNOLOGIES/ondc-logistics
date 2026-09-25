@@ -11,6 +11,7 @@ import {
   ondcAck,
   ondcInternalErrorNack,
   syncResponseContext,
+  ondcSubmissionFailure,
 } from "../utils/ondc-error-response.js";
 import { createCallbackStream } from "../utils/streams/callback-stream.js";
 const validation = (error: InitValidationError) => ({
@@ -121,6 +122,11 @@ export const createInitController =
           console.log("[init.controller] /init failed", {
             error: error instanceof Error ? error.message : error,
           });
+          const submission = ondcSubmissionFailure(error);
+          if (submission) {
+            response.status(submission.status).json(submission.body);
+            return;
+          }
           const status =
             error instanceof Error &&
             error.message === "search option not found"

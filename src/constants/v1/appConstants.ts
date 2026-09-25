@@ -41,6 +41,19 @@ const GATEWAY_URL =
 
 export const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 
+const nonNegativeInt = (raw: string | undefined, fallback: number) => {
+  const value = Number(raw);
+  return raw !== undefined && raw.trim() !== "" && Number.isInteger(value) && value >= 0
+    ? value
+    : fallback;
+};
+
+// Outbound ONDC requests (src/utils/ondc-requests.ts): how long to wait for the
+// counterparty's sync ACK/NACK per attempt, and how many extra attempts to make
+// (same transaction_id + message_id, fresh timestamp/signature) after a timeout.
+export const ONDC_ACK_TIMEOUT_MS = nonNegativeInt(process.env.ONDC_ACK_TIMEOUT_MS, 15_000);
+export const ONDC_ACK_RETRIES = nonNegativeInt(process.env.ONDC_ACK_RETRIES, 2);
+
 export {
   BFF,
   SIGNING_PRIVATE_KEY,

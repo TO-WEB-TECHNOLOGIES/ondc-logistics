@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { UpdateService } from "../services/update.service.js";
-import { ondcNack } from "../utils/ondc-error-response.js";
+import { ondcNack, ondcSubmissionFailure } from "../utils/ondc-error-response.js";
 import {
   UpdateValidationError,
   parseOnUpdateResponse,
@@ -122,6 +122,11 @@ export const createUpdateController =
           console.log("[update.controller] /update failed", {
             error: error instanceof Error ? error.message : error,
           });
+          const submission = ondcSubmissionFailure(error);
+          if (submission) {
+            response.status(submission.status).json(submission.body);
+            return;
+          }
           if (error instanceof UpdateValidationError) {
             response.status(409).json({
               error: {
