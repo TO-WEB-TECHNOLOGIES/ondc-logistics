@@ -9,7 +9,7 @@ import type {
 } from "../types/search/internal.js";
 import type { OndcTransport } from "../utils/ondc-transport.js";
 import type { SearchRepository } from "../repositories/search.repository.js";
-import { clientStreamManager } from "../utils/client-stream.js";
+import { clientStreamManager } from "../utils/streams/client-stream.js";
 
 export interface SearchServiceDependencies {
   transport: OndcTransport;

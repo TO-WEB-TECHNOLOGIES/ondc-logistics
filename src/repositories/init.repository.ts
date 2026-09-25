@@ -20,7 +20,7 @@ import {
 } from "../db/schema/index.js";
 import { extractInitOrder } from "../mappers/init-persistence.mapper.js";
 import { fetchSearchAddressNames } from "./init-order-reader.js";
-import { clientStreamManager } from "../utils/client-stream.js";
+import { clientStreamManager } from "../utils/streams/client-stream.js";
 import type {
   InitRequest,
   ResolvedInitSelection,

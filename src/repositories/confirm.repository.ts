@@ -8,7 +8,7 @@ import {
   type AnyOrder,
 } from "./logistics-order-shared.js";
 import { fetchInitOrderSnapshot } from "./init-order-reader.js";
-import { clientStreamManager } from "../utils/client-stream.js";
+import { clientStreamManager } from "../utils/streams/client-stream.js";
 import type {
   OndcConfirmRequest,
   OndcOnConfirmResponse,

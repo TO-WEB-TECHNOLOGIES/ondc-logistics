@@ -1,5 +1,5 @@
 ﻿import type { Response } from "express";
-import type { SearchSseEvent } from "../types/search/internal.js";
+import type { SearchSseEvent } from "../../types/search/internal.js";
 
 interface Subscriber {
   response: Response;

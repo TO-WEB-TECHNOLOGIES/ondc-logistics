@@ -19,8 +19,9 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { styleText } from "node:util";
+import 'dotenv/config';
 
-export const BASE_URL = "https://ondc-logistics.onrender.com";
+export const BASE_URL = process.env.BAP_URI?.trim() || "https://logistics-render.onrender.com";
 export const clientId = randomUUID();
 
 type DebugLevel = "off" | "on" | "full";

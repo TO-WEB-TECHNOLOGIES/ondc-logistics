@@ -1,7 +1,7 @@
 ﻿import type { OndcOnSearchResponse } from "../types/search/ondc.js";
 import type { OnSearchRepository } from "../repositories/on-search.repository.js";
-import { searchSseManager } from "../utils/search-sse.js";
-import { clientStreamManager } from "../utils/client-stream.js";
+import { searchSseManager } from "../utils/streams/search-sse.js";
+import { clientStreamManager } from "../utils/streams/client-stream.js";
 
 export interface OnSearchQueue {
   enqueue(callbackId: string, response: OndcOnSearchResponse): Promise<void>;

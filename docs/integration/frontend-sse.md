@@ -11,6 +11,9 @@ Both are in-memory, single-process, no Redis/queue — same limitation applies t
 is replayed on reconnect or after an API restart, and a callback that lands before the frontend
 opens its stream is missed.
 
+Server-side internals (which files emit which events, and the ACK-ordering rule) are described
+in [`docs/architecture/stream-workflow.md`](../architecture/stream-workflow.md).
+
 ## Original per-flow streams
 
 Your frontend should own the SSE connection as part of the search request lifecycle.

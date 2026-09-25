@@ -45,9 +45,9 @@ import { DrizzleUpdateRepository } from "../repositories/update.repository.js";
 import { DrizzleStatusRepository } from "../repositories/status.repository.js";
 import { DrizzleTrackRepository } from "../repositories/track.repository.js";
 import { DrizzleCancelRepository } from "../repositories/cancel.repository.js";
-import { searchSseManager } from "../utils/search-sse.js";
-import { orderSseManager } from "../utils/order-sse.js";
-import { clientStreamManager } from "../utils/client-stream.js";
+import { searchSseManager } from "../utils/streams/search-sse.js";
+import { orderSseManager } from "../utils/streams/order-sse.js";
+import { clientStreamManager } from "../utils/streams/client-stream.js";
 import { noApiLogMiddleware } from "../middlewares/no-api-log.middleware.js";
 
 const protocol = {

@@ -14,7 +14,7 @@ import {
   type LogisticsOrderRow,
   type Tx,
 } from "./logistics-order-shared.js";
-import { clientStreamManager } from "../utils/client-stream.js";
+import { clientStreamManager } from "../utils/streams/client-stream.js";
 
 export type { LogisticsOrderRow };
 export type UpdateCallbackResult =

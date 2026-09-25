@@ -7,7 +7,7 @@ import {
   issues,
   ondcTransactions,
 } from "../db/schema/index.js";
-import { clientStreamManager } from "../utils/client-stream.js";
+import { clientStreamManager } from "../utils/streams/client-stream.js";
 import { loadLogisticsOrder, type LogisticsOrderRow } from "./logistics-order-shared.js";
 import type {
   OndcIssueObject,
