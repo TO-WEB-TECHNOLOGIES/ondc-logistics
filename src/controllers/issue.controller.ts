@@ -10,6 +10,7 @@ import {
   parseUpdateIssueRequest,
   toCallbackItems,
 } from "../schemas/issue.schema.js";
+import { createCallbackStream } from "../utils/streams/callback-stream.js";
 
 const detail = (e: IssueValidationError) => ({
   path: e.path ?? "request",
@@ -185,6 +186,7 @@ export const createOnIssueController =
         return;
       }
 
+      const stream = createCallbackStream();
       for (const callback of validated) {
         console.log("[on-issue.controller] /on_issue validated", {
           transactionId: callback.context.transaction_id,
@@ -194,7 +196,7 @@ export const createOnIssueController =
           hasError: Boolean(callback.error),
         });
         void service
-          .handleOnIssue(callback)
+          .handleOnIssue(callback, stream)
           .then((result) => {
             console.log("[on-issue.controller] /on_issue result", {
               transactionId: callback.context.transaction_id,
@@ -211,6 +213,8 @@ export const createOnIssueController =
       }
 
       // ONDC requires an immediate ACK; async processing continues above.
+      // Events it emits are held until this ACK has been written.
+      stream.releaseAfterAck(response);
       response.status(200).json({ message: { ack: { status: "ACK" } } });
     } catch (error) {
       console.log("[on-issue.controller] unexpected failure", error);
@@ -362,6 +366,7 @@ export const createOnIssueStatusController =
         return;
       }
 
+      const stream = createCallbackStream();
       for (const callback of validated) {
         console.log("[on-issue-status.controller] /on_issue_status validated", {
           transactionId: callback.context.transaction_id,
@@ -371,7 +376,7 @@ export const createOnIssueStatusController =
           hasError: Boolean(callback.error),
         });
         void service
-          .handleOnIssueStatus(callback)
+          .handleOnIssueStatus(callback, stream)
           .then((result) => {
             console.log("[on-issue-status.controller] /on_issue_status result", {
               transactionId: callback.context.transaction_id,
@@ -387,6 +392,7 @@ export const createOnIssueStatusController =
           });
       }
 
+      stream.releaseAfterAck(response);
       response.status(200).json({ message: { ack: { status: "ACK" } } });
     } catch (error) {
       console.log("[on-issue-status.controller] unexpected failure", error);

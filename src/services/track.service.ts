@@ -8,6 +8,7 @@ import {
   TrackValidationError,
   validateTrackPayload,
 } from "../utils/track-validation.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 
 export interface TrackProtocol {
   domain: string;
@@ -93,11 +94,11 @@ export class TrackService {
     return { orderId: input.orderId, transactionId, messageId, status: "TRACK_SENT" };
   }
 
-  async handleCallback(response: OndcOnTrackResponse) {
+  async handleCallback(response: OndcOnTrackResponse, stream?: CallbackStream) {
     console.log("[track.service] handling /on_track", {
       transactionId: response.context.transaction_id,
       messageId: response.context.message_id,
     });
-    return this.dependencies.repository.handleCallback(response);
+    return this.dependencies.repository.handleCallback(response, stream);
   }
 }

@@ -12,6 +12,7 @@ import {
   ondcNack,
   syncResponseContext,
 } from "../utils/ondc-error-response.js";
+import { createCallbackStream } from "../utils/streams/callback-stream.js";
 const detail = (e: ConfirmValidationError) => ({
   path: e.path ?? "request",
   message: e.message,
@@ -176,8 +177,9 @@ export const createOnConfirmController =
         state: callback.message?.order?.state,
         hasError: Boolean(callback.error),
       });
+      const stream = createCallbackStream();
       void service
-        .handleCallback(callback)
+        .handleCallback(callback, stream)
         .then((result) => {
           console.log("[on-confirm.controller] /on_confirm result", {
             transactionId: callback.context.transaction_id,
@@ -185,6 +187,7 @@ export const createOnConfirmController =
             result,
           });
           if (result === "not_found") {
+            stream.discard();
             response.status(200).json({
               ...syncResponseContext(request.body),
               ...ondcNack({
@@ -196,6 +199,7 @@ export const createOnConfirmController =
             return;
           }
           if (result === "invalid_order") {
+            stream.discard();
             response.status(200).json({
               ...syncResponseContext(request.body),
               ...ondcNack({
@@ -207,6 +211,7 @@ export const createOnConfirmController =
             return;
           }
           if (result === "invalid_bpp") {
+            stream.discard();
             response.status(200).json({
               ...syncResponseContext(request.body),
               ...ondcNack({
@@ -217,9 +222,11 @@ export const createOnConfirmController =
             });
             return;
           }
+          stream.releaseAfterAck(response);
           response.status(200).json(ondcAck(request.body));
         })
         .catch((error) => {
+          stream.discard();
           console.log("[on-confirm.controller] processing failed", {
             transactionId: callback.context.transaction_id,
             orderId: callback.message?.order?.id,

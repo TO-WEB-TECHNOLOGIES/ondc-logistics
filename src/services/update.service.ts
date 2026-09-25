@@ -8,6 +8,7 @@ import {
   UpdateValidationError,
   validateUpdatePayload,
 } from "../utils/update-validation.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 
 export interface UpdateProtocol {
   domain: string;
@@ -124,11 +125,11 @@ export class UpdateService {
     };
   }
 
-  async handleCallback(response: OndcOnUpdateResponse) {
+  async handleCallback(response: OndcOnUpdateResponse, stream?: CallbackStream) {
     console.log("[update.service] handling /on_update", {
       transactionId: response.context.transaction_id,
       messageId: response.context.message_id,
     });
-    return this.dependencies.repository.handleCallback(response);
+    return this.dependencies.repository.handleCallback(response, stream);
   }
 }

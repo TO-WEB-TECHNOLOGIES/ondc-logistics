@@ -21,6 +21,7 @@ import {
 import { extractInitOrder } from "../mappers/init-persistence.mapper.js";
 import { fetchSearchAddressNames } from "./init-order-reader.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 import type {
   InitRequest,
   ResolvedInitSelection,
@@ -54,6 +55,7 @@ export interface InitRepository {
   ): Promise<void>;
   handleCallback(
     response: OndcOnInitResponse,
+    stream?: CallbackStream,
   ): Promise<"processed" | "duplicate" | "not_found">;
 }
 
@@ -661,7 +663,10 @@ export class DrizzleInitRepository implements InitRepository {
       );
   }
 
-  async handleCallback(response: OndcOnInitResponse) {
+  async handleCallback(
+    response: OndcOnInitResponse,
+    stream: CallbackStream = clientStreamManager,
+  ) {
     const c = response.context;
     const [row] = await this.database
       .select({
@@ -719,12 +724,12 @@ export class DrizzleInitRepository implements InitRepository {
     });
 
     if (response.error) {
-      clientStreamManager.push(c.transaction_id, "init_error", {
+      stream.push(c.transaction_id, "init_error", {
         code: response.error.code,
         message: response.error.message,
       });
     } else if (extracted) {
-      clientStreamManager.push(c.transaction_id, "init_result", {
+      stream.push(c.transaction_id, "init_result", {
         providerId: extracted.providerId,
         items: extracted.items.map((item) => ({
           itemId: item.itemId,

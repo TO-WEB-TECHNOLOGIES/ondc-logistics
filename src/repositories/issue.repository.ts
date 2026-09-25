@@ -8,6 +8,7 @@ import {
   ondcTransactions,
 } from "../db/schema/index.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 import { loadLogisticsOrder, type LogisticsOrderRow } from "./logistics-order-shared.js";
 import type {
   OndcIssueObject,
@@ -101,9 +102,13 @@ export interface IssueRepository {
     status: string,
     error?: { code?: string; message?: string },
   ): Promise<void>;
-  handleOnIssue(response: OndcOnIssueResponse): Promise<IssueCallbackResult>;
+  handleOnIssue(
+    response: OndcOnIssueResponse,
+    stream?: CallbackStream,
+  ): Promise<IssueCallbackResult>;
   handleOnIssueStatus(
     response: OndcOnIssueStatusResponse,
+    stream?: CallbackStream,
   ): Promise<IssueCallbackResult>;
 }
 
@@ -532,7 +537,10 @@ export class DrizzleIssueRepository implements IssueRepository {
   // without a matching outbound /issue of ours) — same dual-branch
   // correlation cancel.repository.ts uses for /on_cancel, keyed by issue_id
   // instead of order_id.
-  async handleOnIssue(response: OndcOnIssueResponse): Promise<IssueCallbackResult> {
+  async handleOnIssue(
+    response: OndcOnIssueResponse,
+    stream: CallbackStream = clientStreamManager,
+  ): Promise<IssueCallbackResult> {
     const c = response.context;
     const incomingIssueId = response.message?.issue?.id;
     console.log("[issue.repository] looking up /on_issue", {
@@ -712,14 +720,14 @@ export class DrizzleIssueRepository implements IssueRepository {
       newActionCount: newActions.length,
     });
     if (response.error) {
-      clientStreamManager.push(c.transaction_id, "issue_error", {
+      stream.push(c.transaction_id, "issue_error", {
         issueId: incomingIssueId,
         orderId: issueRow.orderId,
         code: response.error.code,
         message: response.error.message,
       });
     } else {
-      clientStreamManager.push(c.transaction_id, "issue_updated", {
+      stream.push(c.transaction_id, "issue_updated", {
         issueId: incomingIssueId,
         orderId: issueRow.orderId,
         newActionCount: newActions.length,
@@ -733,6 +741,7 @@ export class DrizzleIssueRepository implements IssueRepository {
   // the same way track/update's /on_track|/on_update do.
   async handleOnIssueStatus(
     response: OndcOnIssueStatusResponse,
+    stream: CallbackStream = clientStreamManager,
   ): Promise<IssueCallbackResult> {
     const c = response.context;
     console.log("[issue.repository] looking up /on_issue_status", {
@@ -858,14 +867,14 @@ export class DrizzleIssueRepository implements IssueRepository {
       newActionCount: newActions.length,
     });
     if (response.error) {
-      clientStreamManager.push(c.transaction_id, "issue_status_error", {
+      stream.push(c.transaction_id, "issue_status_error", {
         issueId: incomingIssueId,
         orderId: pending.orderId,
         code: response.error.code,
         message: response.error.message,
       });
     } else {
-      clientStreamManager.push(c.transaction_id, "issue_status_updated", {
+      stream.push(c.transaction_id, "issue_status_updated", {
         issueId: incomingIssueId,
         orderId: pending.orderId,
         newActionCount: newActions.length,

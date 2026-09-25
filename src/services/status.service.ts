@@ -8,6 +8,7 @@ import {
   StatusValidationError,
   validateStatusPayload,
 } from "../utils/status-validation.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 
 export interface StatusProtocol {
   domain: string;
@@ -95,11 +96,11 @@ export class StatusService {
     return { orderId: input.orderId, transactionId, messageId, status: "STATUS_SENT" };
   }
 
-  async handleCallback(response: OndcOnStatusResponse) {
+  async handleCallback(response: OndcOnStatusResponse, stream?: CallbackStream) {
     console.log("[status.service] handling /on_status", {
       transactionId: response.context.transaction_id,
       messageId: response.context.message_id,
     });
-    return this.dependencies.repository.handleCallback(response);
+    return this.dependencies.repository.handleCallback(response, stream);
   }
 }

@@ -15,6 +15,7 @@ import {
   type Tx,
 } from "./logistics-order-shared.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 
 export type { LogisticsOrderRow };
 export type UpdateCallbackResult =
@@ -153,7 +154,10 @@ export interface UpdateRepository {
     status: string,
     error?: { code?: string; message?: string },
   ): Promise<void>;
-  handleCallback(response: OndcOnUpdateResponse): Promise<UpdateCallbackResult>;
+  handleCallback(
+    response: OndcOnUpdateResponse,
+    stream?: CallbackStream,
+  ): Promise<UpdateCallbackResult>;
 }
 
 export class DrizzleUpdateRepository implements UpdateRepository {
@@ -234,7 +238,10 @@ export class DrizzleUpdateRepository implements UpdateRepository {
       );
   }
 
-  async handleCallback(response: OndcOnUpdateResponse) {
+  async handleCallback(
+    response: OndcOnUpdateResponse,
+    stream: CallbackStream = clientStreamManager,
+  ) {
     const c = response.context;
     const incomingOrderId = response.message?.order?.id as string | undefined;
     console.log("[update.repository] looking up /on_update", {
@@ -345,13 +352,13 @@ export class DrizzleUpdateRepository implements UpdateRepository {
     });
 
     if (response.error) {
-      clientStreamManager.push(c.transaction_id, "update_error", {
+      stream.push(c.transaction_id, "update_error", {
         orderId: row.orderId,
         code: response.error.code,
         message: response.error.message,
       });
     } else {
-      clientStreamManager.push(c.transaction_id, "order_updated", {
+      stream.push(c.transaction_id, "order_updated", {
         orderId: row.orderId,
         state: updatedFields?.state,
         awbNo: updatedFields?.awbNo,

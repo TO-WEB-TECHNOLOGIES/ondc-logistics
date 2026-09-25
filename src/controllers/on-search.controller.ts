@@ -4,6 +4,7 @@ import {
   parseOnSearchResponse,
   SearchValidationError,
 } from "../utils/search-validation.js";
+import { createCallbackStream } from "../utils/streams/callback-stream.js";
 
 /**
  * @swagger
@@ -38,6 +39,7 @@ export const createOnSearchController =
   (onSearchService: OnSearchService) =>
   async (request: Request, response: Response): Promise<void> => {
     console.log("[on-search.controller] incoming /on_search request");
+    const stream = createCallbackStream();
     console.log(
       "[on-search.controller] full incoming payload",
       JSON.stringify(request.body, null, 2),
@@ -51,10 +53,12 @@ export const createOnSearchController =
         bppId: callback.context.bpp_id,
         providerCount: callback.message.catalog["bpp/providers"].length,
       });
-      await onSearchService.handleCallback(callback);
+      await onSearchService.handleCallback(callback, stream);
       console.log("[on-search.controller] /on_search ACK sent");
+      stream.releaseAfterAck(response);
       response.status(200).json({ message: { ack: { status: "ACK" } } });
     } catch (error) {
+      stream.discard();
       console.log(
         "[on-search.controller] /on_search failed",
         error instanceof Error ? error.message : error,

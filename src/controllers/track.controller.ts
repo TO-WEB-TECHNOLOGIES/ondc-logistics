@@ -6,6 +6,7 @@ import {
   parseOnTrackResponse,
   parseTrackRequest,
 } from "../utils/track-validation.js";
+import { createCallbackStream } from "../utils/streams/callback-stream.js";
 
 const detail = (e: TrackValidationError) => ({
   path: e.path ?? "request",
@@ -149,8 +150,9 @@ export const createOnTrackController =
         fulfillmentId: callback.message?.tracking?.id,
         hasError: Boolean(callback.error),
       });
+      const stream = createCallbackStream();
       void service
-        .handleCallback(callback)
+        .handleCallback(callback, stream)
         .then((result) => {
           console.log("[on-track.controller] /on_track result", {
             transactionId: callback.context.transaction_id,
@@ -166,6 +168,8 @@ export const createOnTrackController =
         });
 
       // ONDC requires an immediate ACK; async processing continues above.
+      // Events it emits are held until this ACK has been written.
+      stream.releaseAfterAck(response);
       response.status(200).json({ message: { ack: { status: "ACK" } } });
     } catch (error) {
       if (error instanceof TrackValidationError) {

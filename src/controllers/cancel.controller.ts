@@ -6,6 +6,7 @@ import {
   parseOnCancelResponse,
   parseCancelRequest,
 } from "../utils/cancel-validation.js";
+import { createCallbackStream } from "../utils/streams/callback-stream.js";
 import { getCancellationReasonText } from "../constants/cancellation-reason-codes.js";
 
 const detail = (e: CancelValidationError) => ({
@@ -155,8 +156,9 @@ export const createOnCancelController =
         orderId: callback.message?.order?.id,
         hasError: Boolean(callback.error),
       });
+      const stream = createCallbackStream();
       void service
-        .handleCallback(callback)
+        .handleCallback(callback, stream)
         .then((result) => {
           console.log("[on-cancel.controller] /on_cancel result", {
             transactionId: callback.context.transaction_id,
@@ -173,6 +175,8 @@ export const createOnCancelController =
         });
 
       // ONDC requires an immediate ACK; async processing continues above.
+      // Events it emits are held until this ACK has been written.
+      stream.releaseAfterAck(response);
       response.status(200).json({ message: { ack: { status: "ACK" } } });
     } catch (error) {
       if (error instanceof CancelValidationError) {

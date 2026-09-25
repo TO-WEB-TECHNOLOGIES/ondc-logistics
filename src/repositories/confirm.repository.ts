@@ -9,6 +9,7 @@ import {
 } from "./logistics-order-shared.js";
 import { fetchInitOrderSnapshot } from "./init-order-reader.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 import type {
   OndcConfirmRequest,
   OndcOnConfirmResponse,
@@ -38,6 +39,7 @@ export interface ConfirmRepository {
   ): Promise<void>;
   handleCallback(
     response: OndcOnConfirmResponse,
+    stream?: CallbackStream,
   ): Promise<ConfirmCallbackResult>;
 }
 export class DrizzleConfirmRepository implements ConfirmRepository {
@@ -229,7 +231,10 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
         ),
       );
   }
-  async handleCallback(response: OndcOnConfirmResponse) {
+  async handleCallback(
+    response: OndcOnConfirmResponse,
+    stream: CallbackStream = clientStreamManager,
+  ) {
     const c = response.context;
     const incomingOrderId = response.message?.order?.id;
     console.log("[confirm.repository] looking up /on_confirm", {
@@ -343,13 +348,13 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
     });
 
     if (response.error) {
-      clientStreamManager.push(c.transaction_id, "confirm_error", {
+      stream.push(c.transaction_id, "confirm_error", {
         orderId: row.orderId,
         code: response.error.code,
         message: response.error.message,
       });
     } else if (row.orderId) {
-      clientStreamManager.push(c.transaction_id, "order_confirmed", {
+      stream.push(c.transaction_id, "order_confirmed", {
         orderId: row.orderId,
         state: columns?.state,
         providerId: columns?.providerId,

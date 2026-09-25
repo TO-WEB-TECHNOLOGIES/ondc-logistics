@@ -16,6 +16,7 @@ import {
   type OndcOnIssueStatusResponse,
   type UpdateIssueInput,
 } from "../schemas/issue.schema.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 
 export interface IssueProtocol {
   domain: string;
@@ -338,23 +339,23 @@ export class IssueService {
     };
   }
 
-  async handleOnIssue(response: OndcOnIssueResponse) {
+  async handleOnIssue(response: OndcOnIssueResponse, stream?: CallbackStream) {
     console.log("[issue.service] handling /on_issue", {
       transactionId: response.context.transaction_id,
       messageId: response.context.message_id,
       issueId: response.message?.issue?.id,
       hasError: Boolean(response.error),
     });
-    return this.dependencies.repository.handleOnIssue(response);
+    return this.dependencies.repository.handleOnIssue(response, stream);
   }
 
-  async handleOnIssueStatus(response: OndcOnIssueStatusResponse) {
+  async handleOnIssueStatus(response: OndcOnIssueStatusResponse, stream?: CallbackStream) {
     console.log("[issue.service] handling /on_issue_status", {
       transactionId: response.context.transaction_id,
       messageId: response.context.message_id,
       issueId: response.message?.issue?.id,
       hasError: Boolean(response.error),
     });
-    return this.dependencies.repository.handleOnIssueStatus(response);
+    return this.dependencies.repository.handleOnIssueStatus(response, stream);
   }
 }

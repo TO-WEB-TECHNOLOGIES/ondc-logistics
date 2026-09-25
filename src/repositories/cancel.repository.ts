@@ -3,6 +3,7 @@ import { db1 } from "../db/index.js";
 import { logisticsOrder, ondcTransactions } from "../db/schema/index.js";
 import { orderSseManager } from "../utils/streams/order-sse.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 import { getCancellationReasonText } from "../constants/cancellation-reason-codes.js";
 import {
   buildLogisticsOrderColumns,
@@ -31,7 +32,10 @@ export interface CancelRepository {
     status: string,
     error?: { code?: string; message?: string },
   ): Promise<void>;
-  handleCallback(response: OndcOnCancelResponse): Promise<CancelCallbackResult>;
+  handleCallback(
+    response: OndcOnCancelResponse,
+    stream?: CallbackStream,
+  ): Promise<CancelCallbackResult>;
 }
 
 export class DrizzleCancelRepository implements CancelRepository {
@@ -122,7 +126,10 @@ export class DrizzleCancelRepository implements CancelRepository {
     });
   }
 
-  async handleCallback(response: OndcOnCancelResponse) {
+  async handleCallback(
+    response: OndcOnCancelResponse,
+    stream: CallbackStream = clientStreamManager,
+  ) {
     const c = response.context;
     const order = response.message?.order as AnyOrder | undefined;
     const incomingOrderId = order?.id as string | undefined;
@@ -346,7 +353,7 @@ export class DrizzleCancelRepository implements CancelRepository {
         cancelledBy: order?.cancellation?.cancelled_by,
         updatedAt: new Date().toISOString(),
       });
-      clientStreamManager.push(c.transaction_id, "order_cancelled", {
+      stream.push(c.transaction_id, "order_cancelled", {
         orderId: resolvedOrderId,
         state: columns?.state,
         fulfillmentState: columns?.fulfillmentStateCode,
@@ -357,7 +364,7 @@ export class DrizzleCancelRepository implements CancelRepository {
         updatedAt: new Date().toISOString(),
       });
     } else if (response.error) {
-      clientStreamManager.push(c.transaction_id, "cancel_error", {
+      stream.push(c.transaction_id, "cancel_error", {
         orderId: resolvedOrderId,
         code: response.error.code,
         message: response.error.message,

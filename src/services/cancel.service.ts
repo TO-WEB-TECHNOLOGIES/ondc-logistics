@@ -8,6 +8,7 @@ import {
   CancelValidationError,
   validateCancelPayload,
 } from "../utils/cancel-validation.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 
 export interface CancelProtocol {
   domain: string;
@@ -105,11 +106,11 @@ export class CancelService {
     return { orderId: input.orderId, transactionId, messageId, status: "CANCEL_SENT" };
   }
 
-  async handleCallback(response: OndcOnCancelResponse) {
+  async handleCallback(response: OndcOnCancelResponse, stream?: CallbackStream) {
     console.log("[cancel.service] handling /on_cancel", {
       transactionId: response.context.transaction_id,
       messageId: response.context.message_id,
     });
-    return this.dependencies.repository.handleCallback(response);
+    return this.dependencies.repository.handleCallback(response, stream);
   }
 }

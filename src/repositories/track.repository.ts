@@ -3,6 +3,7 @@ import { db1 } from "../db/index.js";
 import { logisticsOrder, ondcTransactions } from "../db/schema/index.js";
 import { orderSseManager } from "../utils/streams/order-sse.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 import {
   buildTrackingColumns,
   loadLogisticsOrder,
@@ -22,7 +23,10 @@ export interface TrackRepository {
     status: string,
     error?: { code?: string; message?: string },
   ): Promise<void>;
-  handleCallback(response: OndcOnTrackResponse): Promise<TrackCallbackResult>;
+  handleCallback(
+    response: OndcOnTrackResponse,
+    stream?: CallbackStream,
+  ): Promise<TrackCallbackResult>;
 }
 
 export class DrizzleTrackRepository implements TrackRepository {
@@ -95,7 +99,10 @@ export class DrizzleTrackRepository implements TrackRepository {
       );
   }
 
-  async handleCallback(response: OndcOnTrackResponse) {
+  async handleCallback(
+    response: OndcOnTrackResponse,
+    stream: CallbackStream = clientStreamManager,
+  ) {
     const c = response.context;
     console.log("[track.repository] looking up /on_track", {
       transactionId: c.transaction_id,
@@ -202,7 +209,7 @@ export class DrizzleTrackRepository implements TrackRepository {
         path,
         updatedAt: new Date().toISOString(),
       });
-      clientStreamManager.push(c.transaction_id, "order_tracking", {
+      stream.push(c.transaction_id, "order_tracking", {
         orderId: row.orderId,
         url: columns.trackingUrl,
         status: columns.trackingStatus,
@@ -212,7 +219,7 @@ export class DrizzleTrackRepository implements TrackRepository {
         updatedAt: new Date().toISOString(),
       });
     } else if (response.error) {
-      clientStreamManager.push(c.transaction_id, "track_error", {
+      stream.push(c.transaction_id, "track_error", {
         orderId: row.orderId,
         code: response.error.code,
         message: response.error.message,

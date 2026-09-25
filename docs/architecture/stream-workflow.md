@@ -35,9 +35,13 @@ per `transaction_id`.
  workbench / LSP
    │  POST /on_<action> ─────────────────────────► callback controller (controllers/*.controller.ts)
    │                                                 └ service.handleCallback()
-   │                                                    └ repository.handleCallback()  — persist, then emit
-   │                                                         └ clientStreamManager.push(transaction_id, event, data)
-   │                                                           (+ legacy orderSseManager / searchSseManager publish)
+   │                                                 │  stream = createCallbackStream()
+   │                                                 └ service.handleCallback(callback, stream)
+   │                                                    └ repository.handleCallback(callback, stream)  — persist, then emit
+   │                                                         └ stream.push(transaction_id, event, data)   (held)
+   │                                                           (+ legacy orderSseManager / searchSseManager publish, not held)
+   │                                                 stream.releaseAfterAck(res); res.json(ACK)
+   │                                                 res "finish" ─► held events ─► clientStreamManager.push
    ◄──────────── SSE "event: <name>" ─────────── utils/streams/client-stream.ts
 ```
 
@@ -45,8 +49,8 @@ per `transaction_id`.
 |---|---|---|
 | Routes | `src/routes/ondc.routes.ts` | Mount the three `GET` stream endpoints (`subscribe`) |
 | Binding | `src/services/search.service.ts` | `bind(transaction_id, clientId)` when `/search` mints the transaction; every later action reuses that `transaction_id`, so no re-binding |
-| Callback controllers | `on-search`, `init`, `confirm`, `update`, `status`, `track`, `cancel`, `issue` controllers | Verify/validate, call `handleCallback`, write the sync ACK/NACK |
-| Event producers | see §3 | Persist first, then push the normalized event |
+| Callback controllers | `on-search`, `init`, `confirm`, `update`, `status`, `track`, `cancel`, `issue` controllers | Verify/validate, create the per-callback stream, call `handleCallback(callback, stream)`, then `releaseAfterAck` + ACK, or `discard` + NACK/503 |
+| Event producers | see §3 | Persist first, then `stream.push` the normalized event (held until the ACK is written) |
 | Delivery | `src/utils/streams/*` | Write `event:`/`data:` frames to connected subscribers |
 | Consumer (automation) | `src/flows/flow-kit.ts` | `openStream()` + `waitFor(step, event)`; any `*_error` event fails the flow |
 
@@ -72,26 +76,31 @@ called anywhere today.
 
 ## 4. Callback timeline and the ACK ordering rule
 
-### Current (as of this change)
-
-```
-POST /on_init ─► validate ─► persist (DB tx) ─► push "init_result" ─► write ACK
-```
-
-The event reaches the client **before** the sender has our ACK. A client that reacts
-immediately (e.g. the automation scripts firing `/confirm`) can race the ACK; `flow-kit.ts`
-works around this with `FLOW_STEP_DELAY_MS`.
-
-### Proposed (Step 2 — not wired yet)
-
 Rule: **an event for a callback is released only after that callback's ACK has been written.**
-No extra "ack sent" event is added to the stream — the existing event simply arrives later.
+No extra "ack sent" event is added to the stream — the existing event simply arrives after the
+ACK.
+
+Controllers that process first and then ACK (`on_search`, `on_init`, `on_confirm`):
 
 ```
-POST /on_init ─► validate ─► persist ─► stream.push("init_result")   (queued)
+POST /on_init ─► validate ─► persist ─► stream.push("init_result")   (held)
                                     ─► stream.releaseAfterAck(res)
-                                    ─► res.json(ACK) ─► res "finish" ─► queued events flushed
+                                    ─► res.json(ACK) ─► res "finish" ─► held events flushed
+                          NACK / 503 ─► stream.discard()              (nothing emitted)
 ```
+
+Controllers that ACK immediately and process in the background (`on_update`, `on_status`,
+`on_track`, `on_cancel`, `on_issue`, `on_issue_status`):
+
+```
+POST /on_status ─► validate ─► stream.releaseAfterAck(res) ─► res.json(ACK)
+                               └ handleCallback(callback, stream) runs in background ─► stream.push(...)
+                                 held until "finish", delivered immediately after it
+```
+
+Before this rule, events were pushed before the ACK was written, so a client reacting
+immediately (e.g. the automation scripts firing `/confirm`) could race the ACK.
+`FLOW_STEP_DELAY_MS` in `flow-kit.ts` is still applied as an extra pause between steps.
 
 `src/utils/streams/callback-stream.ts` provides this:
 

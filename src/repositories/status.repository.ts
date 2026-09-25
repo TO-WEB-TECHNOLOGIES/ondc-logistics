@@ -3,6 +3,7 @@ import { db1 } from "../db/index.js";
 import { logisticsOrder, ondcTransactions } from "../db/schema/index.js";
 import { orderSseManager } from "../utils/streams/order-sse.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 import {
   buildLogisticsOrderColumns,
   loadLogisticsOrder,
@@ -23,7 +24,10 @@ export interface StatusRepository {
     status: string,
     error?: { code?: string; message?: string },
   ): Promise<void>;
-  handleCallback(response: OndcOnStatusResponse): Promise<StatusCallbackResult>;
+  handleCallback(
+    response: OndcOnStatusResponse,
+    stream?: CallbackStream,
+  ): Promise<StatusCallbackResult>;
 }
 
 export class DrizzleStatusRepository implements StatusRepository {
@@ -96,7 +100,10 @@ export class DrizzleStatusRepository implements StatusRepository {
       );
   }
 
-  async handleCallback(response: OndcOnStatusResponse) {
+  async handleCallback(
+    response: OndcOnStatusResponse,
+    stream: CallbackStream = clientStreamManager,
+  ) {
     const c = response.context;
     const incomingOrderId = response.message?.order?.id as string | undefined;
     console.log("[status.repository] looking up /on_status", {
@@ -185,7 +192,7 @@ export class DrizzleStatusRepository implements StatusRepository {
         awbNo: columns.awbNo,
         updatedAt: new Date().toISOString(),
       });
-      clientStreamManager.push(c.transaction_id, "order_status", {
+      stream.push(c.transaction_id, "order_status", {
         orderId: row.orderId,
         state: columns.state,
         fulfillmentState: columns.fulfillmentStateCode,
@@ -193,7 +200,7 @@ export class DrizzleStatusRepository implements StatusRepository {
         updatedAt: new Date().toISOString(),
       });
     } else if (response.error) {
-      clientStreamManager.push(c.transaction_id, "status_error", {
+      stream.push(c.transaction_id, "status_error", {
         orderId: row.orderId,
         code: response.error.code,
         message: response.error.message,

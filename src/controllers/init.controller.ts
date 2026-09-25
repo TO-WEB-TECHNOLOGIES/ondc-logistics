@@ -12,6 +12,7 @@ import {
   ondcInternalErrorNack,
   syncResponseContext,
 } from "../utils/ondc-error-response.js";
+import { createCallbackStream } from "../utils/streams/callback-stream.js";
 const validation = (error: InitValidationError) => ({
   path: error.path ?? "request",
   message: error.message,
@@ -193,10 +194,12 @@ export const createOnInitController =
         hasError: Boolean(callback.error),
         hasOrder: Boolean(callback.message?.order),
       });
+      const stream = createCallbackStream();
       void service
-        .handleCallback(callback)
+        .handleCallback(callback, stream)
         .then((result) => {
           if (result === "not_found") {
+            stream.discard();
             console.log("[on-init.controller] unknown transaction", {
               transactionId: callback.context.transaction_id,
             });
@@ -215,9 +218,11 @@ export const createOnInitController =
             transactionId: callback.context.transaction_id,
             result,
           });
+          stream.releaseAfterAck(response);
           response.status(200).json(ondcAck(request.body));
         })
         .catch((error) => {
+          stream.discard();
           console.log("[on-init.controller] processing failed", {
             error: error instanceof Error ? error.message : error,
           });

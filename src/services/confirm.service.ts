@@ -17,6 +17,7 @@ import {
   mergeInitializedOrder,
   toSuppliedOrder,
 } from "../mappers/confirm.mapper.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 
 export class ConfirmService {
   constructor(
@@ -138,11 +139,11 @@ export class ConfirmService {
     };
   }
 
-  async handleCallback(response: any) {
+  async handleCallback(response: any, stream?: CallbackStream) {
     console.log("[confirm.service] handling /on_confirm", {
       transactionId: response.context.transaction_id,
       messageId: response.context.message_id,
     });
-    return this.dependencies.repository.handleCallback(response);
+    return this.dependencies.repository.handleCallback(response, stream);
   }
 }

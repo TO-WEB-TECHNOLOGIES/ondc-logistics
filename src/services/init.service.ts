@@ -10,6 +10,7 @@ import type {
 } from "../types/init/ondc.js";
 import type { OndcTransport } from "../utils/ondc-transport.js";
 import type { InitRepository } from "../repositories/init.repository.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 
 export class InitService {
   constructor(
@@ -62,7 +63,7 @@ export class InitService {
       status: "INIT_SENT",
     };
   }
-  async handleCallback(response: OndcOnInitResponse) {
-    return this.dependencies.repository.handleCallback(response);
+  async handleCallback(response: OndcOnInitResponse, stream?: CallbackStream) {
+    return this.dependencies.repository.handleCallback(response, stream);
   }
 }

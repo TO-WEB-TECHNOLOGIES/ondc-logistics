@@ -2,9 +2,14 @@
 import type { OnSearchRepository } from "../repositories/on-search.repository.js";
 import { searchSseManager } from "../utils/streams/search-sse.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
+import type { CallbackStream } from "../utils/streams/callback-stream.js";
 
 export interface OnSearchQueue {
-  enqueue(callbackId: string, response: OndcOnSearchResponse): Promise<void>;
+  enqueue(
+    callbackId: string,
+    response: OndcOnSearchResponse,
+    stream?: CallbackStream,
+  ): Promise<void>;
 }
 
 export class InProcessOnSearchQueue implements OnSearchQueue {
@@ -13,6 +18,7 @@ export class InProcessOnSearchQueue implements OnSearchQueue {
   async enqueue(
     callbackId: string,
     response: OndcOnSearchResponse,
+    stream: CallbackStream = clientStreamManager,
   ): Promise<void> {
     console.log("[on-search.queue] callback queued", {
       callbackId,
@@ -33,7 +39,7 @@ export class InProcessOnSearchQueue implements OnSearchQueue {
             searchId: result.searchId,
             provider,
           });
-          clientStreamManager.push(response.context.transaction_id, "search_result", {
+          stream.push(response.context.transaction_id, "search_result", {
             searchId: result.searchId,
             provider,
           });
@@ -53,7 +59,10 @@ export class OnSearchService {
     ),
   ) {}
 
-  async handleCallback(response: OndcOnSearchResponse): Promise<void> {
+  async handleCallback(
+    response: OndcOnSearchResponse,
+    stream?: CallbackStream,
+  ): Promise<void> {
     console.log("[on-search.service] callback received", {
       transactionId: response.context.transaction_id,
       messageId: response.context.message_id,
@@ -65,6 +74,6 @@ export class OnSearchService {
 
     if (!staged.callbackId) throw new Error("search transaction not found");
     if (!staged.duplicate)
-      await this.queue.enqueue(staged.callbackId, response);
+      await this.queue.enqueue(staged.callbackId, response, stream);
   }
 }
