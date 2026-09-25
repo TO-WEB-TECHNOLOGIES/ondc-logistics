@@ -5,7 +5,13 @@ import {
   parseConfirmRequest,
   parseOnConfirmResponse,
 } from "../utils/confirm-validation.js";
-import { ondcNack, syncResponseContext } from "../utils/ondc-error-response.js";
+import {
+  ONDC_INTERNAL_ERROR_HTTP_STATUS,
+  ondcAck,
+  ondcInternalErrorNack,
+  ondcNack,
+  syncResponseContext,
+} from "../utils/ondc-error-response.js";
 const detail = (e: ConfirmValidationError) => ({
   path: e.path ?? "request",
   message: e.message,
@@ -211,6 +217,7 @@ export const createOnConfirmController =
             });
             return;
           }
+          response.status(200).json(ondcAck(request.body));
         })
         .catch((error) => {
           console.log("[on-confirm.controller] processing failed", {
@@ -219,25 +226,10 @@ export const createOnConfirmController =
             error:
               error instanceof Error ? (error.stack ?? error.message) : error,
           });
-          response.status(500).json({
-            error: {
-              code: "ON_CONFIRM_FAILED",
-              message: "Unable to process callback",
-            },
-          });
+          response
+            .status(ONDC_INTERNAL_ERROR_HTTP_STATUS)
+            .json(ondcInternalErrorNack(request.body));
         });
-        console.log("[on-confirm.controller] BEFORE RESPONSE");
-
-        response.status(200).json({
-          ...syncResponseContext(request.body),
-          message: {
-            ack: {
-              status: "ACK",
-            },
-          },
-        });
-
-        console.log("[on-confirm.controller] AFTER RESPONSE");
     } catch (error) {
       if (error instanceof ConfirmValidationError) {
         console.log("[on-confirm.controller] validation failed", detail(error));
@@ -252,11 +244,8 @@ export const createOnConfirmController =
         return;
       }
       console.log("[on-confirm.controller] unexpected failure", error);
-      response.status(500).json({
-        error: {
-          code: "ON_CONFIRM_FAILED",
-          message: "Unable to process callback",
-        },
-      });
+      response
+        .status(ONDC_INTERNAL_ERROR_HTTP_STATUS)
+        .json(ondcInternalErrorNack(request.body));
     }
   };

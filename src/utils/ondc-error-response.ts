@@ -23,3 +23,24 @@ export const ondcNack = (error: OndcNetworkError) => ({
   message: { ack: { status: "NACK" as const } },
   error: ondcError(error),
 });
+
+/** Sync ACK for a callback: echoed context + message.ack. */
+export const ondcAck = (body: unknown) => ({
+  ...syncResponseContext(body),
+  message: { ack: { status: "ACK" as const } },
+});
+
+/**
+ * Sync NACK for an internal processing failure on a callback. The contract
+ * ("Rules for order confirmation") specifies http 503/504 with retriable
+ * error code 63001 for LBNP internal errors, so the sender retries.
+ */
+export const ONDC_INTERNAL_ERROR_HTTP_STATUS = 503;
+export const ondcInternalErrorNack = (body: unknown) => ({
+  ...syncResponseContext(body),
+  ...ondcNack({
+    type: "CORE-ERROR",
+    code: "63001",
+    message: "Internal error while processing callback; retry",
+  }),
+});

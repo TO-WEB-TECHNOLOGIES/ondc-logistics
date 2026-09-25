@@ -6,7 +6,12 @@ import {
   parseMinimalInitRequest,
   parseOnInitResponse,
 } from "../utils/init-validation.js";
-import { syncResponseContext } from "../utils/ondc-error-response.js";
+import {
+  ONDC_INTERNAL_ERROR_HTTP_STATUS,
+  ondcAck,
+  ondcInternalErrorNack,
+  syncResponseContext,
+} from "../utils/ondc-error-response.js";
 const validation = (error: InitValidationError) => ({
   path: error.path ?? "request",
   message: error.message,
@@ -210,21 +215,15 @@ export const createOnInitController =
             transactionId: callback.context.transaction_id,
             result,
           });
-          response.status(200).json({
-            ...syncResponseContext(request.body),
-            message: { ack: { status: "ACK" } },
-          });
+          response.status(200).json(ondcAck(request.body));
         })
         .catch((error) => {
           console.log("[on-init.controller] processing failed", {
             error: error instanceof Error ? error.message : error,
           });
-          response.status(500).json({
-            error: {
-              code: "ON_INIT_FAILED",
-              message: "Unable to process callback",
-            },
-          });
+          response
+            .status(ONDC_INTERNAL_ERROR_HTTP_STATUS)
+            .json(ondcInternalErrorNack(request.body));
         });
     } catch (error) {
       if (error instanceof InitValidationError) {
@@ -245,11 +244,8 @@ export const createOnInitController =
         return;
       }
       console.log("[on-init.controller] unexpected failure", error);
-      response.status(500).json({
-        error: {
-          code: "ON_INIT_FAILED",
-          message: "Unable to process callback",
-        },
-      });
+      response
+        .status(ONDC_INTERNAL_ERROR_HTTP_STATUS)
+        .json(ondcInternalErrorNack(request.body));
     }
   };
