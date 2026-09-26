@@ -1,11 +1,11 @@
 /**
  * search -> on_search -> init -> on_init -> confirm -> on_confirm -> update -> on_update
  *   -> on_status x2 -> track -> on_track -> on_status x2
- *   -> issue -> on_issue -> issue_status -> on_issue_status -> issue (info) -> issue (close)
+ *   -> issue -> on_issue -> on_issue_status (pushed) -> issue (close, no callback awaited)
  * Run: npm run flow:baseline-igm
  * Request bodies mirror postman/Ustart.postman_collection.json.
  */
-import { post, runFlow, runSearchInitConfirm, waitFor, waitForCount } from "./flow-kit.js";
+import { post, PUSH_WAIT_MS, runFlow, runSearchInitConfirm, waitFor, waitForCount } from "./flow-kit.js";
 
 void runFlow("ondc-baseline-igm", async () => {
   const { orderId, fulfillmentId: confirmedFulfillmentId } = await runSearchInitConfirm();
@@ -49,23 +49,13 @@ void runFlow("ondc-baseline-igm", async () => {
   await waitFor("16 on_issue", "issue_updated");
   const issueId: string = issue.issueId;
 
-  // 17. ISSUE_STATUS -> ON_ISSUE_STATUS
-  await post("17 issue_status", "/logistics/issue_status", { issue_id: issueId });
-  await waitFor("17 on_issue_status", "issue_status_updated");
+  // 17. ON_ISSUE_STATUS (pushed by workbench, no /issue_status of ours)
+  await waitFor("17 on_issue_status", "issue_status_updated", { timeoutMs: PUSH_WAIT_MS });
 
-  // 18. ISSUE (update) -> ON_ISSUE
+  // 18. ISSUE (close) — flow ends without waiting for the on_issue callback
   await post("18 issue", "/logistics/issue", {
     issue_id: issueId,
-    action_code: "INFO_PROVIDED",
+    action_code: "CLOSED",
     descriptor_long_desc: "Attached the invoice and photos as requested.",
   });
-  await waitFor("18 on_issue", "issue_updated");
-
-  // 19. ISSUE (close) -> ON_ISSUE
-  await post("19 issue", "/logistics/issue", {
-    issue_id: issueId,
-    action_code: "CLOSED",
-    descriptor_long_desc: "Issue resolved, closing the complaint.",
-  });
-  await waitFor("19 on_issue", "issue_updated");
 });

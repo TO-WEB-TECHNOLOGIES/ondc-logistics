@@ -736,9 +736,10 @@ export class DrizzleIssueRepository implements IssueRepository {
     return "processed";
   }
 
-  // /on_issue_status is always solicited — it's a direct reply to our
-  // /issue_status poll, correlated by (transaction_id, action, message_id)
-  // the same way track/update's /on_track|/on_update do.
+  // /on_issue_status is solicited-or-unsolicited: a reply to our
+  // /issue_status poll is correlated by (transaction_id, action, message_id)
+  // the same way track/update's /on_track|/on_update do; a status pushed
+  // without one is correlated by issue_id, like unsolicited /on_issue.
   async handleOnIssueStatus(
     response: OndcOnIssueStatusResponse,
     stream: CallbackStream = clientStreamManager,
@@ -766,36 +767,71 @@ export class DrizzleIssueRepository implements IssueRepository {
         ),
       )
       .limit(1);
-    if (!pending) {
-      console.log("[issue.repository] /on_issue_status has no matching /issue_status", {
-        transactionId: c.transaction_id,
-      });
-      return "not_found";
-    }
-    if (pending.callbackTimestamp) {
-      console.log("[issue.repository] duplicate /on_issue_status callback", {
-        transactionId: c.transaction_id,
-        messageId: c.message_id,
-      });
-      return "duplicate";
-    }
-    if (pending.bppId && c.bpp_id && pending.bppId !== c.bpp_id) {
-      console.log("[issue.repository] /on_issue_status bpp_id mismatch", {
-        transactionId: c.transaction_id,
-        expectedBppId: pending.bppId,
-        receivedBppId: c.bpp_id,
-      });
-      return "invalid_bpp";
+    if (pending) {
+      if (pending.callbackTimestamp) {
+        console.log("[issue.repository] duplicate /on_issue_status callback", {
+          transactionId: c.transaction_id,
+          messageId: c.message_id,
+        });
+        return "duplicate";
+      }
+      if (pending.bppId && c.bpp_id && pending.bppId !== c.bpp_id) {
+        console.log("[issue.repository] /on_issue_status bpp_id mismatch", {
+          transactionId: c.transaction_id,
+          expectedBppId: pending.bppId,
+          receivedBppId: c.bpp_id,
+        });
+        return "invalid_bpp";
+      }
     }
 
     const incomingIssueId = response.message?.issue?.id;
     const [issueRow] = incomingIssueId
       ? await this.database
-          .select({ id: issues.id })
+          .select({ id: issues.id, orderId: issues.orderId, bppId: issues.bppId })
           .from(issues)
           .where(eq(issues.issueId, incomingIssueId))
           .limit(1)
       : [];
+
+    if (!pending) {
+      if (!issueRow) {
+        console.log("[issue.repository] unsolicited /on_issue_status for unknown issue", {
+          transactionId: c.transaction_id,
+          incomingIssueId,
+        });
+        return "not_found";
+      }
+      if (issueRow.bppId && c.bpp_id && issueRow.bppId !== c.bpp_id) {
+        console.log("[issue.repository] /on_issue_status bpp_id mismatch (issue row)", {
+          transactionId: c.transaction_id,
+          expectedBppId: issueRow.bppId,
+          receivedBppId: c.bpp_id,
+        });
+        return "invalid_bpp";
+      }
+      // Unsolicited push — dedupe by an existing audit row for this exact
+      // (transaction_id, message_id, action); there is no pending row to match.
+      const [existingAudit] = await this.database
+        .select({ id: ondcTransactions.id })
+        .from(ondcTransactions)
+        .where(
+          and(
+            eq(ondcTransactions.transactionId, c.transaction_id),
+            eq(ondcTransactions.messageId, c.message_id),
+            eq(ondcTransactions.action, "issue_status"),
+          ),
+        )
+        .limit(1);
+      if (existingAudit) {
+        console.log("[issue.repository] duplicate unsolicited /on_issue_status callback", {
+          transactionId: c.transaction_id,
+          messageId: c.message_id,
+        });
+        return "duplicate";
+      }
+    }
+    const orderId = pending?.orderId ?? issueRow?.orderId;
 
     const incomingActions = response.message?.issue
       ? collectIncomingActions(response.message.issue)
@@ -840,43 +876,61 @@ export class DrizzleIssueRepository implements IssueRepository {
           .where(eq(issues.id, issueRow.id));
       }
 
-      await tx
-        .update(ondcTransactions)
-        .set({
+      if (pending) {
+        await tx
+          .update(ondcTransactions)
+          .set({
+            status: response.error ? "failed" : "completed",
+            callbackMessageId: c.message_id,
+            callbackTimestamp: new Date(c.timestamp),
+            bppId: c.bpp_id,
+            bppUri: c.bpp_uri,
+            errorCode: response.error?.code as string | undefined,
+            errorMessage: response.error?.message as string | undefined,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(ondcTransactions.transactionId, c.transaction_id),
+              eq(ondcTransactions.action, "issue_status"),
+              eq(ondcTransactions.messageId, c.message_id),
+            ),
+          );
+      } else {
+        await tx.insert(ondcTransactions).values({
+          transactionId: c.transaction_id,
+          messageId: c.message_id,
+          action: "issue_status",
+          orderId,
           status: response.error ? "failed" : "completed",
-          callbackMessageId: c.message_id,
-          callbackTimestamp: new Date(c.timestamp),
           bppId: c.bpp_id,
           bppUri: c.bpp_uri,
+          timestamp: new Date(c.timestamp),
+          callbackMessageId: c.message_id,
+          callbackTimestamp: new Date(c.timestamp),
           errorCode: response.error?.code as string | undefined,
           errorMessage: response.error?.message as string | undefined,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(ondcTransactions.transactionId, c.transaction_id),
-            eq(ondcTransactions.action, "issue_status"),
-            eq(ondcTransactions.messageId, c.message_id),
-          ),
-        );
+        });
+      }
     });
 
     console.log("[issue.repository] /on_issue_status persisted", {
       transactionId: c.transaction_id,
       issueId: incomingIssueId,
+      solicited: Boolean(pending),
       newActionCount: newActions.length,
     });
     if (response.error) {
       stream.push(c.transaction_id, "issue_status_error", {
         issueId: incomingIssueId,
-        orderId: pending.orderId,
+        orderId,
         code: response.error.code,
         message: response.error.message,
       });
     } else {
       stream.push(c.transaction_id, "issue_status_updated", {
         issueId: incomingIssueId,
-        orderId: pending.orderId,
+        orderId,
         newActionCount: newActions.length,
       });
     }
