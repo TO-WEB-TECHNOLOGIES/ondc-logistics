@@ -1,4 +1,10 @@
-﻿import type { Request, Response } from "express";
+﻿import {
+  ondcAck,
+  syncResponseContext,
+  ondcInternalErrorNack,
+  ONDC_INTERNAL_ERROR_HTTP_STATUS,
+} from "../utils/ondc-error-response.js";
+import type { Request, Response } from "express";
 import type { OnSearchService } from "../services/on-search.service.js";
 import {
   parseOnSearchResponse,
@@ -56,7 +62,7 @@ export const createOnSearchController =
       await onSearchService.handleCallback(callback, stream);
       console.log("[on-search.controller] /on_search ACK sent");
       stream.releaseAfterAck(response);
-      response.status(200).json({ message: { ack: { status: "ACK" } } });
+      response.status(200).json(ondcAck(request.body));
     } catch (error) {
       stream.discard();
       console.log(
@@ -65,6 +71,7 @@ export const createOnSearchController =
       );
       if (error instanceof SearchValidationError) {
         response.status(200).json({
+          ...syncResponseContext(request.body),
           message: { ack: { status: "NACK" } },
           error: {
             type: "JSON-SCHEMA-ERROR",
@@ -79,6 +86,7 @@ export const createOnSearchController =
         error.message === "search transaction not found"
       ) {
         response.status(200).json({
+          ...syncResponseContext(request.body),
           message: { ack: { status: "NACK" } },
           error: {
             type: "CONTEXT-ERROR",
@@ -88,11 +96,8 @@ export const createOnSearchController =
         });
         return;
       }
-      response.status(500).json({
-        error: {
-          code: "ON_SEARCH_FAILED",
-          message: "Unable to stage callback",
-        },
-      });
+      response
+        .status(ONDC_INTERNAL_ERROR_HTTP_STATUS)
+        .json(ondcInternalErrorNack(request.body));
     }
   };

@@ -1,3 +1,8 @@
+import { contextBaseFromProtocol } from "../utils/ondc-context.js";
+import {
+  resolveTransactionProtocol,
+  type TransactionContextLoader,
+} from "../repositories/transaction-context.js";
 import { randomUUID } from "node:crypto";
 import { buildCancelPayload } from "../mappers/cancel.mapper.js";
 import type { CancelRepository } from "../repositories/cancel.repository.js";
@@ -25,6 +30,7 @@ export class CancelService {
       transport: OndcTransport;
       repository: CancelRepository;
       protocol: CancelProtocol;
+      loadTransactionContext: TransactionContextLoader;
     },
   ) {}
 
@@ -46,18 +52,15 @@ export class CancelService {
     const transactionId = input.context?.transaction_id ?? row.transactionId;
     const messageId = input.context?.message_id ?? randomUUID();
     const now = new Date().toISOString();
-    const { protocol } = this.dependencies;
+    const protocol = await resolveTransactionProtocol(
+      this.dependencies.loadTransactionContext,
+      transactionId,
+      this.dependencies.protocol,
+    );
     const payload = buildCancelPayload({
       orderId: input.orderId,
       cancellationReasonId: input.cancellationReasonId,
-      context: {
-        domain: protocol.domain,
-        country: protocol.country,
-        city: protocol.city,
-        core_version: protocol.coreVersion,
-        bap_id: protocol.bapId,
-        bap_uri: protocol.bapUri,
-      },
+      context: contextBaseFromProtocol(protocol),
       bppId: row.bppId,
       bppUri: row.bppUri,
       transactionId,

@@ -8,6 +8,7 @@
  * payload). State-consistency validation (confirm request vs. initialized
  * transaction) stays in confirm.service.ts.
  */
+import { buildRequestContext } from "../utils/ondc-context.js";
 import type { OndcConfirmOrder, OndcConfirmRequest } from "../types/confirm/ondc.js";
 import type { ConfirmRequest } from "../types/confirm/internal.js";
 import type { OndcInitFulfillment, OndcInitOrder } from "../types/init/ondc.js";
@@ -275,13 +276,16 @@ export const buildConfirmPayload = ({
   now,
 }: BuildConfirmPayloadInput): OndcConfirmRequest => {
   const payload: OndcConfirmRequest = {
-    context: {
-      ...initContext,
-      action: "confirm",
-      transaction_id: transactionId,
-      message_id: messageId,
+    // Same base + LSP as the /init this confirms; new message_id.
+    context: buildRequestContext("confirm", {
+      base: initContext,
+      bppId: initContext.bpp_id,
+      bppUri: initContext.bpp_uri,
+      transactionId,
+      messageId,
       timestamp: now,
-    } as OndcConfirmRequest["context"],
+      ttl: initContext.ttl,
+    }) as OndcConfirmRequest["context"],
     message: { order },
   };
 

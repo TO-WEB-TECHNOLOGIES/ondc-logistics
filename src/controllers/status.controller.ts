@@ -1,6 +1,13 @@
 import type { Request, Response } from "express";
 import { StatusService } from "../services/status.service.js";
-import { ondcNack, ondcSubmissionFailure } from "../utils/ondc-error-response.js";
+import {
+  ondcNack,
+  ondcSubmissionFailure,
+  ondcAck,
+  syncResponseContext,
+  ondcInternalErrorNack,
+  ONDC_INTERNAL_ERROR_HTTP_STATUS,
+} from "../utils/ondc-error-response.js";
 import {
   StatusValidationError,
   parseOnStatusResponse,
@@ -174,25 +181,23 @@ export const createOnStatusController =
       // ONDC requires an immediate ACK; async processing continues above.
       // Events it emits are held until this ACK has been written.
       stream.releaseAfterAck(response);
-      response.status(200).json({ message: { ack: { status: "ACK" } } });
+      response.status(200).json(ondcAck(request.body));
     } catch (error) {
       if (error instanceof StatusValidationError) {
         console.log("[on-status.controller] validation failed", detail(error));
-        response.status(200).json(
-          ondcNack({
+        response.status(200).json({
+          ...syncResponseContext(request.body),
+          ...ondcNack({
             type: "JSON-SCHEMA-ERROR",
             code: "63002",
             message: error.message,
           }),
-        );
+        });
         return;
       }
       console.log("[on-status.controller] unexpected failure", error);
-      response.status(500).json({
-        error: {
-          code: "ON_STATUS_FAILED",
-          message: "Unable to process callback",
-        },
-      });
+      response
+        .status(ONDC_INTERNAL_ERROR_HTTP_STATUS)
+        .json(ondcInternalErrorNack(request.body));
     }
   };

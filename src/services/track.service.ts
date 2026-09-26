@@ -1,3 +1,8 @@
+import { contextBaseFromProtocol } from "../utils/ondc-context.js";
+import {
+  resolveTransactionProtocol,
+  type TransactionContextLoader,
+} from "../repositories/transaction-context.js";
 import { randomUUID } from "node:crypto";
 import { buildTrackPayload } from "../mappers/track.mapper.js";
 import type { TrackRepository } from "../repositories/track.repository.js";
@@ -25,6 +30,7 @@ export class TrackService {
       transport: OndcTransport;
       repository: TrackRepository;
       protocol: TrackProtocol;
+      loadTransactionContext: TransactionContextLoader;
     },
   ) {}
 
@@ -41,17 +47,14 @@ export class TrackService {
     const transactionId = input.context?.transaction_id ?? row.transactionId;
     const messageId = input.context?.message_id ?? randomUUID();
     const now = new Date().toISOString();
-    const { protocol } = this.dependencies;
+    const protocol = await resolveTransactionProtocol(
+      this.dependencies.loadTransactionContext,
+      transactionId,
+      this.dependencies.protocol,
+    );
     const payload = buildTrackPayload({
       orderId: input.orderId,
-      context: {
-        domain: protocol.domain,
-        country: protocol.country,
-        city: protocol.city,
-        core_version: protocol.coreVersion,
-        bap_id: protocol.bapId,
-        bap_uri: protocol.bapUri,
-      },
+      context: contextBaseFromProtocol(protocol),
       bppId: row.bppId,
       bppUri: row.bppUri,
       transactionId,

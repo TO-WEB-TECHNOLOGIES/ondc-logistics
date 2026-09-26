@@ -5,6 +5,7 @@
  * the request is minimal, same shape family as /status: just
  * `message: { order_id, cancellation_reason_id }`, no nested order object.
  */
+import { buildRequestContext } from "../utils/ondc-context.js";
 import type { OndcContext } from "../types/search/ondc.js";
 import type { OndcCancelRequest } from "../types/cancel/ondc.js";
 import type { CancellationReasonCode } from "../constants/cancellation-reason-codes.js";
@@ -33,15 +34,13 @@ export const buildCancelPayload = ({
   messageId,
   now,
 }: BuildCancelPayloadInput): OndcCancelRequest => ({
-  context: {
-    ...context,
-    action: "cancel",
-    bpp_id: bppId,
-    bpp_uri: bppUri,
-    transaction_id: transactionId,
-    message_id: messageId,
+  context: buildRequestContext("cancel", {
+    base: context,
+    bppId: bppId,
+    bppUri: bppUri,
+    transactionId: transactionId,
+    messageId: messageId,
     timestamp: now,
-    ttl: "PT30S",
-  },
+  }),
   message: { order_id: orderId, cancellation_reason_id: cancellationReasonId },
 });

@@ -49,16 +49,20 @@ import { searchSseManager } from "../utils/streams/search-sse.js";
 import { orderSseManager } from "../utils/streams/order-sse.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
 import { noApiLogMiddleware } from "../middlewares/no-api-log.middleware.js";
+import { ondcProtocol } from "../config/ondc-protocol.js";
+import { loadTransactionContext } from "../repositories/transaction-context.js";
+import { callbackContextMiddleware } from "../middlewares/callback-context.middleware.js";
 
-const protocol = {
-  domain: process.env.ONDC_DOMAIN ?? "nic2004:60232",
-  country: process.env.ONDC_COUNTRY ?? "IND",
-  city: process.env.ONDC_CITY ?? "std:080",
-  coreVersion: process.env.ONDC_CORE_VERSION ?? "1.2.0",
-  bapId: process.env.BAP_ID ?? process.env.SUBSCRIBER_ID ?? "",
-  bapUri: process.env.BAP_URI ?? "",
-  ttl: process.env.ONDC_TTL ?? "PT30S",
-};
+/** Expected context on core logistics callbacks (see utils/ondc-context.ts). */
+const callbackContext = (action: string) =>
+  callbackContextMiddleware({
+    action,
+    domain: ondcProtocol.domain,
+    coreVersion: ondcProtocol.coreVersion,
+    bapId: ondcProtocol.bapId || undefined,
+  });
+
+const protocol = ondcProtocol;
 
 const transport = new GatewayOndcTransport();
 const searchRepository = new DrizzleSearchRepository();
@@ -76,6 +80,7 @@ const initService = new InitService({
   transport,
   repository: new DrizzleInitRepository(),
   protocol: initProtocol,
+  loadTransactionContext,
 });
 const confirmService = new ConfirmService({
   transport,
@@ -85,24 +90,28 @@ const updateService = new UpdateService({
   transport,
   repository: new DrizzleUpdateRepository(),
   protocol,
+  loadTransactionContext,
 });
 const statusRepository = new DrizzleStatusRepository();
 const statusService = new StatusService({
   transport,
   repository: statusRepository,
   protocol,
+  loadTransactionContext,
 });
 const trackRepository = new DrizzleTrackRepository();
 const trackService = new TrackService({
   transport,
   repository: trackRepository,
   protocol,
+  loadTransactionContext,
 });
 const cancelRepository = new DrizzleCancelRepository();
 const cancelService = new CancelService({
   transport,
   repository: cancelRepository,
   protocol,
+  loadTransactionContext,
 });
 
 export const streamRouter = express.Router();
@@ -162,25 +171,25 @@ searchRouter.get("/search/:searchId/events", (request, response) => {
 });
 
 export const onSearchRouter = express.Router();
-onSearchRouter.post("/on_search", noApiLogMiddleware, createOnSearchController(onSearchService));
+onSearchRouter.post("/on_search", noApiLogMiddleware, callbackContext("on_search"), createOnSearchController(onSearchService));
 
 export const initRouter = express.Router();
 initRouter.post("/init", createInitController(initService));
 
 export const onInitRouter = express.Router();
-onInitRouter.post("/on_init", noApiLogMiddleware, createOnInitController(initService));
+onInitRouter.post("/on_init", noApiLogMiddleware, callbackContext("on_init"), createOnInitController(initService));
 
 export const confirmRouter = express.Router();
 confirmRouter.post("/confirm", createConfirmController(confirmService));
 
 export const onConfirmRouter = express.Router();
-onConfirmRouter.post("/on_confirm", noApiLogMiddleware, createOnConfirmController(confirmService));
+onConfirmRouter.post("/on_confirm", noApiLogMiddleware, callbackContext("on_confirm"), createOnConfirmController(confirmService));
 
 export const updateRouter = express.Router();
 updateRouter.post("/update", createUpdateController(updateService));
 
 export const onUpdateRouter = express.Router();
-onUpdateRouter.post("/on_update", noApiLogMiddleware, createOnUpdateController(updateService));
+onUpdateRouter.post("/on_update", noApiLogMiddleware, callbackContext("on_update"), createOnUpdateController(updateService));
 
 export const statusRouter = express.Router();
 statusRouter.post("/status", createStatusController(statusService));
@@ -211,7 +220,7 @@ statusRouter.get("/orders/:orderId/status/events", (request, response) => {
 });
 
 export const onStatusRouter = express.Router();
-onStatusRouter.post("/on_status", noApiLogMiddleware, createOnStatusController(statusService));
+onStatusRouter.post("/on_status", noApiLogMiddleware, callbackContext("on_status"), createOnStatusController(statusService));
 
 export const trackRouter = express.Router();
 trackRouter.post("/track", createTrackController(trackService));
@@ -222,10 +231,10 @@ trackRouter.get(
 );
 
 export const onTrackRouter = express.Router();
-onTrackRouter.post("/on_track", noApiLogMiddleware, createOnTrackController(trackService));
+onTrackRouter.post("/on_track", noApiLogMiddleware, callbackContext("on_track"), createOnTrackController(trackService));
 
 export const cancelRouter = express.Router();
 cancelRouter.post("/cancel", createCancelController(cancelService));
 
 export const onCancelRouter = express.Router();
-onCancelRouter.post("/on_cancel", noApiLogMiddleware, createOnCancelController(cancelService));
+onCancelRouter.post("/on_cancel", noApiLogMiddleware, callbackContext("on_cancel"), createOnCancelController(cancelService));

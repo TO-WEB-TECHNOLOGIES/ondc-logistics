@@ -1,3 +1,5 @@
+import { contextBaseFromProtocol } from "../utils/ondc-context.js";
+import type { TransactionContextLoader } from "../repositories/transaction-context.js";
 import { randomUUID } from "node:crypto";
 import { generateIssueId } from "../utils/order-id.js";
 import {
@@ -47,8 +49,23 @@ export class IssueService {
       transport: OndcTransport;
       repository: IssueRepository;
       protocol: IssueProtocol;
+      loadTransactionContext: TransactionContextLoader;
     },
   ) {}
+
+  /**
+   * IGM keeps its own configured domain/core_version; only city/country
+   * follow the order's transaction so they match what the LSP saw on /search.
+   */
+  private async transactionProtocol(transactionId: string) {
+    const { protocol, loadTransactionContext } = this.dependencies;
+    const stored = await loadTransactionContext(transactionId);
+    return {
+      ...protocol,
+      country: stored?.country || protocol.country,
+      city: stored?.city || protocol.city,
+    };
+  }
 
   async createIssue(input: CreateIssueInput): Promise<IssueSendResult> {
     console.log("[issue.service] createIssue invoked", {
@@ -71,7 +88,7 @@ export class IssueService {
     const messageId = input.context?.message_id ?? randomUUID();
     const issueId = generateIssueId();
     const now = new Date().toISOString();
-    const { protocol } = this.dependencies;
+    const protocol = await this.transactionProtocol(transactionId);
 
     const payload = buildIssuePayload({
       issueId,
@@ -82,14 +99,7 @@ export class IssueService {
       images: input.images,
       media: input.media,
       items: input.items,
-      context: {
-        domain: protocol.domain,
-        country: protocol.country,
-        city: protocol.city,
-        core_version: protocol.coreVersion,
-        bap_id: protocol.bapId,
-        bap_uri: protocol.bapUri,
-      },
+      context: contextBaseFromProtocol(protocol),
       bppId: row.bppId,
       bppUri: row.bppUri,
       providerId: row.providerId ?? undefined,
@@ -194,7 +204,7 @@ export class IssueService {
     const transactionId = input.context?.transaction_id ?? existing.transactionId;
     const messageId = input.context?.message_id ?? randomUUID();
     const now = new Date().toISOString();
-    const { protocol } = this.dependencies;
+    const protocol = await this.transactionProtocol(transactionId);
 
     const { payload, nextStatus, nextLevel, newAction, nextLongDesc } =
       buildIssueUpdatePayload({
@@ -203,14 +213,7 @@ export class IssueService {
         resolutionId: input.resolutionId,
         descriptorLongDesc: input.descriptorLongDesc,
         images: input.images,
-        context: {
-          domain: protocol.domain,
-          country: protocol.country,
-          city: protocol.city,
-          core_version: protocol.coreVersion,
-          bap_id: protocol.bapId,
-          bap_uri: protocol.bapUri,
-        },
+        context: contextBaseFromProtocol(protocol),
         transactionId,
         messageId,
         now,
@@ -276,18 +279,11 @@ export class IssueService {
     const transactionId = input.context?.transaction_id ?? existing.transactionId;
     const messageId = input.context?.message_id ?? randomUUID();
     const now = new Date().toISOString();
-    const { protocol } = this.dependencies;
+    const protocol = await this.transactionProtocol(transactionId);
 
     const payload = buildIssueStatusPayload({
       issueId: input.issueId,
-      context: {
-        domain: protocol.domain,
-        country: protocol.country,
-        city: protocol.city,
-        core_version: protocol.coreVersion,
-        bap_id: protocol.bapId,
-        bap_uri: protocol.bapUri,
-      },
+      context: contextBaseFromProtocol(protocol),
       bppId: existing.bppId,
       bppUri: existing.bppUri,
       transactionId,

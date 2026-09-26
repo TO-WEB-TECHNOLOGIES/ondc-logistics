@@ -56,7 +56,7 @@ export interface InitRepository {
   handleCallback(
     response: OndcOnInitResponse,
     stream?: CallbackStream,
-  ): Promise<"processed" | "duplicate" | "not_found">;
+  ): Promise<"processed" | "duplicate" | "not_found" | "invalid_bpp">;
 }
 
 export type Tx = Parameters<Parameters<typeof db1.transaction>[0]>[0];
@@ -668,20 +668,28 @@ export class DrizzleInitRepository implements InitRepository {
     stream: CallbackStream = clientStreamManager,
   ) {
     const c = response.context;
+    // /on_init is always solicited and echoes the /init's message_id, so match
+    // the exact (transaction_id, action, message_id) row — a transaction can
+    // hold several /init rows (one per re-init), and a late /on_init for an
+    // earlier one must not be applied to the latest.
     const [row] = await this.database
       .select({
         id: ondcTransactions.id,
         callbackMessageId: ondcTransactions.callbackMessageId,
+        bppId: ondcTransactions.bppId,
       })
       .from(ondcTransactions)
       .where(
         and(
           eq(ondcTransactions.transactionId, c.transaction_id),
           eq(ondcTransactions.action, "init"),
+          eq(ondcTransactions.messageId, c.message_id),
         ),
       )
       .limit(1);
     if (!row) return "not_found" as const;
+    if (row.bppId && c.bpp_id && row.bppId !== c.bpp_id)
+      return "invalid_bpp" as const;
     if (row.callbackMessageId === c.message_id) return "duplicate" as const;
 
     const personNames = await fetchSearchAddressNames(

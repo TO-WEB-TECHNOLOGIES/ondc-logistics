@@ -220,6 +220,23 @@ export const createOnInitController =
             });
             return;
           }
+          if (result === "invalid_bpp") {
+            stream.discard();
+            console.log("[on-init.controller] bpp_id mismatch", {
+              transactionId: callback.context.transaction_id,
+              bppId: callback.context.bpp_id,
+            });
+            response.status(200).json({
+              ...syncResponseContext(request.body),
+              message: { ack: { status: "NACK" } },
+              error: {
+                type: "CONTEXT-ERROR",
+                code: "63002",
+                message: "on_init bpp_id does not match init bpp_id",
+              },
+            });
+            return;
+          }
           console.log("[on-init.controller] /on_init acknowledged", {
             transactionId: callback.context.transaction_id,
             result,

@@ -1,6 +1,13 @@
 import type { Request, Response } from "express";
 import { IssueService } from "../services/issue.service.js";
-import { ondcNack, ondcSubmissionFailure } from "../utils/ondc-error-response.js";
+import {
+  ondcNack,
+  ondcSubmissionFailure,
+  ondcAck,
+  syncResponseContext,
+  ondcInternalErrorNack,
+  ONDC_INTERNAL_ERROR_HTTP_STATUS,
+} from "../utils/ondc-error-response.js";
 import {
   IssueValidationError,
   parseCheckIssueStatusRequest,
@@ -186,13 +193,14 @@ export const createOnIssueController =
 
       if (validated.length === 0 && firstError) {
         console.log("[on-issue.controller] all items failed validation", detail(firstError));
-        response.status(200).json(
-          ondcNack({
+        response.status(200).json({
+          ...syncResponseContext(request.body),
+          ...ondcNack({
             type: "JSON-SCHEMA-ERROR",
             code: "63002",
             message: firstError.message,
           }),
-        );
+        });
         return;
       }
 
@@ -225,12 +233,12 @@ export const createOnIssueController =
       // ONDC requires an immediate ACK; async processing continues above.
       // Events it emits are held until this ACK has been written.
       stream.releaseAfterAck(response);
-      response.status(200).json({ message: { ack: { status: "ACK" } } });
+      response.status(200).json(ondcAck(request.body));
     } catch (error) {
       console.log("[on-issue.controller] unexpected failure", error);
-      response.status(500).json({
-        error: { code: "ON_ISSUE_FAILED", message: "Unable to process callback" },
-      });
+      response
+        .status(ONDC_INTERNAL_ERROR_HTTP_STATUS)
+        .json(ondcInternalErrorNack(request.body));
     }
   };
 
@@ -371,13 +379,14 @@ export const createOnIssueStatusController =
           "[on-issue-status.controller] all items failed validation",
           detail(firstError),
         );
-        response.status(200).json(
-          ondcNack({
+        response.status(200).json({
+          ...syncResponseContext(request.body),
+          ...ondcNack({
             type: "JSON-SCHEMA-ERROR",
             code: "63002",
             message: firstError.message,
           }),
-        );
+        });
         return;
       }
 
@@ -408,14 +417,11 @@ export const createOnIssueStatusController =
       }
 
       stream.releaseAfterAck(response);
-      response.status(200).json({ message: { ack: { status: "ACK" } } });
+      response.status(200).json(ondcAck(request.body));
     } catch (error) {
       console.log("[on-issue-status.controller] unexpected failure", error);
-      response.status(500).json({
-        error: {
-          code: "ON_ISSUE_STATUS_FAILED",
-          message: "Unable to process callback",
-        },
-      });
+      response
+        .status(ONDC_INTERNAL_ERROR_HTTP_STATUS)
+        .json(ondcInternalErrorNack(request.body));
     }
   };

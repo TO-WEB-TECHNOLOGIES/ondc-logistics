@@ -4,6 +4,7 @@
  * Contract reference: docs/ondc/ondc logistics.docx, "/track" section —
  * same minimal shape as /status: `message: { order_id }`.
  */
+import { buildRequestContext } from "../utils/ondc-context.js";
 import type { OndcContext } from "../types/search/ondc.js";
 import type { OndcTrackRequest } from "../types/track/ondc.js";
 
@@ -29,15 +30,13 @@ export const buildTrackPayload = ({
   messageId,
   now,
 }: BuildTrackPayloadInput): OndcTrackRequest => ({
-  context: {
-    ...context,
-    action: "track",
-    bpp_id: bppId,
-    bpp_uri: bppUri,
-    transaction_id: transactionId,
-    message_id: messageId,
+  context: buildRequestContext("track", {
+    base: context,
+    bppId: bppId,
+    bppUri: bppUri,
+    transactionId: transactionId,
+    messageId: messageId,
     timestamp: now,
-    ttl: "PT30S",
-  },
+  }),
   message: { order_id: orderId },
 });

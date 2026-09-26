@@ -28,7 +28,7 @@ import { join } from "node:path";
 import { styleText } from "node:util";
 import 'dotenv/config';
 
-export const BASE_URL = process.env.BAP_URI?.trim() || "https://logistics-render.onrender.com";
+export const BASE_URL = process.env.BASE_URL?.trim() || "https://logistics-render.onrender.com";
 export const clientId = randomUUID();
 
 type DebugLevel = "off" | "on" | "full";

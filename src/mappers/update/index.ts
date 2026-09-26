@@ -7,6 +7,7 @@
  * per-field distinction lives entirely in our own UpdateType, which is
  * never sent to ONDC.
  */
+import { buildRequestContext } from "../../utils/ondc-context.js";
 import type { OndcContext, OndcTag } from "../../types/search/ondc.js";
 import type { UpdateRequest, UpdateType } from "../../types/update/internal.js";
 import type { OndcUpdateOrder, OndcUpdateRequest } from "../../types/update/ondc.js";
@@ -59,16 +60,14 @@ export const buildUpdatePayload = ({
   messageId,
   now,
 }: BuildUpdatePayloadInput): OndcUpdateRequest => ({
-  context: {
-    ...context,
-    action: "update",
-    bpp_id: bppId,
-    bpp_uri: bppUri,
-    transaction_id: transactionId,
-    message_id: messageId,
+  context: buildRequestContext("update", {
+    base: context,
+    bppId: bppId,
+    bppUri: bppUri,
+    transactionId: transactionId,
+    messageId: messageId,
     timestamp: now,
-    ttl: "PT30S",
-  },
+  }),
   message: {
     update_target: "fulfillment",
     order: { ...order, updated_at: now },

@@ -1,4 +1,8 @@
-﻿import type {
+﻿import {
+  buildRequestContext,
+  contextBaseFromProtocol,
+} from "../utils/ondc-context.js";
+import type {
   InitRequest,
   ResolvedInitSelection,
 } from "../types/init/internal.js";
@@ -85,21 +89,15 @@ export const mapInitRequestToOndc = (
   };
 
   return {
-    context: {
-      domain: protocol.domain,
-      country: protocol.country,
-      city: protocol.city,
-      action: "init",
-      core_version: protocol.coreVersion,
-      bap_id: protocol.bapId,
-      bap_uri: protocol.bapUri,
-      bpp_id: selected.bppId,
-      bpp_uri: selected.bppUri,
-      transaction_id: protocol.transactionId,
-      message_id: protocol.messageId,
+    context: buildRequestContext("init", {
+      base: contextBaseFromProtocol(protocol),
+      bppId: selected.bppId,
+      bppUri: selected.bppUri,
+      transactionId: protocol.transactionId,
+      messageId: protocol.messageId,
       timestamp: protocol.timestamp,
       ttl: protocol.ttl,
-    },
+    }),
 
     message: {
       order: {

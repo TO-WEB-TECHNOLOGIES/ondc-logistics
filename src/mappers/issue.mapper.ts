@@ -8,6 +8,7 @@
  * actions[] history + one newly appended action, mirroring how /on_issue
  * appends to that same array from the BPP side.
  */
+import { buildRequestContext } from "../utils/ondc-context.js";
 import { SUBSCRIBER_ID } from "../constants/v1/appConstants.js";
 import type { IssueCategory } from "../constants/issueCategories.js";
 import type { OndcContext } from "../types/search/ondc.js";
@@ -179,16 +180,14 @@ export const buildIssuePayload = (input: BuildIssuePayloadInput): OndcIssueReque
   };
 
   return {
-    context: {
-      ...input.context,
-      action: "issue",
-      bpp_id: input.bppId,
-      bpp_uri: input.bppUri,
-      transaction_id: input.transactionId,
-      message_id: input.messageId,
+    context: buildRequestContext("issue", {
+      base: input.context,
+      bppId: input.bppId,
+      bppUri: input.bppUri,
+      transactionId: input.transactionId,
+      messageId: input.messageId,
       timestamp: input.now,
-      ttl: "PT30S",
-    },
+    }),
     message: {
       issue: {
         id: input.issueId,
@@ -282,16 +281,14 @@ export const buildIssueUpdatePayload = (
   };
 
   const payload: OndcIssueRequest = {
-    context: {
-      ...input.context,
-      action: "issue",
-      bpp_id: existing.bppId ?? "",
-      bpp_uri: existing.bppUri ?? "",
-      transaction_id: input.transactionId,
-      message_id: input.messageId,
+    context: buildRequestContext("issue", {
+      base: input.context,
+      bppId: existing.bppId ?? "",
+      bppUri: existing.bppUri ?? "",
+      transactionId: input.transactionId,
+      messageId: input.messageId,
       timestamp: input.now,
-      ttl: "PT30S",
-    },
+    }),
     message: {
       issue: {
         id: existing.issueId,
@@ -341,15 +338,13 @@ export interface BuildIssueStatusPayloadInput {
 export const buildIssueStatusPayload = (
   input: BuildIssueStatusPayloadInput,
 ): OndcIssueStatusRequest => ({
-  context: {
-    ...input.context,
-    action: "issue_status",
-    bpp_id: input.bppId,
-    bpp_uri: input.bppUri,
-    transaction_id: input.transactionId,
-    message_id: input.messageId,
+  context: buildRequestContext("issue_status", {
+    base: input.context,
+    bppId: input.bppId,
+    bppUri: input.bppUri,
+    transactionId: input.transactionId,
+    messageId: input.messageId,
     timestamp: input.now,
-    ttl: "PT30S",
-  },
+  }),
   message: { issue_id: input.issueId },
 });

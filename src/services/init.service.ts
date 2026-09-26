@@ -10,6 +10,10 @@ import type {
 } from "../types/init/ondc.js";
 import type { OndcTransport } from "../utils/ondc-transport.js";
 import type { InitRepository } from "../repositories/init.repository.js";
+import {
+  resolveTransactionProtocol,
+  type TransactionContextLoader,
+} from "../repositories/transaction-context.js";
 import type { CallbackStream } from "../utils/streams/callback-stream.js";
 
 export class InitService {
@@ -18,6 +22,7 @@ export class InitService {
       transport: OndcTransport;
       repository: InitRepository;
       protocol: InitProtocolOptions;
+      loadTransactionContext: TransactionContextLoader;
     },
   ) {}
   async createInit(request: InitRequest): Promise<InitResponse> {
@@ -37,8 +42,14 @@ export class InitService {
       throw new Error("search option not found");
     }
     const transactionId = resolved.selection.searchTransactionId;
+    // Same city/domain/core_version the LSP saw on this transaction's /search.
+    const protocol = await resolveTransactionProtocol(
+      this.dependencies.loadTransactionContext,
+      transactionId,
+      this.dependencies.protocol,
+    );
     const payload = mapInitRequestToOndc(request, resolved.selection, {
-      ...this.dependencies.protocol,
+      ...protocol,
       transactionId,
       messageId: randomUUID(),
       timestamp: new Date().toISOString(),

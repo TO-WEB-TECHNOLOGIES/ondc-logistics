@@ -1,3 +1,7 @@
+import {
+  buildRequestContext,
+  contextBaseFromProtocol,
+} from "../utils/ondc-context.js";
 import type { SearchRequest } from "../types/search/internal.js";
 import type { OndcAddress, OndcSearchRequest } from "../types/search/ondc.js";
 export interface SearchProtocolOptions {
@@ -83,19 +87,14 @@ export const mapSearchRequestToOndc = (
           : decimalString(request.payment.collectionAmount),
     };
   return {
-    context: {
-      domain: options.domain,
-      country: options.country,
-      city: options.city,
-      action: "search",
-      core_version: options.coreVersion,
-      bap_id: options.bapId,
-      bap_uri: options.bapUri,
-      transaction_id: options.transactionId,
-      message_id: options.messageId,
+    // No bpp_id/bpp_uri: /search goes via the gateway to every LSP.
+    context: buildRequestContext("search", {
+      base: contextBaseFromProtocol(options),
+      transactionId: options.transactionId,
+      messageId: options.messageId,
       timestamp: options.timestamp,
       ttl: options.ttl,
-    },
+    }),
     message: { intent },
   };
 };

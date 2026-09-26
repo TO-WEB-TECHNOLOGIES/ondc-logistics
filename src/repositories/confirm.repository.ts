@@ -250,6 +250,7 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
         orderId: ondcTransactions.orderId,
         callbackMessageId: ondcTransactions.callbackMessageId,
         bppId: ondcTransactions.bppId,
+        messageId: ondcTransactions.messageId,
       })
       .from(ondcTransactions)
       .where(
@@ -274,6 +275,15 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
       });
       return "not_found";
     }
+    // Contract correlates /on_confirm to /confirm by order_id, and a 63002
+    // NACK makes the LSP cancel the order (reason 997) — so a message_id that
+    // doesn't echo our /confirm is logged, never NACKed.
+    if (row.messageId !== c.message_id)
+      console.log("[confirm.repository] /on_confirm message_id differs from /confirm", {
+        transactionId: c.transaction_id,
+        confirmMessageId: row.messageId,
+        callbackMessageId: c.message_id,
+      });
     console.log("[confirm.repository] /on_confirm matched confirm row", {
       transactionId: c.transaction_id,
       rowId: row.id,
