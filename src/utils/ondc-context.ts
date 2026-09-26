@@ -95,6 +95,8 @@ export interface CallbackContextExpectation {
   coreVersion?: string;
   /** Our own subscriber id — callbacks addressed to anyone else are rejected. */
   bapId?: string;
+  /** Accept a missing context.city (IGM callbacks); a present city is still format-checked. */
+  cityOptional?: boolean;
 }
 
 const COUNTRY = /^[A-Z]{3}$/;
@@ -150,7 +152,9 @@ export const validateCallbackContext = (
   requireEqual(c, "domain", expected.domain);
   if (!COUNTRY.test(requireString(c, "country")))
     throw new OndcContextError("context.country", "must be an ISO 3166-1 alpha-3 code");
-  if (!CITY.test(requireString(c, "city")))
+  const cityMissing =
+    c.city === undefined || (typeof c.city === "string" && c.city.trim() === "");
+  if (!(expected.cityOptional && cityMissing) && !CITY.test(requireString(c, "city")))
     throw new OndcContextError("context.city", 'must be "std:<STD code>" or "*"');
   requireEqual(c, "core_version", expected.coreVersion);
   requireEqual(c, "bap_id", expected.bapId);

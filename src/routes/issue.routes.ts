@@ -30,5 +30,5 @@ issueRouter.post("/issue_status", createIssueStatusController(issueService));
 
 // IGM callbacks carry their own domain/core_version, so only action + bap_id are pinned.
 export const onIssueRouter = express.Router();
-onIssueRouter.post("/on_issue", noApiLogMiddleware, callbackContextMiddleware({ action: "on_issue", bapId: ondcProtocol.bapId || undefined }), createOnIssueController(issueService));
-onIssueRouter.post("/on_issue_status", noApiLogMiddleware, callbackContextMiddleware({ action: "on_issue_status", bapId: ondcProtocol.bapId || undefined }), createOnIssueStatusController(issueService));
+onIssueRouter.post("/on_issue", noApiLogMiddleware, callbackContextMiddleware({ action: "on_issue", bapId: ondcProtocol.bapId || undefined, cityOptional: true }), createOnIssueController(issueService));
+onIssueRouter.post("/on_issue_status", noApiLogMiddleware, callbackContextMiddleware({ action: "on_issue_status", bapId: ondcProtocol.bapId || undefined, cityOptional: true }), createOnIssueStatusController(issueService));
