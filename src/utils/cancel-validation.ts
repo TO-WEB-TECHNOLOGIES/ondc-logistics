@@ -1,5 +1,6 @@
 import {
   getCancellationReason,
+  isCancellationReasonCode,
   isValidBnpCancellationReason,
 } from "../constants/cancellation-reason-codes.js";
 import type { CancelRequest } from "../types/cancel/internal.js";
@@ -33,12 +34,15 @@ export const parseCancelRequest = (value: unknown): CancelRequest => {
   const x = record(value, "request body");
   const orderId = str(x.orderId, "orderId");
   const cancellationReasonId = str(x.cancellationReasonId, "cancellationReasonId");
+  if (!isCancellationReasonCode(cancellationReasonId))
+    throw new CancelValidationError(
+      `unknown cancellation_reason_id '${cancellationReasonId}'`,
+      "cancellationReasonId",
+    );
   if (!isValidBnpCancellationReason(cancellationReasonId)) {
     const existing = getCancellationReason(cancellationReasonId);
     throw new CancelValidationError(
-      existing
-        ? `'${cancellationReasonId}' (${existing.reason}) is ${existing.whoCanUse}-only — not a reason this NP may send in /cancel`
-        : `unknown cancellation_reason_id '${cancellationReasonId}'`,
+      `'${cancellationReasonId}' (${existing?.reason}) is ${existing?.whoCanUse}-only — not a reason this NP may send in /cancel`,
       "cancellationReasonId",
     );
   }
@@ -65,7 +69,15 @@ export const validateCancelPayload = (value: OndcCancelRequest): void => {
   if (value.context.action !== "cancel")
     throw new CancelValidationError("must be cancel", "context.action");
   str(value.message?.order_id, "message.order_id");
-  str(value.message?.cancellation_reason_id, "message.cancellation_reason_id");
+  const reasonId = str(
+    value.message?.cancellation_reason_id,
+    "message.cancellation_reason_id",
+  );
+  if (!isValidBnpCancellationReason(reasonId))
+    throw new CancelValidationError(
+      `'${reasonId}' is not a cancellation reason this NP may send`,
+      "message.cancellation_reason_id",
+    );
 };
 
 const context = (v: unknown): Record<string, any> => {

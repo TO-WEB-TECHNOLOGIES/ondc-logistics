@@ -3,6 +3,7 @@
  * Run: npm run flow:cancellation
  */
 import { post, runFlow, runSearchInitConfirm, waitFor } from "./flow-kit.js";
+import { CancellationReasonCode } from "../constants/cancellation-reason-codes.js";
 
 void runFlow("ondc-buyer-cancellation", async () => {
   const { orderId, initTransactionId } = await runSearchInitConfirm();
@@ -10,7 +11,7 @@ void runFlow("ondc-buyer-cancellation", async () => {
   // 7-8. CANCEL -> ON_CANCEL
   await post("7 cancel", "/logistics/cancel", {
     orderId,
-    cancellationReasonId: "004",
+    cancellationReasonId: CancellationReasonCode.STORE_NOT_ACCEPTING_ORDER_LEGACY,
     context: { transaction_id: initTransactionId },
   });
   await waitFor("8 on_cancel", "order_cancelled");

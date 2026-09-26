@@ -7,10 +7,11 @@
  */
 import type { OndcContext } from "../types/search/ondc.js";
 import type { OndcCancelRequest } from "../types/cancel/ondc.js";
+import type { CancellationReasonCode } from "../constants/cancellation-reason-codes.js";
 
 export interface BuildCancelPayloadInput {
   orderId: string;
-  cancellationReasonId: string;
+  cancellationReasonId: CancellationReasonCode;
   context: Pick<
     OndcContext,
     "domain" | "country" | "city" | "core_version" | "bap_id" | "bap_uri"
