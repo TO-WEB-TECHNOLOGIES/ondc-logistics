@@ -26,3 +26,11 @@ export function indianNowISO(): string {
 export function utcNowISO(): string {
   return new Date().toISOString();
 }
+
+/**
+ * Formats a date as the contract's date-only form (e.g. "2023-06-06"), used
+ * for items[].time.timestamp. UTC, matching how the catalog date was stored.
+ */
+export function toContractDate(value: Date | string): string {
+  return (value instanceof Date ? value : new Date(value)).toISOString().slice(0, 10);
+}

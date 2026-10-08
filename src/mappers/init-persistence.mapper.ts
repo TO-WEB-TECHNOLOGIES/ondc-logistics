@@ -1,5 +1,6 @@
 import type { OndcTag } from "../types/search/ondc.js";
 import type { OndcInitFulfillment, OndcInitOrder } from "../types/init/ondc.js";
+import { toContractDate } from "../utils/indian-time.js";
 
 // ---------------------------------------------------------------------------
 // database records -> init aggregate -> ONDC /init|/on_init order object
@@ -695,7 +696,7 @@ export const buildOndcInitOrder = (fetched: FetchedInitOrder): OndcInitOrder => 
             time: {
               ...(item.timeLabel ? { label: item.timeLabel } : {}),
               ...(item.timeDuration ? { duration: item.timeDuration } : {}),
-              ...(item.timeTimestamp ? { timestamp: iso(item.timeTimestamp) } : {}),
+              ...(item.timeTimestamp ? { timestamp: toContractDate(item.timeTimestamp) } : {}),
             },
           }
         : {}),

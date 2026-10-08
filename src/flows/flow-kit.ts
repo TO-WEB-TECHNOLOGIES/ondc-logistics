@@ -512,8 +512,16 @@ export interface ConfirmedOrder {
   initTransactionId: string;
 }
 
+export interface SearchInitConfirmOptions {
+  /** Value of the /confirm fulfillment `state.ready_to_ship` tag (default "no"). */
+  readyToShip?: "yes" | "no";
+}
+
 /** Steps 1-6: SEARCH, ON_SEARCH, INIT, ON_INIT, CONFIRM, ON_CONFIRM. */
-export async function runSearchInitConfirm(): Promise<ConfirmedOrder> {
+export async function runSearchInitConfirm(
+  options: SearchInitConfirmOptions = {},
+): Promise<ConfirmedOrder> {
+  const readyToShip = options.readyToShip ?? "no";
   // Search starts a fresh transaction on every attempt, so one retry is safe.
   const search = await post(
     "1 search",
@@ -623,7 +631,7 @@ export async function runSearchInitConfirm(): Promise<ConfirmedOrder> {
           },
         },
         end: { instructions: { code: "3", short_desc: "654321", long_desc: "additional instructions for delivery" } },
-        tags: [{ code: "state", list: [{ code: "ready_to_ship", value: "yes" }] }],
+        tags: [{ code: "state", list: [{ code: "ready_to_ship", value: readyToShip }] }],
       },
     ],
     linkedOrder: {

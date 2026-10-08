@@ -8,6 +8,7 @@ import type {
 } from "../types/init/internal.js";
 import type { OndcInitRequest } from "../types/init/ondc.js";
 import type { SearchAddress } from "../types/search/internal.js";
+import { toContractDate } from "../utils/indian-time.js";
 
 export interface InitProtocolOptions {
   domain: string;
@@ -69,20 +70,27 @@ export const mapInitRequestToOndc = (
           },
         }
       : {}),
-    ...(selected.item.time ? { time: selected.item.time } : {}),
+    ...(selected.item.time
+      ? {
+          time: {
+            ...selected.item.time,
+            ...(selected.item.time.timestamp
+              ? { timestamp: toContractDate(selected.item.time.timestamp) }
+              : {}),
+          },
+        }
+      : {}),
   };
   const orderFulfillment = {
     id: f.id,
     type: f.type ?? "Delivery",
     start: {
       location: { gps: start.gps, address: address(start.address) },
-      authorization: { type: start.authorizationType },
       contact: request.pickupContact,
       ...(f.pickupDuration ? { time: { duration: f.pickupDuration } } : {}),
     },
     end: {
       location: { gps: end.gps, address: address(end.address) },
-      authorization: { type: end.authorizationType },
       contact: request.deliveryContact,
     },
     ...(f.tags?.length ? { tags: f.tags } : {}),
