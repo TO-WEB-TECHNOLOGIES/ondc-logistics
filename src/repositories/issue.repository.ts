@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db1 } from "../db/index.js";
 import {
   issueActions,
@@ -69,6 +69,66 @@ export interface FullIssue {
   actions: IssueActionRow[];
 }
 
+/**
+ * Frontend read model for GET /logistics/issues/:issueId — kept separate from
+ * FullIssue (which feeds outbound /issue payload construction) so the read
+ * side can expose resolution/actor columns without touching the wire path.
+ */
+export interface IssueDetails {
+  issueId: string;
+  orderId: string;
+  transactionId: string;
+  bppId?: string;
+  categoryCode: string;
+  descriptorCode: string;
+  status: string;
+  level: string;
+  shortDesc?: string;
+  longDesc?: string;
+  additionalDescUrl?: string;
+  expectedResponseDuration?: string;
+  expectedResolutionDuration?: string;
+  lastActionId?: string;
+  resolution?: {
+    actionTriggered?: string;
+    shortDesc?: string;
+    longDesc?: string;
+    refundAmount?: string;
+  };
+  refs: { refId: string; refType: string; quantityCount?: string }[];
+  actors: FullIssue["actors"];
+  actions: {
+    actionId: string;
+    side?: string;
+    cascadedLevel?: number;
+    code: string;
+    name?: string;
+    shortDesc?: string;
+    updatedAt: string;
+    actionBy?: string;
+    actorName?: string;
+    actorOrgName?: string;
+    actorPersonName?: string;
+    actorPhone?: string;
+    actorEmail?: string;
+    resolutionId?: string;
+  }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** One row of GET /logistics/orders/:orderId/issues. */
+export interface IssueSummary {
+  issueId: string;
+  categoryCode: string;
+  descriptorCode: string;
+  status: string;
+  level: string;
+  lastActionId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CreateIssueParams {
   payload: OndcIssueRequest;
   orderId: string;
@@ -89,6 +149,8 @@ export interface AppendIssueActionParams {
 export interface IssueRepository {
   loadOrder(orderId: string): Promise<LogisticsOrderRow | undefined>;
   findByIssueId(issueId: string): Promise<FullIssue | undefined>;
+  getIssueDetails(issueId: string): Promise<IssueDetails | undefined>;
+  listIssuesByOrder(orderId: string): Promise<IssueSummary[]>;
   createIssue(params: CreateIssueParams): Promise<{ created: boolean }>;
   appendIssueAction(params: AppendIssueActionParams): Promise<{ created: boolean }>;
   createIssueStatusCheck(
@@ -276,6 +338,107 @@ export class DrizzleIssueRepository implements IssueRepository {
         resolutionId: a.resolutionId ?? undefined,
       })),
     };
+  }
+
+  async getIssueDetails(issueId: string): Promise<IssueDetails | undefined> {
+    const [row] = await this.database
+      .select()
+      .from(issues)
+      .where(eq(issues.issueId, issueId))
+      .limit(1);
+    if (!row) return undefined;
+
+    const [refs, actors, actions] = await Promise.all([
+      this.database.select().from(issueRefs).where(eq(issueRefs.issueId, row.id)),
+      this.database.select().from(issueActors).where(eq(issueActors.issueId, row.id)),
+      this.database.select().from(issueActions).where(eq(issueActions.issueId, row.id)),
+    ]);
+
+    const hasResolution =
+      row.resolutionActionTriggered ||
+      row.resolutionShortDesc ||
+      row.resolutionLongDesc ||
+      row.resolutionRefundAmount;
+
+    return {
+      issueId: row.issueId,
+      orderId: row.orderId,
+      transactionId: row.transactionId,
+      bppId: row.bppId ?? undefined,
+      categoryCode: row.categoryCode,
+      descriptorCode: row.descriptorCode,
+      status: row.status,
+      level: row.level,
+      shortDesc: row.shortDesc ?? undefined,
+      longDesc: row.longDesc ?? undefined,
+      additionalDescUrl: row.additionalDescUrl ?? undefined,
+      expectedResponseDuration: row.expectedResponseDuration ?? undefined,
+      expectedResolutionDuration: row.expectedResolutionDuration ?? undefined,
+      lastActionId: row.lastActionId ?? undefined,
+      ...(hasResolution
+        ? {
+            resolution: {
+              actionTriggered: row.resolutionActionTriggered ?? undefined,
+              shortDesc: row.resolutionShortDesc ?? undefined,
+              longDesc: row.resolutionLongDesc ?? undefined,
+              refundAmount: row.resolutionRefundAmount ?? undefined,
+            },
+          }
+        : {}),
+      refs: refs.map((r) => ({
+        refId: r.refId,
+        refType: r.refType,
+        quantityCount: r.quantityCount ?? undefined,
+      })),
+      actors: actors.map((a) => ({
+        actorId: a.actorId,
+        actorType: a.actorType,
+        orgName: a.orgName ?? undefined,
+        personName: a.personName ?? undefined,
+        contactPhone: a.contactPhone ?? undefined,
+        contactEmail: a.contactEmail ?? undefined,
+      })),
+      // Timeline order: the action's own updated_at from the payload, falling
+      // back to insert time for rows that don't carry one.
+      actions: actions
+        .map((a) => ({
+          actionId: a.actionId,
+          side: a.side ?? undefined,
+          cascadedLevel: a.cascadedLevel ?? undefined,
+          code: a.descriptorCode,
+          name: a.descriptorName ?? undefined,
+          shortDesc: a.shortDesc ?? undefined,
+          updatedAt: (a.updatedAt ?? a.createdAt).toISOString(),
+          actionBy: a.actionBy ?? undefined,
+          actorName: a.actorDetailsName ?? undefined,
+          actorOrgName: a.actorOrgName ?? undefined,
+          actorPersonName: a.actorPersonName ?? undefined,
+          actorPhone: a.actorPhone ?? undefined,
+          actorEmail: a.actorEmail ?? undefined,
+          resolutionId: a.resolutionId ?? undefined,
+        }))
+        .sort((x, y) => x.updatedAt.localeCompare(y.updatedAt)),
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  async listIssuesByOrder(orderId: string): Promise<IssueSummary[]> {
+    const rows = await this.database
+      .select()
+      .from(issues)
+      .where(eq(issues.orderId, orderId))
+      .orderBy(desc(issues.createdAt));
+    return rows.map((row) => ({
+      issueId: row.issueId,
+      categoryCode: row.categoryCode,
+      descriptorCode: row.descriptorCode,
+      status: row.status,
+      level: row.level,
+      lastActionId: row.lastActionId ?? undefined,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    }));
   }
 
   async createIssue({ payload, orderId, categoryCode, initialAction }: CreateIssueParams) {

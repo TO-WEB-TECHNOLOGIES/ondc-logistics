@@ -1,7 +1,9 @@
 import express from "express";
 import {
   createIssueController,
+  createIssueDetailsController,
   createIssueStatusController,
+  createOrderIssuesController,
   createOnIssueController,
   createOnIssueStatusController,
 } from "../controllers/issue.controller.js";
@@ -27,6 +29,8 @@ const issueService = new IssueService({
 export const issueRouter = express.Router();
 issueRouter.post("/issue", createIssueController(issueService));
 issueRouter.post("/issue_status", createIssueStatusController(issueService));
+issueRouter.get("/issues/:issueId", createIssueDetailsController(issueRepository));
+issueRouter.get("/orders/:orderId/issues", createOrderIssuesController(issueRepository));
 
 // IGM callbacks carry their own domain/core_version, so only action + bap_id are pinned.
 export const onIssueRouter = express.Router();

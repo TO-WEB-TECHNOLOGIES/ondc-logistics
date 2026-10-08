@@ -18,6 +18,7 @@ import {
   toCallbackItems,
 } from "../schemas/issue.schema.js";
 import { createCallbackStream } from "../utils/streams/callback-stream.js";
+import type { IssueRepository } from "../repositories/issue.repository.js";
 
 const detail = (e: IssueValidationError) => ({
   path: e.path ?? "request",
@@ -423,5 +424,78 @@ export const createOnIssueStatusController =
       response
         .status(ONDC_INTERNAL_ERROR_HTTP_STATUS)
         .json(ondcInternalErrorNack(request.body));
+    }
+  };
+
+/**
+ * @swagger
+ * /logistics/issues/{issueId}:
+ *   get:
+ *     summary: Read a stored IGM issue (no ONDC call)
+ *     description: >
+ *       Reads the persisted issue — current status/level, latest resolution,
+ *       refs, actors and the full complainant/respondent action timeline
+ *       (oldest first). Updated as /on_issue and /on_issue_status callbacks
+ *       are processed.
+ *     tags: [Issue]
+ *     parameters:
+ *       - in: path
+ *         name: issueId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Issue details.
+ *       404:
+ *         description: Unknown issueId.
+ */
+export const createIssueDetailsController =
+  (repository: Pick<IssueRepository, "getIssueDetails">) =>
+  async (request: Request, response: Response): Promise<void> => {
+    try {
+      const issue = await repository.getIssueDetails(String(request.params.issueId));
+      if (!issue) {
+        response.status(404).json({
+          error: { code: "ISSUE_NOT_FOUND", message: "Issue not found" },
+        });
+        return;
+      }
+      response.status(200).json(issue);
+    } catch (error) {
+      console.error("[issue-details.controller] failed", error);
+      response.status(500).json({
+        error: { code: "ISSUE_DETAILS_FAILED", message: "Unable to load issue" },
+      });
+    }
+  };
+
+/**
+ * @swagger
+ * /logistics/orders/{orderId}/issues:
+ *   get:
+ *     summary: List stored IGM issues for an order (no ONDC call)
+ *     description: Newest first; an empty list when the order has no issues.
+ *     tags: [Issue]
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: "{ orderId, issues: [...] }"
+ */
+export const createOrderIssuesController =
+  (repository: Pick<IssueRepository, "listIssuesByOrder">) =>
+  async (request: Request, response: Response): Promise<void> => {
+    try {
+      const orderId = String(request.params.orderId);
+      const issues = await repository.listIssuesByOrder(orderId);
+      response.status(200).json({ orderId, issues });
+    } catch (error) {
+      console.error("[order-issues.controller] failed", error);
+      response.status(500).json({
+        error: { code: "ORDER_ISSUES_FAILED", message: "Unable to load issues" },
+      });
     }
   };
