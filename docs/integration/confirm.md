@@ -57,7 +57,7 @@ confirm-time details.
 | `fulfillments[].start.instructions` | no | Pickup instructions. `code: "2"` + `short_desc` = PCC (pickup confirmation code). |
 | `fulfillments[].end.instructions` | no | Delivery instructions. `code: "3"` + `short_desc` = DCC (delivery confirmation code). |
 | `fulfillments[].start.time` | no | Pickup slot, ONDC shape (`{ "range": { "start": "…", "end": "…" } }`). |
-| `fulfillments[].tags` | no | Replaces the stored fulfillment tags. Use `state.ready_to_ship` = `"no"` unless the package is already ready (then `"yes"`; that also requires `start.instructions.short_desc`). Mark it ready later with `/update` `READY_TO_SHIP`. |
+| `fulfillments[].tags` | no | Replaces the stored fulfillment tags. `state.ready_to_ship`: `"no"` if the package isn't ready yet; mark it ready later with `/update` `READY_TO_SHIP`. `"yes"` if it's ready now and no update will follow (requires `start.instructions.short_desc`). See [post-order.md](post-order.md#update). |
 | `fulfillments[]["@ondc/org/awb_no"]` | no | AWB number, if you already have one. |
 | `linkedOrder` | no (recommended) | The retail order this shipment carries. **Sent to the LSP as-is in ONDC shape** (`@ondc/org/linked_order`): snake_case keys exactly as above. |
 

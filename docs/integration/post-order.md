@@ -164,7 +164,7 @@ check), `updateType`.
 
 | `updateType` | Extra field | Use |
 |---|---|---|
-| `READY_TO_SHIP` | – | Package is ready; the LSP starts assigning a rider. |
+| `READY_TO_SHIP` | `linkedOrder?` (same fields as below; overrides the stored linked order) | Package is ready; the LSP starts assigning a rider. Sets `ready_to_ship = "yes"` and also sends the stored linked order and PCC. |
 | `START_INSTRUCTION` / `END_INSTRUCTION` | `instruction: { code, shortDesc?, longDesc?, images?[] }` | Change pickup / delivery instructions (PCC/DCC). |
 | `START_AUTHENTICATION` / `END_AUTHENTICATION` | `authorization: { token, type?="OTP", validFrom?, validTo? }` | Send the pickup / delivery OTP. Validity defaults to now → now+10 min. |
 | `LINKED_ORDER_DETAILS` | `linkedOrder: { retailOrderId?, productName?, quantityCount?, weight?, dimensions?, providerName? }` (at least one) | Partial update of the retail order details. |
@@ -173,6 +173,15 @@ check), `updateType`.
 { "orderId": "od260910a1b2c3d4", "fulfillmentId": "1", "updateType": "START_AUTHENTICATION",
   "authorization": { "token": "482913" } }
 ```
+
+```json
+{ "orderId": "od260910a1b2c3d4", "fulfillmentId": "1", "updateType": "READY_TO_SHIP" }
+```
+
+**Ready-to-ship pattern:** confirm with `state.ready_to_ship = "no"` if the package isn't packed
+yet, then send `READY_TO_SHIP` when it is. If it's already packed at checkout, confirm with
+`"yes"` and skip the update. Either way, `"yes"` needs the PCC
+(`start.instructions.short_desc`), sent at confirm or via `START_INSTRUCTION`.
 
 `202` → `{ "orderId", "transactionId", "messageId", "updateType", "status": "UPDATE_SENT" }`
 

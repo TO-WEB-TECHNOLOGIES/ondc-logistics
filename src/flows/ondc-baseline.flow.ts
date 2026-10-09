@@ -8,11 +8,12 @@ import { post, runFlow, runSearchInitConfirm, waitFor, waitForCount } from "./fl
 void runFlow("ondc-baseline", async () => {
   const { orderId, fulfillmentId } = await runSearchInitConfirm();
 
-  // 7-8. UPDATE -> ON_UPDATE
+  // 7-8. UPDATE -> ON_UPDATE — ready-to-ship notification: confirm sent
+  // ready_to_ship=no, this update flips it to yes and carries the linked order.
   await post("7 update", "/logistics/update", {
     orderId,
     fulfillmentId,
-    updateType: "LINKED_ORDER_DETAILS",
+    updateType: "READY_TO_SHIP",
     linkedOrder: {
       retailOrderId: "O1",
       productName: "Atta",

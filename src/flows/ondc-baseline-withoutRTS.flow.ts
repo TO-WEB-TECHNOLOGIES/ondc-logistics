@@ -6,6 +6,7 @@
 import { runFlow, runSearchInitConfirm, waitForCount } from "./flow-kit.js";
 
 void runFlow("ondc-baseline-withoutRTS", async () => {
-  await runSearchInitConfirm();
+  // No /update step in this flow, so the order is ready to ship at /confirm.
+  await runSearchInitConfirm({ readyToShip: "yes" });
   await waitForCount("7-10 on_status", "order_status", 4);
 });

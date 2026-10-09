@@ -139,7 +139,16 @@ retail order is ready to ship."* Produces
 and is persisted via the shared `tags`/`tag_values` tables
 (`tags.logistics_order_id`), not a column.
 
-No extra fields beyond the common ones:
+The payload also carries `@ondc/org/linked_order`, matching the contract's `/update` sample,
+which sends the ready-to-ship notification together with the linked order. It is built from
+the linked order stored at `/confirm` (or by a previous update). It is left out entirely if
+none is stored.
+
+`linkedOrder` is **optional** and takes the same fields as `LINKED_ORDER_DETAILS`. Send it only
+to change something at ready-to-ship time. Each supplied field overrides the stored value and
+is saved. An empty `linkedOrder: {}` is rejected; just omit the key.
+
+Minimal:
 
 ```json
 {
@@ -148,6 +157,21 @@ No extra fields beyond the common ones:
   "updateType": "READY_TO_SHIP"
 }
 ```
+
+With linked-order changes:
+
+```json
+{
+  "orderId": "od260910a1b2c3d4",
+  "fulfillmentId": "1",
+  "updateType": "READY_TO_SHIP",
+  "linkedOrder": { "productName": "Atta", "quantityCount": 2 }
+}
+```
+
+Use this after a `/confirm` that sent `ready_to_ship = "no"`. The `start.instructions`
+(PCC) stored at confirm are added automatically, because `"yes"` requires a non-empty
+`start.instructions.short_desc`. If confirm didn't send one, call `START_INSTRUCTION` first.
 
 ---
 

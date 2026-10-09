@@ -6,7 +6,8 @@
 import { PUSH_WAIT_MS, runFlow, runSearchInitConfirm, waitFor, waitForCount } from "./flow-kit.js";
 
 void runFlow("ondc-rto", async () => {
-  await runSearchInitConfirm();
+  // Same as baseline-without-RTS: ready to ship at /confirm (no /update step).
+  await runSearchInitConfirm({ readyToShip: "yes" });
   await waitForCount("7-9 on_status", "order_status", 3);
   await waitFor("10 on_cancel", "order_cancelled", { timeoutMs: PUSH_WAIT_MS }); // workbench-initiated
   await waitFor("11 on_status", "order_status");

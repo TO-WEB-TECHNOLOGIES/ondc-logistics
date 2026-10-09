@@ -29,20 +29,26 @@ interface UpdateRequestBase {
   context?: { transaction_id?: string; message_id?: string };
 }
 
+/**
+ * Flat, frontend-friendly linked-order input (@ondc/org/linked_order).
+ * Every field is optional; omitted fields fall back to the stored values.
+ */
+export interface LinkedOrderInput {
+  retailOrderId?: string;
+  productName?: string;
+  quantityCount?: number;
+  weight?: { unit: string; value: string | number };
+  dimensions?: {
+    length?: { unit: string; value: string | number };
+    breadth?: { unit: string; value: string | number };
+    height?: { unit: string; value: string | number };
+  };
+  providerName?: string;
+}
+
 export interface LinkedOrderDetailsUpdateRequest extends UpdateRequestBase {
   updateType: "LINKED_ORDER_DETAILS";
-  linkedOrder: {
-    retailOrderId?: string;
-    productName?: string;
-    quantityCount?: number;
-    weight?: { unit: string; value: string | number };
-    dimensions?: {
-      length?: { unit: string; value: string | number };
-      breadth?: { unit: string; value: string | number };
-      height?: { unit: string; value: string | number };
-    };
-    providerName?: string;
-  };
+  linkedOrder: LinkedOrderInput;
 }
 
 /** Covers both PCC (start) and DCC (end) instructions — same shape either side. */
@@ -71,6 +77,12 @@ export interface AuthenticationUpdateRequest extends UpdateRequestBase {
 /** Marks the fulfillment ready to ship (order.fulfillments[].tags state=ready_to_ship). */
 export interface ReadyToShipUpdateRequest extends UpdateRequestBase {
   updateType: "READY_TO_SHIP";
+  /**
+   * Optional linked-order changes sent with the ready-to-ship notification
+   * (the contract's /update sample carries both together). The stored linked
+   * order is echoed either way; supplied fields override it.
+   */
+  linkedOrder?: LinkedOrderInput;
 }
 
 export type UpdateRequest =

@@ -61,6 +61,37 @@ Confirm required fields. 7. Confirm enums. 8. Confirm state transitions.
 requirements. 11. Confirm signature requirements. 12. Confirm whether
 the proposed change affects the ONDC wire payload.
 
+## IGM (issue & grievance) contract
+
+IGM (`/issue` → `/on_issue`, `/issue_status` → `/on_issue_status`) is a
+separate contract from the logistics one. The version this project must
+implement is **IGM MVP v1.0.0**:
+`tasks/ONDC API Contract for IGM_MVP_v1.0.0 - Google Docs.pdf` (the doc is
+marked "deprecated" in favour of 2.0.0, but the ONDC reviewer explicitly
+requires 1.0.0 Scenario 1 — see the certification sheet
+`tasks/USTART (www.ustart.in) _ Buyer NP_ Logistics (B2C) - Google Sheets.pdf`).
+`tasks/` is gitignored — read the PDFs from there.
+
+Key 1.0.0 shape facts (do NOT mix with 2.0.0 — iteration 2 failed for exactly that):
+- `context.core_version` is `"1.0.0"`; domain / transaction_id are the order's.
+- `message.issue`: `id`, `category` (`ITEM` / `FULFILLMENT`), `sub_category`
+  (e.g. `ITM04`, `FLM04`), `complainant_info { person.name, contact.phone, contact.email }`,
+  `order_details { id, state, items[{id, quantity}], fulfillments[{id, state}], provider_id }`,
+  `description { short_desc, long_desc, additional_desc{url, content_type}, images: [url strings] }`,
+  `source { network_participant_id, type: CONSUMER|SELLER|INTERFACING-NP }`,
+  `expected_response_time`, `expected_resolution_time`, `status` (OPEN|CLOSED, owned by the
+  buyer app), `issue_type` (ISSUE|GRIEVANCE|DISPUTE),
+  `issue_actions.complainant_actions[]` (`complainant_action`: OPEN|ESCALATE|CLOSE,
+  `short_desc`, `updated_at`, `updated_by { org.name = "subscriber_id::domain", contact, person }`),
+  `created_at`, `updated_at`.
+- No `refs[]`, `actors[]`, `actions[]`, `descriptor`, `last_action_id`, `level`, or
+  `resolution_id` — those are 2.0.0.
+- LSP replies: `issue_actions.respondent_actions[]` (PROCESSING, RESOLVED, CASCADED, …), a single
+  `resolution { short_desc, long_desc, action_triggered, refund_amount }`, `resolution_provider`.
+- Close = complainant action `CLOSE` with `status: CLOSED` (+ optional `rating`
+  THUMBS-UP/THUMBS-DOWN); escalate = `ESCALATE` with `issue_type: GRIEVANCE`.
+- `/issue_status` message is `{ "issue_id": "…" }`.
+
 ## Important rule
 
 Application-domain models may differ from ONDC payloads.

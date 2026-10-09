@@ -97,6 +97,23 @@ from memory if the selected catalog object already contains
 authoritative values, - preserve IDs and selected relationships, -
 explicitly map only the fields required by the target API.
 
+## Workbench certification rules (reviewer feedback)
+
+Feedback from the ONDC reviewer's iteration sheet
+(`tasks/USTART (www.ustart.in) _ Buyer NP_ Logistics (B2C) - Google Sheets.pdf`), domain
+`nic2004:60232`, subscriber `uat.ustart.in`:
+
+- `/init`: no `fulfillments[].start|end.authorization`.
+- `/init`, `/confirm`: `items[].time.timestamp` is date-only (`2023-06-06`).
+- `fulfillments[].tags` `state.ready_to_ship` per flow:
+  | Flow (`src/flows/`) | `/confirm` | `/update` |
+  |---|---|---|
+  | Baseline | `no` | `yes` (the update is the ready-to-ship notification) |
+  | Baseline without RTS | `yes` | – (no update step) |
+  | RTO | `yes` (same as without-RTS) | – |
+  | Buyer-side cancellation | `no` (passed in iteration 2) | – |
+- IGM flow: IGM 1.0.0 only (see the ondc-api-contract skill's IGM section).
+
 ## Post-order
 
 State updates must be validated against the existing order and

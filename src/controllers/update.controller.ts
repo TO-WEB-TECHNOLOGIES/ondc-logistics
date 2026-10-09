@@ -94,6 +94,11 @@ const detail = (e: UpdateValidationError) => ({
  *                   orderId: { type: string, example: od260910a1b2c3d4 }
  *                   fulfillmentId: { type: string, example: "1" }
  *                   updateType: { type: string, enum: [READY_TO_SHIP] }
+ *                   linkedOrder:
+ *                     type: object
+ *                     description: >
+ *                       Optional — same fields as LINKED_ORDER_DETAILS. The stored linked
+ *                       order is always echoed; fields supplied here override it.
  *     responses:
  *       202:
  *         description: Update accepted and sent to the network.

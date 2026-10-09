@@ -40,29 +40,33 @@ const applyUpdate = async (
   const now = new Date();
   const fulfillment = order.fulfillments[0] as any;
 
+  const persistLinkedOrder = async () => {
+    const linked = order["@ondc/org/linked_order"] as any;
+    const item = linked?.items?.[0];
+    const retail = linked?.order;
+    await tx
+      .update(logisticsOrder)
+      .set({
+        linkedOrderRetailOrderId: retail?.id,
+        linkedOrderProductName: item?.descriptor?.name,
+        linkedOrderQuantityCount: item?.quantity?.count,
+        linkedOrderWeightUnit: retail?.weight?.unit,
+        linkedOrderWeightValue: numeric(retail?.weight?.value),
+        linkedOrderLengthUnit: retail?.dimensions?.length?.unit,
+        linkedOrderLengthValue: numeric(retail?.dimensions?.length?.value),
+        linkedOrderBreadthUnit: retail?.dimensions?.breadth?.unit,
+        linkedOrderBreadthValue: numeric(retail?.dimensions?.breadth?.value),
+        linkedOrderHeightUnit: retail?.dimensions?.height?.unit,
+        linkedOrderHeightValue: numeric(retail?.dimensions?.height?.value),
+        linkedOrderProviderName: linked?.provider?.descriptor?.name,
+        updatedAt: now,
+      })
+      .where(eq(logisticsOrder.orderId, orderId));
+  };
+
   switch (updateType) {
     case "LINKED_ORDER_DETAILS": {
-      const linked = order["@ondc/org/linked_order"] as any;
-      const item = linked?.items?.[0];
-      const retail = linked?.order;
-      await tx
-        .update(logisticsOrder)
-        .set({
-          linkedOrderRetailOrderId: retail?.id,
-          linkedOrderProductName: item?.descriptor?.name,
-          linkedOrderQuantityCount: item?.quantity?.count,
-          linkedOrderWeightUnit: retail?.weight?.unit,
-          linkedOrderWeightValue: numeric(retail?.weight?.value),
-          linkedOrderLengthUnit: retail?.dimensions?.length?.unit,
-          linkedOrderLengthValue: numeric(retail?.dimensions?.length?.value),
-          linkedOrderBreadthUnit: retail?.dimensions?.breadth?.unit,
-          linkedOrderBreadthValue: numeric(retail?.dimensions?.breadth?.value),
-          linkedOrderHeightUnit: retail?.dimensions?.height?.unit,
-          linkedOrderHeightValue: numeric(retail?.dimensions?.height?.value),
-          linkedOrderProviderName: linked?.provider?.descriptor?.name,
-          updatedAt: now,
-        })
-        .where(eq(logisticsOrder.orderId, orderId));
+      await persistLinkedOrder();
       return;
     }
     case "START_INSTRUCTION":
@@ -131,6 +135,12 @@ const applyUpdate = async (
       await tx
         .insert(tagValues)
         .values({ tagId: tagRow.id, code: "ready_to_ship", value: "yes" });
+      // The linked order echoed on this payload may carry caller overrides —
+      // persist it so the stored row matches what was sent.
+      if (order["@ondc/org/linked_order"]) {
+        await persistLinkedOrder();
+        return;
+      }
       await tx
         .update(logisticsOrder)
         .set({ updatedAt: now })

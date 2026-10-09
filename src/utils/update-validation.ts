@@ -169,7 +169,13 @@ export const parseUpdateRequest = (value: unknown): UpdateRequest => {
     case "END_AUTHENTICATION":
       return { ...base, updateType, authorization: checkAuthentication(x) };
     case "READY_TO_SHIP":
-      return { ...base, updateType } satisfies ReadyToShipUpdateRequest;
+      return {
+        ...base,
+        updateType,
+        ...(x.linkedOrder !== undefined
+          ? { linkedOrder: checkLinkedOrderDetails(x) }
+          : {}),
+      } satisfies ReadyToShipUpdateRequest;
   }
 };
 
