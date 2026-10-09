@@ -509,6 +509,8 @@ async function postOnce(step: string, path: string, body: unknown): Promise<{ js
 export interface ConfirmedOrder {
   orderId: string;
   fulfillmentId: string;
+  /** The confirmed order's item id (e.g. for IGM order_details.items). */
+  itemId: string;
   initTransactionId: string;
 }
 
@@ -656,6 +658,7 @@ export async function runSearchInitConfirm(
   return {
     orderId,
     fulfillmentId: confirmedFulfillmentId,
+    itemId: confirmed.item?.itemId ?? itemId,
     initTransactionId,
   };
 }

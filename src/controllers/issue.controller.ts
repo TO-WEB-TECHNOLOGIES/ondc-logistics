@@ -31,14 +31,15 @@ const detail = (e: IssueValidationError) => ({
  *   post:
  *     summary: Raise a new IGM complaint, or update an existing one
  *     description: >
- *       Body without `issue_id` raises a new complaint (order_id, category_code,
- *       descriptor_long_desc, items[] required — category_code is one of
- *       constants/issueCategories.ts's IssueCategoryCode). Body with `issue_id`
- *       updates an existing complaint (issue_id + action_code required;
- *       action_code one of RESOLUTION_ACCEPTED | RESOLUTION_REJECTED |
- *       INFO_PROVIDED | CLOSED | OPEN | ESCALATED). Backend resolves bpp
- *       routing/history from the persisted order/issue and sends /issue;
- *       the request is only durably settled once /on_issue confirms it.
+ *       IGM MVP v1.0.0. Body without `issue_id` raises a new complaint
+ *       (order_id, category_code, descriptor_long_desc required; items[] for
+ *       item categories; images[] (URL strings) for photo categories —
+ *       category_code is one of constants/issueCategories.ts's supported
+ *       IssueCategoryCode). Body with `issue_id` sends a complainant action:
+ *       action_code CLOSE (optional rating THUMBS-UP | THUMBS-DOWN) or
+ *       ESCALATE; optional short_desc. Backend resolves bpp routing/history
+ *       from the persisted order/issue and sends /issue; the request is only
+ *       durably settled once /on_issue confirms it.
  *     tags: [Issue]
  *     requestBody:
  *       required: true

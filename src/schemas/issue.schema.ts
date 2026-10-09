@@ -2,11 +2,12 @@
  * ONDC IGM (Issue & Grievance) — wire types, internal types, and validators
  * for /issue, /on_issue, /issue_status, /on_issue_status.
  *
- * Contract source: docs/ondc/ondc logistics.docx has no IGM section (only two
- * unrelated mentions of "IGM" in the changelog). Wire shapes here are taken
- * from src/json/{issue,on_issue,issue_status,on_issue_status}.json — see
- * CLAUDE.md's "contract is the source of truth" rule; this is the closest
- * available source of truth for this endpoint family.
+ * Contract source: IGM MVP v1.0.0 —
+ * tasks/ONDC API Contract for IGM_MVP_v1.0.0 - Google Docs.pdf (Scenario 1),
+ * the version the ONDC reviewer requires. Outbound /issue is built strictly in
+ * that shape (OndcIssueV1). Inbound /on_issue|/on_issue_status parsing stays
+ * tolerant of both the 1.0 shape (issue_actions/resolution) and the older flat
+ * sample shape in src/json/*.json (OndcIssueObject).
  */
 import { ISSUE_CATEGORIES, type IssueCategoryCode } from "../constants/issueCategories.js";
 import type { OndcContext } from "../types/search/ondc.js";
@@ -95,12 +96,24 @@ export interface OndcIssueResolution {
   long_desc?: string;
   refund_amount?: string;
 }
-/** Observed live but not deeply modeled/persisted yet — kept loose. */
+/**
+ * IGM 1.0.0 resolution_provider — mandatory from the respondent once its latest
+ * respondent_action is RESOLVED. Persisted as issue_actors rows +
+ * issues.resolution_support_chat_link (see issue.repository.ts).
+ */
 export interface OndcIssueResolutionProvider {
   respondent_info?: {
-    organization?: unknown;
-    resolution_support?: unknown;
-    type?: string;
+    type?: string; // INTERFACING-NP | TRANSACTION-COUNTERPARTY-NP | CASCADED-COUNTERPARTY-NP
+    organization?: OndcIssueActionUpdatedBy;
+    resolution_support?: {
+      chat_link?: string;
+      contact?: { phone?: string; email?: string };
+      gros?: {
+        person?: { name?: string };
+        contact?: { phone?: string; email?: string };
+        gro_type?: string;
+      }[];
+    };
   };
 }
 
@@ -128,9 +141,49 @@ export interface OndcIssueObject {
   resolution_provider?: OndcIssueResolutionProvider;
 }
 
+/**
+ * Outbound /issue — IGM MVP v1.0.0 shape only. Create (Scenario 1 step 1)
+ * carries every field; close (5a) / escalate (5b) carry only id, status,
+ * issue_type (escalate), issue_actions, rating (close), created_at, updated_at.
+ * Never add 2.0 attributes (refs/actors/descriptor/actions/level/...) here — the
+ * reviewer rejects mixed-version payloads.
+ */
+export type IssueRating = "THUMBS-UP" | "THUMBS-DOWN";
+export interface OndcIssueV1 {
+  id: string;
+  category?: "ITEM" | "FULFILLMENT" | "ORDER";
+  sub_category?: string;
+  complainant_info?: {
+    person: { name: string };
+    contact: { phone: string; email?: string };
+  };
+  order_details?: {
+    id: string;
+    state?: string;
+    items?: { id: string; quantity: number }[];
+    fulfillments?: { id: string; state?: string }[];
+    provider_id?: string;
+  };
+  description?: {
+    short_desc: string;
+    long_desc: string;
+    additional_desc?: { url: string; content_type: string };
+    images?: string[];
+  };
+  source?: { network_participant_id: string; type: "CONSUMER" | "SELLER" | "INTERFACING-NP" };
+  expected_response_time?: { duration: string };
+  expected_resolution_time?: { duration: string };
+  status: "OPEN" | "CLOSED";
+  issue_type?: "ISSUE" | "GRIEVANCE" | "DISPUTE";
+  issue_actions: { complainant_actions: OndcIssueActionEntry[] };
+  rating?: IssueRating;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface OndcIssueRequest {
   context: OndcContext & { action: "issue"; bpp_id: string; bpp_uri: string };
-  message: { issue: OndcIssueObject };
+  message: { issue: OndcIssueV1 };
 }
 
 export interface OndcOnIssueResponse {
@@ -167,28 +220,25 @@ export interface CreateIssueInput {
   categoryCode: IssueCategoryCode;
   descriptorLongDesc: string;
   descriptorAdditionalDescUrl?: string;
-  images?: { url: string; size_type?: string }[];
-  media?: { url: string }[];
+  /** Image URLs (IGM 1.0.0 description.images is an array of URL strings). */
+  images?: string[];
+  /** Required for ITEM categories, optional for FULFILLMENT. */
   items: { id: string; quantity: number }[];
   context?: { transaction_id?: string; message_id?: string };
 }
 
-export const ISSUE_UPDATE_ACTIONS = [
-  "RESOLUTION_ACCEPTED",
-  "RESOLUTION_REJECTED",
-  "INFO_PROVIDED",
-  "CLOSED",
-  "OPEN",
-  "ESCALATED",
-] as const;
+/** IGM 1.0.0 complainant actions the buyer can take after creating an issue. */
+export const ISSUE_UPDATE_ACTIONS = ["CLOSE", "ESCALATE"] as const;
 export type IssueUpdateActionCode = (typeof ISSUE_UPDATE_ACTIONS)[number];
+export const ISSUE_RATINGS: readonly IssueRating[] = ["THUMBS-UP", "THUMBS-DOWN"];
 
 export interface UpdateIssueInput {
   issueId: string;
   actionCode: IssueUpdateActionCode;
-  resolutionId?: string;
-  descriptorLongDesc?: string;
-  images?: { url: string; size_type?: string }[];
+  /** CLOSE only. */
+  rating?: IssueRating;
+  /** Overrides the default complainant action short_desc. */
+  shortDesc?: string;
   context?: { transaction_id?: string; message_id?: string };
 }
 
@@ -266,22 +316,15 @@ const parseOptionalContextOverride = (v: unknown) => {
   };
 };
 
-const parseImages = (v: unknown, p: string) => {
+// Image URLs as plain strings (the 1.0.0 wire shape). `{ url }` objects are
+// also accepted so older clients keep working; only the url is used.
+const parseImages = (v: unknown, p: string): string[] | undefined => {
   if (v === undefined) return undefined;
-  return arr(v, p).map((im, i) => {
-    const o = record(im, `${p}[${i}]`);
-    str(o.url, `${p}[${i}].url`);
-    return { url: o.url as string, ...(o.size_type ? { size_type: o.size_type } : {}) };
-  });
-};
-
-const parseMedia = (v: unknown, p: string) => {
-  if (v === undefined) return undefined;
-  return arr(v, p).map((m, i) => {
-    const o = record(m, `${p}[${i}]`);
-    str(o.url, `${p}[${i}].url`);
-    return { url: o.url as string };
-  });
+  return arr(v, p).map((im, i) =>
+    typeof im === "string"
+      ? str(im, `${p}[${i}]`)
+      : str(record(im, `${p}[${i}]`).url, `${p}[${i}].url`),
+  );
 };
 
 export const parseCreateIssueRequest = (value: unknown): CreateIssueInput => {
@@ -294,10 +337,17 @@ export const parseCreateIssueRequest = (value: unknown): CreateIssueInput => {
       `unknown category_code '${categoryCode}'`,
       "category_code",
     );
+  if (category.internalOnly || !category.subCategoryV1)
+    throw new IssueValidationError(
+      `category_code '${categoryCode}' is not supported in IGM 1.0.0 yet`,
+      "category_code",
+    );
   const descriptorLongDesc = str(x.descriptor_long_desc, "descriptor_long_desc");
 
-  const itemsArr = arr(x.items, "items");
-  if (itemsArr.length === 0)
+  // order_details.items is mandatory for ITEM complaints, optional otherwise.
+  const itemsArr =
+    x.items === undefined && category.igmCategory !== "ITEM" ? [] : arr(x.items, "items");
+  if (itemsArr.length === 0 && category.igmCategory === "ITEM")
     throw new IssueValidationError("must have at least one item", "items");
   const items = itemsArr.map((it, i) => {
     const o = record(it, `items[${i}]`);
@@ -316,7 +366,6 @@ export const parseCreateIssueRequest = (value: unknown): CreateIssueInput => {
       `images are required for category '${categoryCode}' (${category.shortDesc})`,
       "images",
     );
-  const media = parseMedia(x.media, "media");
 
   return {
     orderId,
@@ -331,7 +380,6 @@ export const parseCreateIssueRequest = (value: unknown): CreateIssueInput => {
         }
       : {}),
     ...(images ? { images } : {}),
-    ...(media ? { media } : {}),
     items,
     ...(x.context !== undefined
       ? { context: parseOptionalContextOverride(x.context) }
@@ -348,27 +396,25 @@ export const parseUpdateIssueRequest = (value: unknown): UpdateIssueInput => {
       `must be one of: ${ISSUE_UPDATE_ACTIONS.join(", ")}`,
       "action_code",
     );
-  if (
-    (actionCode === "RESOLUTION_ACCEPTED" || actionCode === "RESOLUTION_REJECTED") &&
-    !x.resolution_id
-  )
-    throw new IssueValidationError(
-      `resolution_id is required for ${actionCode}`,
-      "resolution_id",
-    );
-
-  const images = parseImages(x.images, "images");
+  let rating: IssueRating | undefined;
+  if (x.rating !== undefined) {
+    if (actionCode !== "CLOSE")
+      throw new IssueValidationError("is only allowed with action_code CLOSE", "rating");
+    rating = str(x.rating, "rating") as IssueRating;
+    if (!ISSUE_RATINGS.includes(rating))
+      throw new IssueValidationError(
+        `must be one of: ${ISSUE_RATINGS.join(", ")}`,
+        "rating",
+      );
+  }
 
   return {
     issueId,
     actionCode,
-    ...(x.resolution_id !== undefined
-      ? { resolutionId: str(x.resolution_id, "resolution_id") }
+    ...(rating ? { rating } : {}),
+    ...(x.short_desc !== undefined
+      ? { shortDesc: str(x.short_desc, "short_desc") }
       : {}),
-    ...(x.descriptor_long_desc !== undefined
-      ? { descriptorLongDesc: str(x.descriptor_long_desc, "descriptor_long_desc") }
-      : {}),
-    ...(images ? { images } : {}),
     ...(x.context !== undefined
       ? { context: parseOptionalContextOverride(x.context) }
       : {}),

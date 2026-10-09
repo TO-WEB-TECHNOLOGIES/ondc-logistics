@@ -9,9 +9,10 @@ import {
 } from "../db/schema/index.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
 import type { CallbackStream } from "../utils/streams/callback-stream.js";
-import { loadLogisticsOrder, type LogisticsOrderRow } from "./logistics-order-shared.js";
+import { loadLogisticsOrder, type LogisticsOrderRow, type Tx } from "./logistics-order-shared.js";
 import type {
   OndcIssueObject,
+  OndcIssueResolutionProvider,
   OndcIssueRequest,
   OndcIssueStatusRequest,
   OndcOnIssueResponse,
@@ -34,6 +35,12 @@ export interface IssueActionRow {
   actionBy: string;
   actorDetailsName?: string;
   resolutionId?: string;
+  /** "complainant" for actions we send (IGM 1.0.0 complainant_actions), "respondent" for the LSP's. */
+  side?: string;
+  actorOrgName?: string;
+  actorPersonName?: string;
+  actorPhone?: string;
+  actorEmail?: string;
 }
 
 export interface FullIssue {
@@ -57,6 +64,7 @@ export interface FullIssue {
   expectedResponseDuration?: string;
   expectedResolutionDuration?: string;
   lastActionId?: string;
+  createdAt: string;
   refs: { refId: string; refType: string; quantityCount?: string }[];
   actors: {
     actorId: string;
@@ -80,20 +88,31 @@ export interface IssueDetails {
   transactionId: string;
   bppId?: string;
   categoryCode: string;
-  descriptorCode: string;
+  /** IGM 1.0.0 sub_category, e.g. ITM04. */
+  subCategory: string;
+  /** Ours, the complainant's: OPEN | CLOSED. */
   status: string;
-  level: string;
+  /** ISSUE | GRIEVANCE | DISPUTE. */
+  issueType: string;
+  /** Latest respondent (LSP) action code, e.g. PROCESSING / RESOLVED. */
+  respondentStatus?: string;
+  rating?: string;
   shortDesc?: string;
   longDesc?: string;
   additionalDescUrl?: string;
   expectedResponseDuration?: string;
   expectedResolutionDuration?: string;
-  lastActionId?: string;
   resolution?: {
     actionTriggered?: string;
     shortDesc?: string;
     longDesc?: string;
     refundAmount?: string;
+  };
+  resolutionProvider?: {
+    type?: string;
+    organization?: { orgName?: string; personName?: string; phone?: string; email?: string };
+    support?: { chatLink?: string; phone?: string; email?: string };
+    gros: { groType?: string; personName?: string; phone?: string; email?: string }[];
   };
   refs: { refId: string; refType: string; quantityCount?: string }[];
   actors: FullIssue["actors"];
@@ -121,10 +140,9 @@ export interface IssueDetails {
 export interface IssueSummary {
   issueId: string;
   categoryCode: string;
-  descriptorCode: string;
+  subCategory: string;
   status: string;
-  level: string;
-  lastActionId?: string;
+  issueType: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -142,8 +160,8 @@ export interface AppendIssueActionParams {
   orderId: string;
   action: IssueActionRow;
   nextStatus: string;
-  nextLevel: string;
-  nextLongDesc?: string;
+  nextIssueType: string;
+  rating?: string;
 }
 
 export interface IssueRepository {
@@ -174,10 +192,69 @@ export interface IssueRepository {
   ): Promise<IssueCallbackResult>;
 }
 
-const refQuantityCount = (ref: { tags?: { descriptor: { code: string }; list: { descriptor: { code: string }; value: string }[] }[] }) =>
-  ref.tags
-    ?.find((t) => t.descriptor.code === "message.order.items")
-    ?.list.find((l) => l.descriptor.code === "quantity.selected.count")?.value;
+// issue_actors ids used for the IGM 1.0.0 resolution_provider (see
+// persistResolutionProvider). Excluded from IssueDetails.actors.
+const RESOLUTION_PROVIDER_ACTOR = "resolution-provider";
+const RESOLUTION_SUPPORT_ACTOR = "resolution-support";
+const GRO_ACTOR_PREFIX = "gro-";
+const isResolutionProviderActor = (actorId: string) =>
+  actorId === RESOLUTION_PROVIDER_ACTOR ||
+  actorId === RESOLUTION_SUPPORT_ACTOR ||
+  actorId.startsWith(GRO_ACTOR_PREFIX);
+
+/**
+ * Replaces this issue's resolution_provider rows (provider org, support contact,
+ * GROs) with the latest callback's — normalized issue_actors rows + the
+ * chat_link column, per this schema's no-JSONB convention.
+ */
+const persistResolutionProvider = async (
+  tx: Tx,
+  issueRowId: string,
+  rp: OndcIssueResolutionProvider | undefined,
+) => {
+  const info = rp?.respondent_info;
+  if (!info) return;
+  const existing = await tx
+    .select({ id: issueActors.id, actorId: issueActors.actorId })
+    .from(issueActors)
+    .where(eq(issueActors.issueId, issueRowId));
+  const stale = existing.filter((a) => isResolutionProviderActor(a.actorId));
+  for (const a of stale) await tx.delete(issueActors).where(eq(issueActors.id, a.id));
+
+  const support = info.resolution_support;
+  const rows = [
+    {
+      actorId: RESOLUTION_PROVIDER_ACTOR,
+      actorType: info.type ?? "RESOLUTION-PROVIDER",
+      orgName: info.organization?.org?.name,
+      personName: info.organization?.person?.name,
+      contactPhone: info.organization?.contact?.phone,
+      contactEmail: info.organization?.contact?.email,
+    },
+    ...(support?.contact
+      ? [
+          {
+            actorId: RESOLUTION_SUPPORT_ACTOR,
+            actorType: "RESOLUTION-SUPPORT",
+            contactPhone: support.contact.phone,
+            contactEmail: support.contact.email,
+          },
+        ]
+      : []),
+    ...(support?.gros ?? []).map((g, i) => ({
+      actorId: `${GRO_ACTOR_PREFIX}${i}`,
+      actorType: g.gro_type ?? "GRO",
+      personName: g.person?.name,
+      contactPhone: g.contact?.phone,
+      contactEmail: g.contact?.email,
+    })),
+  ];
+  await tx.insert(issueActors).values(rows.map((r) => ({ issueId: issueRowId, ...r })));
+  await tx
+    .update(issues)
+    .set({ resolutionSupportChatLink: support?.chat_link ?? null })
+    .where(eq(issues.id, issueRowId));
+};
 
 /** One action extracted from either observed callback shape — see issue_actions column comments in db/schema/issue.schema.ts. */
 interface IncomingAction {
@@ -314,6 +391,7 @@ export class DrizzleIssueRepository implements IssueRepository {
       expectedResponseDuration: row.expectedResponseDuration ?? undefined,
       expectedResolutionDuration: row.expectedResolutionDuration ?? undefined,
       lastActionId: row.lastActionId ?? undefined,
+      createdAt: row.createdAt.toISOString(),
       refs: refs.map((r) => ({
         refId: r.refId,
         refType: r.refType,
@@ -336,6 +414,11 @@ export class DrizzleIssueRepository implements IssueRepository {
         actionBy: a.actionBy ?? "",
         actorDetailsName: a.actorDetailsName ?? undefined,
         resolutionId: a.resolutionId ?? undefined,
+        side: a.side ?? undefined,
+        actorOrgName: a.actorOrgName ?? undefined,
+        actorPersonName: a.actorPersonName ?? undefined,
+        actorPhone: a.actorPhone ?? undefined,
+        actorEmail: a.actorEmail ?? undefined,
       })),
     };
   }
@@ -360,21 +443,67 @@ export class DrizzleIssueRepository implements IssueRepository {
       row.resolutionLongDesc ||
       row.resolutionRefundAmount;
 
+    const actorById = new Map(actors.map((a) => [a.actorId, a]));
+    const provider = actorById.get(RESOLUTION_PROVIDER_ACTOR);
+    const support = actorById.get(RESOLUTION_SUPPORT_ACTOR);
+    const gros = actors
+      .filter((a) => a.actorId.startsWith(GRO_ACTOR_PREFIX))
+      .sort((x, y) => x.actorId.localeCompare(y.actorId, undefined, { numeric: true }));
+    const respondentStatus = actions
+      .filter((a) => a.side === "respondent")
+      .sort((x, y) =>
+        (x.updatedAt ?? x.createdAt).getTime() - (y.updatedAt ?? y.createdAt).getTime(),
+      )
+      .at(-1)?.descriptorCode;
+
     return {
       issueId: row.issueId,
       orderId: row.orderId,
       transactionId: row.transactionId,
       bppId: row.bppId ?? undefined,
       categoryCode: row.categoryCode,
-      descriptorCode: row.descriptorCode,
+      subCategory: row.descriptorCode,
       status: row.status,
-      level: row.level,
+      issueType: row.level,
+      ...(respondentStatus ? { respondentStatus } : {}),
+      rating: row.rating ?? undefined,
       shortDesc: row.shortDesc ?? undefined,
       longDesc: row.longDesc ?? undefined,
       additionalDescUrl: row.additionalDescUrl ?? undefined,
       expectedResponseDuration: row.expectedResponseDuration ?? undefined,
       expectedResolutionDuration: row.expectedResolutionDuration ?? undefined,
-      lastActionId: row.lastActionId ?? undefined,
+      ...(provider || support || gros.length || row.resolutionSupportChatLink
+        ? {
+            resolutionProvider: {
+              type: provider?.actorType,
+              ...(provider
+                ? {
+                    organization: {
+                      orgName: provider.orgName ?? undefined,
+                      personName: provider.personName ?? undefined,
+                      phone: provider.contactPhone ?? undefined,
+                      email: provider.contactEmail ?? undefined,
+                    },
+                  }
+                : {}),
+              ...(support || row.resolutionSupportChatLink
+                ? {
+                    support: {
+                      chatLink: row.resolutionSupportChatLink ?? undefined,
+                      phone: support?.contactPhone ?? undefined,
+                      email: support?.contactEmail ?? undefined,
+                    },
+                  }
+                : {}),
+              gros: gros.map((g) => ({
+                groType: g.actorType,
+                personName: g.personName ?? undefined,
+                phone: g.contactPhone ?? undefined,
+                email: g.contactEmail ?? undefined,
+              })),
+            },
+          }
+        : {}),
       ...(hasResolution
         ? {
             resolution: {
@@ -390,14 +519,16 @@ export class DrizzleIssueRepository implements IssueRepository {
         refType: r.refType,
         quantityCount: r.quantityCount ?? undefined,
       })),
-      actors: actors.map((a) => ({
-        actorId: a.actorId,
-        actorType: a.actorType,
-        orgName: a.orgName ?? undefined,
-        personName: a.personName ?? undefined,
-        contactPhone: a.contactPhone ?? undefined,
-        contactEmail: a.contactEmail ?? undefined,
-      })),
+      actors: actors
+        .filter((a) => !isResolutionProviderActor(a.actorId))
+        .map((a) => ({
+          actorId: a.actorId,
+          actorType: a.actorType,
+          orgName: a.orgName ?? undefined,
+          personName: a.personName ?? undefined,
+          contactPhone: a.contactPhone ?? undefined,
+          contactEmail: a.contactEmail ?? undefined,
+        })),
       // Timeline order: the action's own updated_at from the payload, falling
       // back to insert time for rows that don't carry one.
       actions: actions
@@ -432,10 +563,9 @@ export class DrizzleIssueRepository implements IssueRepository {
     return rows.map((row) => ({
       issueId: row.issueId,
       categoryCode: row.categoryCode,
-      descriptorCode: row.descriptorCode,
+      subCategory: row.descriptorCode,
       status: row.status,
-      level: row.level,
-      lastActionId: row.lastActionId ?? undefined,
+      issueType: row.level,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     }));
@@ -457,15 +587,25 @@ export class DrizzleIssueRepository implements IssueRepository {
     if (existing.length > 0) return { created: false };
 
     const issue = payload.message.issue;
-    // This method only ever receives payloads WE built (buildIssuePayload,
-    // the flat outbound shape) — descriptor/status/level are always present
-    // there, unlike the more permissive inbound OndcIssueObject type shared
-    // with /on_issue|/on_issue_status.
-    if (!issue.descriptor || !issue.status || !issue.level)
-      throw new Error("outbound /issue payload is missing descriptor/status/level");
-    const descriptor = issue.descriptor;
-    const refs = issue.refs ?? [];
-    const actors = issue.actors ?? [];
+    // Only ever receives payloads WE built (buildIssuePayload, IGM 1.0.0 create)
+    // — sub_category/description/order_details/complainant_info are always set.
+    if (!issue.sub_category || !issue.description || !issue.order_details || !issue.complainant_info)
+      throw new Error("outbound /issue create payload is missing 1.0.0 fields");
+    const subCategory = issue.sub_category;
+    const description = issue.description;
+    const details = issue.order_details;
+    // order_details is kept as issue_refs so GET /logistics/issues/:id shows it.
+    const refs = [
+      { refId: details.id, refType: "ORDER" },
+      ...(details.provider_id ? [{ refId: details.provider_id, refType: "PROVIDER" }] : []),
+      ...(details.fulfillments ?? []).map((f) => ({ refId: f.id, refType: "FULFILLMENT" })),
+      ...(details.items ?? []).map((i) => ({
+        refId: i.id,
+        refType: "ITEM",
+        quantityCount: String(i.quantity),
+      })),
+    ];
+    const complainant = issue.complainant_info;
 
     console.log("[issue.repository] persisting /issue (create)", {
       issueId: issue.id,
@@ -484,53 +624,45 @@ export class DrizzleIssueRepository implements IssueRepository {
           bppId: payload.context.bpp_id,
           bppUri: payload.context.bpp_uri,
           categoryCode,
-          descriptorCode: descriptor.code,
+          descriptorCode: subCategory,
           status: issue.status,
-          level: issue.level,
-          shortDesc: descriptor.short_desc,
-          longDesc: descriptor.long_desc,
-          additionalDescUrl: descriptor.additional_desc?.url,
-          additionalDescContentType: descriptor.additional_desc?.content_type,
-          sourceId: issue.source_id,
-          complainantId: issue.complainant_id,
+          level: issue.issue_type ?? "ISSUE",
+          shortDesc: description.short_desc,
+          longDesc: description.long_desc,
+          additionalDescUrl: description.additional_desc?.url,
+          additionalDescContentType: description.additional_desc?.content_type,
+          sourceId: issue.source?.network_participant_id,
           expectedResponseDuration: issue.expected_response_time?.duration,
           expectedResolutionDuration: issue.expected_resolution_time?.duration,
-          lastActionId: issue.last_action_id,
+          lastActionId: initialAction.actionId,
         })
         .returning({ id: issues.id });
 
-      if (refs.length)
-        await tx.insert(issueRefs).values(
-          refs.map((r) => ({
-            issueId: row.id,
-            refId: r.ref_id,
-            refType: r.ref_type,
-            quantityCount: refQuantityCount(r),
-          })),
-        );
+      await tx
+        .insert(issueRefs)
+        .values(refs.map((r) => ({ issueId: row.id, ...r })));
 
-      if (actors.length)
-        await tx.insert(issueActors).values(
-          actors.map((a) => ({
-            issueId: row.id,
-            actorId: a.id,
-            actorType: a.type,
-            orgName: a.info?.org?.name,
-            personName: a.info?.person?.name,
-            contactPhone: a.info?.contact?.phone,
-            contactEmail: a.info?.contact?.email,
-          })),
-        );
+      await tx.insert(issueActors).values({
+        issueId: row.id,
+        actorId: "complainant",
+        actorType: "COMPLAINANT",
+        personName: complainant.person.name,
+        contactPhone: complainant.contact.phone,
+        contactEmail: complainant.contact.email,
+      });
 
       await tx.insert(issueActions).values({
         issueId: row.id,
         actionId: initialAction.actionId,
+        side: initialAction.side,
         descriptorCode: initialAction.descriptorCode,
-        descriptorName: initialAction.descriptorName,
         shortDesc: initialAction.shortDesc,
         updatedAt: new Date(initialAction.updatedAt),
         actionBy: initialAction.actionBy,
-        actorDetailsName: initialAction.actorDetailsName,
+        actorOrgName: initialAction.actorOrgName,
+        actorPersonName: initialAction.actorPersonName,
+        actorPhone: initialAction.actorPhone,
+        actorEmail: initialAction.actorEmail,
       });
 
       await tx.insert(ondcTransactions).values({
@@ -560,8 +692,8 @@ export class DrizzleIssueRepository implements IssueRepository {
     orderId,
     action,
     nextStatus,
-    nextLevel,
-    nextLongDesc,
+    nextIssueType,
+    rating,
   }: AppendIssueActionParams) {
     const existing = await this.database
       .select({ id: ondcTransactions.id })
@@ -589,22 +721,24 @@ export class DrizzleIssueRepository implements IssueRepository {
       await tx.insert(issueActions).values({
         issueId: issueRowId,
         actionId: action.actionId,
+        side: action.side,
         descriptorCode: action.descriptorCode,
-        descriptorName: action.descriptorName,
         shortDesc: action.shortDesc,
         updatedAt: new Date(action.updatedAt),
         actionBy: action.actionBy,
-        actorDetailsName: action.actorDetailsName,
-        resolutionId: action.resolutionId,
+        actorOrgName: action.actorOrgName,
+        actorPersonName: action.actorPersonName,
+        actorPhone: action.actorPhone,
+        actorEmail: action.actorEmail,
       });
 
       await tx
         .update(issues)
         .set({
           status: nextStatus,
-          level: nextLevel,
+          level: nextIssueType,
           lastActionId: action.actionId,
-          ...(nextLongDesc !== undefined ? { longDesc: nextLongDesc } : {}),
+          ...(rating !== undefined ? { rating } : {}),
           updatedAt: new Date(),
         })
         .where(eq(issues.id, issueRowId));
@@ -837,6 +971,11 @@ export class DrizzleIssueRepository implements IssueRepository {
           .update(issues)
           .set(buildIssuePatch(response.message.issue, { bppId: c.bpp_id, bppUri: c.bpp_uri }))
           .where(eq(issues.id, issueRow.id));
+        await persistResolutionProvider(
+          tx,
+          issueRow.id,
+          response.message.issue.resolution_provider,
+        );
       }
 
       if (pending) {
@@ -1037,6 +1176,11 @@ export class DrizzleIssueRepository implements IssueRepository {
           .update(issues)
           .set(buildIssuePatch(response.message.issue))
           .where(eq(issues.id, issueRow.id));
+        await persistResolutionProvider(
+          tx,
+          issueRow.id,
+          response.message.issue.resolution_provider,
+        );
       }
 
       if (pending) {

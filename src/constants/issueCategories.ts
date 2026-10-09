@@ -19,6 +19,12 @@
  *       — none of these descriptor code prefixes exist in the IGM 2.0 spec CSV.
  *     - CANCEL_NO_RESPONSE (CNR001) retained: used by force-cancel auto-escalation in
  *       cancel.controller.ts and is not a user-facing dropdown option.
+ *   2026-10-09 — IGM MVP v1.0.0 (required by the ONDC reviewer; see
+ *     tasks/ONDC API Contract for IGM_MVP_v1.0.0): added igmCategory + subCategoryV1.
+ *     ITM01–ITM05 and FLM04 are confirmed by the 1.0.0 contract (sample ITM04, image
+ *     footnote ITM02–ITM05 / FLM04). ITEM_WRONGLY_RETURNED and DELIVERY_DELAY have no
+ *     confirmed 1.0.0 code yet and are hidden from ISSUE_CATEGORY_OPTIONS.
+ *     descriptorCode (2.0 code) is kept for reference only — no longer sent.
  *   2026-05-26 — Full ITM001–ITM006 + FLM005 + ORD003 coverage per IGM 2.0 spec CSV:
  *     - ITEM_MISSING fixed: ITM006 → ITM001 (was "Incorrectly marked as returned")
  *     - WRONG_ITEM fixed:   ITM005 → ITM003 (was "Expired item")
@@ -49,6 +55,14 @@ export interface IssueCategory {
   categoryCode: IssueCategoryCode;
   /** ONDC protocol descriptor code — sent to BPP in /issue payload */
   descriptorCode: string;
+  /** IGM MVP v1.0.0 issue category sent on the wire (`message.issue.category`). */
+  igmCategory: "ITEM" | "FULFILLMENT" | "ORDER";
+  /**
+   * IGM MVP v1.0.0 sub-category sent on the wire (`message.issue.sub_category`).
+   * Undefined = no confirmed 1.0.0 code yet; creating such an issue is rejected
+   * (see parseCreateIssueRequest) until the 1.0 category sheet confirms one.
+   */
+  subCategoryV1?: string;
   /** Human-readable short description for frontend dropdown */
   shortDesc: string;
   /** Long description shown to user before submitting */
@@ -79,6 +93,8 @@ export const ISSUE_CATEGORIES: Record<IssueCategoryCode, IssueCategory> = {
 
   ITEM_MISSING: {
     categoryCode: "ITEM_MISSING",
+    igmCategory: "ITEM",
+    subCategoryV1: "ITM01",
     descriptorCode: "ITM001",
     shortDesc: "Missing items",
     longDesc:
@@ -89,6 +105,8 @@ export const ISSUE_CATEGORIES: Record<IssueCategoryCode, IssueCategory> = {
 
   ITEM_QUANTITY: {
     categoryCode: "ITEM_QUANTITY",
+    igmCategory: "ITEM",
+    subCategoryV1: "ITM02",
     descriptorCode: "ITM002",
     shortDesc: "Quantity issue",
     longDesc:
@@ -101,6 +119,8 @@ export const ISSUE_CATEGORIES: Record<IssueCategoryCode, IssueCategory> = {
 
   WRONG_ITEM: {
     categoryCode: "WRONG_ITEM",
+    igmCategory: "ITEM",
+    subCategoryV1: "ITM03",
     descriptorCode: "ITM003",
     shortDesc: "Item mismatch",
     longDesc:
@@ -113,6 +133,8 @@ export const ISSUE_CATEGORIES: Record<IssueCategoryCode, IssueCategory> = {
 
   ITEM_QUALITY: {
     categoryCode: "ITEM_QUALITY",
+    igmCategory: "ITEM",
+    subCategoryV1: "ITM04",
     descriptorCode: "ITM004",
     shortDesc: "Quality issue",
     longDesc:
@@ -125,6 +147,8 @@ export const ISSUE_CATEGORIES: Record<IssueCategoryCode, IssueCategory> = {
 
   ITEM_EXPIRED: {
     categoryCode: "ITEM_EXPIRED",
+    igmCategory: "ITEM",
+    subCategoryV1: "ITM05",
     descriptorCode: "ITM005",
     shortDesc: "Expired item",
     longDesc: "The product was delivered beyond its date of expiry.",
@@ -136,6 +160,7 @@ export const ISSUE_CATEGORIES: Record<IssueCategoryCode, IssueCategory> = {
 
   ITEM_WRONGLY_RETURNED: {
     categoryCode: "ITEM_WRONGLY_RETURNED",
+    igmCategory: "ITEM",
     descriptorCode: "ITM006",
     shortDesc: "Incorrectly marked as returned",
     longDesc:
@@ -148,6 +173,8 @@ export const ISSUE_CATEGORIES: Record<IssueCategoryCode, IssueCategory> = {
 
   PACKAGING_ISSUE: {
     categoryCode: "PACKAGING_ISSUE",
+    igmCategory: "FULFILLMENT",
+    subCategoryV1: "FLM04",
     descriptorCode: "FLM005",
     shortDesc: "Packaging issue",
     longDesc: "The order arrived with spillage or improper/damaged packaging.",
@@ -161,6 +188,7 @@ export const ISSUE_CATEGORIES: Record<IssueCategoryCode, IssueCategory> = {
 
   DELIVERY_DELAY: {
     categoryCode: "DELIVERY_DELAY",
+    igmCategory: "FULFILLMENT",
     descriptorCode: "ORD003",
     shortDesc: "Delayed delivery",
     longDesc: "The order was delivered later than the promised delivery time.",
@@ -172,6 +200,7 @@ export const ISSUE_CATEGORIES: Record<IssueCategoryCode, IssueCategory> = {
 
   CANCEL_NO_RESPONSE: {
     categoryCode: "CANCEL_NO_RESPONSE",
+    igmCategory: "ORDER",
     descriptorCode: "CNR001",
     shortDesc: "Seller not responding to cancellation",
     longDesc: "I requested cancellation but the seller is not responding.",
@@ -190,9 +219,10 @@ export function getDescriptorCode(categoryCode: IssueCategoryCode): string {
 }
 
 /**
- * Returns category options for the frontend dropdown (excludes internalOnly entries).
+ * Returns category options for the frontend dropdown (excludes internalOnly entries
+ * and categories with no IGM 1.0.0 sub-category yet).
  * Usage: ISSUE_CATEGORY_OPTIONS.map(opt => ({ value: opt.categoryCode, label: opt.shortDesc }))
  */
 export const ISSUE_CATEGORY_OPTIONS = Object.values(ISSUE_CATEGORIES).filter(
-  (c) => !c.internalOnly,
+  (c) => !c.internalOnly && c.subCategoryV1 !== undefined,
 );

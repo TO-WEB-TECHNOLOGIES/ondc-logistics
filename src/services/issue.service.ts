@@ -6,6 +6,7 @@ import {
   buildIssuePayload,
   buildIssueStatusPayload,
   buildIssueUpdatePayload,
+  complainantHistory,
 } from "../mappers/issue.mapper.js";
 import type { IssueRepository } from "../repositories/issue.repository.js";
 import type { OndcTransport } from "../utils/ondc-transport.js";
@@ -83,6 +84,12 @@ export class IssueService {
     const category = ISSUE_CATEGORIES[input.categoryCode];
     if (!category)
       throw new IssueValidationError("unknown category_code", "categoryCode");
+    const subCategoryV1 = category.subCategoryV1;
+    if (!subCategoryV1)
+      throw new IssueValidationError(
+        "category is not supported in IGM 1.0.0 yet",
+        "categoryCode",
+      );
 
     const transactionId = input.context?.transaction_id ?? row.transactionId;
     const messageId = input.context?.message_id ?? randomUUID();
@@ -90,20 +97,21 @@ export class IssueService {
     const now = new Date().toISOString();
     const protocol = await this.transactionProtocol(transactionId);
 
-    const payload = buildIssuePayload({
+    const { payload, initialAction } = buildIssuePayload({
       issueId,
       orderId: input.orderId,
-      category,
+      category: { ...category, subCategoryV1 },
       descriptorLongDesc: input.descriptorLongDesc,
       descriptorAdditionalDescUrl: input.descriptorAdditionalDescUrl,
       images: input.images,
-      media: input.media,
       items: input.items,
       context: contextBaseFromProtocol(protocol),
       bppId: row.bppId,
       bppUri: row.bppUri,
       providerId: row.providerId ?? undefined,
+      orderState: row.state ?? undefined,
       fulfillmentId: row.fulfillmentId ?? undefined,
+      fulfillmentState: row.fulfillmentStateCode ?? undefined,
       billingName: row.billingName ?? undefined,
       billingEmail: row.billingEmail ?? undefined,
       billingPhone: row.billingPhone ?? undefined,
@@ -112,22 +120,11 @@ export class IssueService {
       now,
     });
 
-    // buildIssuePayload always populates a single initial "OPEN" action.
-    const initialAction = payload.message.issue.actions?.[0];
-    if (!initialAction) throw new IssueValidationError("failed to build initial action");
     const { created } = await this.dependencies.repository.createIssue({
       payload,
       orderId: input.orderId,
       categoryCode: input.categoryCode,
-      initialAction: {
-        actionId: initialAction.id,
-        descriptorCode: initialAction.descriptor.code,
-        descriptorName: initialAction.descriptor.name,
-        shortDesc: initialAction.descriptor.short_desc,
-        updatedAt: initialAction.updated_at,
-        actionBy: initialAction.action_by,
-        actorDetailsName: initialAction.actor_details?.name,
-      },
+      initialAction,
     });
 
     if (!created) {
@@ -178,25 +175,30 @@ export class IssueService {
         "issueId",
       );
 
-    if (input.actionCode === "ESCALATED") {
+    if (existing.status === "CLOSED")
+      throw new IssueValidationError("issue is already closed", "issueId");
+    // Issues raised before the IGM 1.0.0 switch have no complainant-side
+    // history to resend in issue_actions.complainant_actions.
+    if (complainantHistory(existing).length === 0)
+      throw new IssueValidationError(
+        "issue was created with an older IGM format and cannot be updated",
+        "issueId",
+      );
+
+    // CLOSE is allowed at any time (the contract lets the complainant close
+    // without a RESOLVED action). ESCALATE follows a respondent resolution.
+    if (input.actionCode === "ESCALATE") {
       if (existing.level !== "ISSUE")
         throw new IssueValidationError(
           "issue is already at GRIEVANCE level or higher",
           "actionCode",
         );
-      if (existing.status === "CLOSED")
-        throw new IssueValidationError(
-          "a closed issue cannot be escalated",
-          "actionCode",
-        );
-      const hasResolvedOrAccepted = existing.actions.some(
-        (a) =>
-          a.descriptorCode === "RESOLVED" ||
-          a.descriptorCode === "RESOLUTION_ACCEPTED",
+      const resolved = existing.actions.some(
+        (a) => a.side === "respondent" && a.descriptorCode === "RESOLVED",
       );
-      if (!hasResolvedOrAccepted)
+      if (!resolved)
         throw new IssueValidationError(
-          "escalation is only allowed after a resolution has been proposed and accepted",
+          "escalation is only allowed after the respondent has resolved the issue",
           "actionCode",
         );
     }
@@ -206,13 +208,12 @@ export class IssueService {
     const now = new Date().toISOString();
     const protocol = await this.transactionProtocol(transactionId);
 
-    const { payload, nextStatus, nextLevel, newAction, nextLongDesc } =
+    const { payload, nextStatus, nextIssueType, newAction } =
       buildIssueUpdatePayload({
         existing,
         actionCode: input.actionCode,
-        resolutionId: input.resolutionId,
-        descriptorLongDesc: input.descriptorLongDesc,
-        images: input.images,
+        rating: input.rating,
+        shortDesc: input.shortDesc,
         context: contextBaseFromProtocol(protocol),
         transactionId,
         messageId,
@@ -225,8 +226,8 @@ export class IssueService {
       orderId: existing.orderId,
       action: newAction,
       nextStatus,
-      nextLevel,
-      nextLongDesc,
+      nextIssueType,
+      rating: input.rating,
     });
 
     if (!created) {

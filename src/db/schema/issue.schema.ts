@@ -32,9 +32,9 @@ export const issues = pgTable(
     bppId: varchar("bpp_id"),
     bppUri: varchar("bpp_uri"),
     categoryCode: varchar("category_code").notNull(), // BAP IssueCategoryCode (constants/issueCategories.ts)
-    descriptorCode: varchar("descriptor_code").notNull(), // ONDC descriptor code (e.g. ITM004)
-    status: varchar("status").notNull().default("OPEN"), // OPEN | PROCESSING | RESOLVED | CLOSED
-    level: varchar("level").notNull().default("ISSUE"), // ISSUE | GRIEVANCE | DISPUTE
+    descriptorCode: varchar("descriptor_code").notNull(), // ONDC sub_category (IGM 1.0.0, e.g. ITM04; older rows: 2.0 code e.g. ITM004)
+    status: varchar("status").notNull().default("OPEN"), // IGM 1.0.0: OPEN | CLOSED (owned by us, the complainant)
+    level: varchar("level").notNull().default("ISSUE"), // IGM 1.0.0 issue_type: ISSUE | GRIEVANCE | DISPUTE
     shortDesc: varchar("short_desc"),
     longDesc: varchar("long_desc"),
     additionalDescUrl: varchar("additional_desc_url"),
@@ -58,6 +58,12 @@ export const issues = pgTable(
       precision: 18,
       scale: 2,
     }),
+    // IGM 1.0.0 resolution_provider.respondent_info.resolution_support.chat_link.
+    // The provider org, support contact and GROs are issue_actors rows
+    // (actor ids "resolution-provider" / "resolution-support" / "gro-<n>").
+    resolutionSupportChatLink: varchar("resolution_support_chat_link"),
+    // IGM 1.0.0 rating sent with the complainant's CLOSE action (THUMBS-UP | THUMBS-DOWN).
+    rating: varchar("rating"),
     createdAt: timestampWithTimezone("created_at").defaultNow().notNull(),
     updatedAt: timestampWithTimezone("updated_at").defaultNow().notNull(),
   },

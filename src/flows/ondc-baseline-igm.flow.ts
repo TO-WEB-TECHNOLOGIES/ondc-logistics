@@ -2,13 +2,14 @@
  * search -> on_search -> init -> on_init -> confirm -> on_confirm -> update -> on_update
  *   -> on_status x2 -> track -> on_track -> on_status x2
  *   -> issue -> on_issue -> on_issue_status (pushed) -> issue (close, no callback awaited)
+ * IGM payloads follow IGM MVP v1.0.0 Scenario 1 (item complaint, ITM04).
  * Run: npm run flow:baseline-igm
  * Request bodies mirror postman/Ustart.postman_collection.json.
  */
 import { post, PUSH_WAIT_MS, runFlow, runSearchInitConfirm, waitFor, waitForCount } from "./flow-kit.js";
 
 void runFlow("ondc-baseline-igm", async () => {
-  const { orderId, fulfillmentId: confirmedFulfillmentId } = await runSearchInitConfirm();
+  const { orderId, fulfillmentId: confirmedFulfillmentId, itemId } = await runSearchInitConfirm();
 
   // 7-8. UPDATE -> ON_UPDATE
   await post("7 update", "/logistics/update", {
@@ -42,9 +43,8 @@ void runFlow("ondc-baseline-igm", async () => {
     category_code: "ITEM_QUALITY",
     descriptor_long_desc: "The biryani was cold and salty.",
     descriptor_additional_desc_url: "https://buyerapp.com/additional-details/desc.txt",
-    images: [{ url: "https://buyerapp.com/images/img1.png", size_type: "xs" }],
-    media: [{ url: "https://buyerapp.com/media/video1.mp4" }],
-    items: [{ id: "I1", quantity: 2 }],
+    images: ["https://buyerapp.com/images/img1.png"],
+    items: [{ id: itemId, quantity: 1 }],
   });
   await waitFor("16 on_issue", "issue_updated");
   const issueId: string = issue.issueId;
@@ -52,10 +52,10 @@ void runFlow("ondc-baseline-igm", async () => {
   // 17. ON_ISSUE_STATUS (pushed by workbench, no /issue_status of ours)
   await waitFor("17 on_issue_status", "issue_status_updated", { timeoutMs: PUSH_WAIT_MS });
 
-  // 18. ISSUE (close) — flow ends without waiting for the on_issue callback
+  // 18. ISSUE (close, Scenario 1 step 5a) — flow ends without waiting for the on_issue callback
   await post("18 issue", "/logistics/issue", {
     issue_id: issueId,
-    action_code: "CLOSED",
-    descriptor_long_desc: "Attached the invoice and photos as requested.",
+    action_code: "CLOSE",
+    rating: "THUMBS-UP",
   });
 });

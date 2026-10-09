@@ -1,12 +1,14 @@
 /**
- * Mapper for /issue, /issue_status.
+ * Mapper for /issue, /issue_status — IGM MVP v1.0.0.
  *
- * Contract reference: no IGM section exists in docs/ondc/ondc logistics.docx —
- * shape is taken from src/json/{issue,issue_status}.json (see issue.schema.ts's
- * header comment). The /issue UPDATE shape (buildIssueUpdatePayload) has no
- * local sample at all; it resends the full issue object with the complete
- * actions[] history + one newly appended action, mirroring how /on_issue
- * appends to that same array from the BPP side.
+ * Contract reference: tasks/ONDC API Contract for IGM_MVP_v1.0.0 - Google Docs.pdf,
+ * Scenario 1 (complaint related to an item):
+ *   1.  /issue create                     → buildIssuePayload
+ *   3.  /issue_status                     → buildIssueStatusPayload
+ *   5a. /issue close (CLOSE + rating)     → buildIssueUpdatePayload
+ *   5b. /issue escalate (ESCALATE)        → buildIssueUpdatePayload
+ * Only 1.0.0 attributes are emitted — the ONDC reviewer rejected payloads that
+ * mixed 1.0.0 and 2.0.0 (refs/actors/descriptor/actions/level/...).
  */
 import { buildRequestContext } from "../utils/ondc-context.js";
 import { SUBSCRIBER_ID } from "../constants/v1/appConstants.js";
@@ -14,31 +16,29 @@ import type { IssueCategory } from "../constants/issueCategories.js";
 import type { OndcContext } from "../types/search/ondc.js";
 import type { FullIssue, IssueActionRow } from "../repositories/issue.repository.js";
 import type {
+  IssueRating,
   IssueUpdateActionCode,
-  OndcIssueAction,
-  OndcIssueActor,
-  OndcIssueRef,
+  OndcIssueActionEntry,
+  OndcIssueActionUpdatedBy,
   OndcIssueRequest,
   OndcIssueStatusRequest,
 } from "../schemas/issue.schema.js";
 
-// No BAP support-contact config exists yet in this repo (unlike the reference
-// project's hardcoded org contact) — read from env with obvious placeholders
-// so this is easy to grep for and replace with real values.
+// No BAP support-contact config exists yet in this repo — read from env with
+// obvious placeholders so this is easy to grep for and replace with real values.
+// Sent as complainant_actions[].updated_by (the interfacing app's representative).
 const BAP_SUPPORT_NAME = process.env.BAP_SUPPORT_NAME || "Support";
 const BAP_SUPPORT_PHONE = process.env.BAP_SUPPORT_PHONE || "9999999999";
 const BAP_SUPPORT_EMAIL = process.env.BAP_SUPPORT_EMAIL || "support@example.com";
 
-const CONSUMER_ACTOR_ID = "CONSUMER";
-const INTERFACING_NP_ACTOR_ID = "ONDC_BAP";
+// IGM policy maximums (contract footnote 18); buyer apps may shorten them.
+const EXPECTED_RESPONSE_TIME = "PT2H";
+const EXPECTED_RESOLUTION_TIME = "P1D";
 
-const ACTION_SHORT_DESC: Record<IssueUpdateActionCode, string> = {
-  RESOLUTION_ACCEPTED: "Resolution accepted",
-  RESOLUTION_REJECTED: "Resolution rejected",
-  INFO_PROVIDED: "Additional information provided",
-  CLOSED: "Complaint closed",
-  OPEN: "Complaint reopened",
-  ESCALATED: "Escalated to grievance",
+const DEFAULT_ACTION_SHORT_DESC: Record<"OPEN" | IssueUpdateActionCode, string> = {
+  OPEN: "Complaint created",
+  CLOSE: "Complaint closed",
+  ESCALATE: "Escalated to grievance",
 };
 
 type ContextBase = Pick<
@@ -46,71 +46,73 @@ type ContextBase = Pick<
   "domain" | "country" | "city" | "core_version" | "bap_id" | "bap_uri"
 >;
 
-const actionRowToOndc = (a: IssueActionRow): OndcIssueAction => ({
-  id: a.actionId,
-  descriptor: {
-    code: a.descriptorCode,
-    ...(a.descriptorName ? { name: a.descriptorName } : {}),
+/** updated_by for our own complainant actions: org name is "subscriber_id::domain". */
+const complainantUpdatedBy = (domain: string): OndcIssueActionUpdatedBy => ({
+  org: { name: `${SUBSCRIBER_ID}::${domain}` },
+  contact: { phone: BAP_SUPPORT_PHONE, email: BAP_SUPPORT_EMAIL },
+  person: { name: BAP_SUPPORT_NAME },
+});
+
+/** A stored complainant action → its 1.0.0 wire entry. */
+const complainantEntry = (a: IssueActionRow, domain: string): OndcIssueActionEntry => {
+  const fallback = complainantUpdatedBy(domain);
+  return {
+    complainant_action: a.descriptorCode,
     ...(a.shortDesc ? { short_desc: a.shortDesc } : {}),
-  },
-  updated_at: a.updatedAt,
-  action_by: a.actionBy,
-  ...(a.actorDetailsName ? { actor_details: { name: a.actorDetailsName } } : {}),
-});
+    updated_at: a.updatedAt,
+    updated_by: {
+      org: { name: a.actorOrgName ?? fallback.org!.name },
+      contact: {
+        phone: a.actorPhone ?? fallback.contact!.phone,
+        email: a.actorEmail ?? fallback.contact!.email,
+      },
+      person: { name: a.actorPersonName ?? fallback.person!.name },
+    },
+  };
+};
 
-const refToOndc = (r: FullIssue["refs"][number]): OndcIssueRef => ({
-  ref_id: r.refId,
-  ref_type: r.refType as OndcIssueRef["ref_type"],
-  ...(r.quantityCount !== undefined
-    ? {
-        tags: [
-          {
-            descriptor: { code: "message.order.items" },
-            list: [
-              {
-                descriptor: { code: "quantity.selected.count" },
-                value: r.quantityCount,
-              },
-            ],
-          },
-        ],
-      }
-    : {}),
-});
+/** The IssueActionRow persisted for a complainant action we send. */
+const complainantRow = (
+  index: number,
+  code: string,
+  shortDesc: string,
+  updatedAt: string,
+  domain: string,
+): IssueActionRow => {
+  const by = complainantUpdatedBy(domain);
+  return {
+    // Same id scheme collectIncomingActions synthesizes for echoed
+    // complainant_actions, so an echo dedupes against what we stored.
+    actionId: `complainant-${index}`,
+    side: "complainant",
+    descriptorCode: code,
+    shortDesc,
+    updatedAt,
+    actionBy: "",
+    actorOrgName: by.org?.name,
+    actorPersonName: by.person?.name,
+    actorPhone: by.contact?.phone,
+    actorEmail: by.contact?.email,
+  };
+};
 
-const actorToOndc = (a: FullIssue["actors"][number]): OndcIssueActor => ({
-  id: a.actorId,
-  type: a.actorType,
-  info: {
-    ...(a.orgName ? { org: { name: a.orgName } } : {}),
-    ...(a.personName ? { person: { name: a.personName } } : {}),
-    ...(a.contactPhone || a.contactEmail
-      ? {
-          contact: {
-            ...(a.contactPhone ? { phone: a.contactPhone } : {}),
-            ...(a.contactEmail ? { email: a.contactEmail } : {}),
-          },
-        }
-      : {}),
-  },
-});
-
-// ── CREATE ───────────────────────────────────────────────────────────────────
+// ── CREATE (Scenario 1, step 1) ──────────────────────────────────────────────
 
 export interface BuildIssuePayloadInput {
   issueId: string;
   orderId: string;
-  category: IssueCategory;
+  category: IssueCategory & { subCategoryV1: string };
   descriptorLongDesc: string;
   descriptorAdditionalDescUrl?: string;
-  images?: { url: string; size_type?: string }[];
-  media?: { url: string }[];
+  images?: string[];
   items: { id: string; quantity: number }[];
   context: ContextBase;
   bppId: string;
   bppUri: string;
   providerId?: string;
+  orderState?: string;
   fulfillmentId?: string;
+  fulfillmentState?: string;
   billingName?: string;
   billingEmail?: string;
   billingPhone?: string;
@@ -119,67 +121,23 @@ export interface BuildIssuePayloadInput {
   now: string;
 }
 
-export const buildIssuePayload = (input: BuildIssuePayloadInput): OndcIssueRequest => {
+export interface BuildIssuePayloadResult {
+  payload: OndcIssueRequest;
+  /** The OPEN complainant action, to persist. */
+  initialAction: IssueActionRow;
+}
+
+export const buildIssuePayload = (input: BuildIssuePayloadInput): BuildIssuePayloadResult => {
   const { category } = input;
+  const initialAction = complainantRow(
+    0,
+    "OPEN",
+    DEFAULT_ACTION_SHORT_DESC.OPEN,
+    input.now,
+    input.context.domain,
+  );
 
-  const actors: OndcIssueActor[] = [
-    {
-      id: CONSUMER_ACTOR_ID,
-      type: "CONSUMER",
-      info: {
-        org: { name: `${SUBSCRIBER_ID}::${input.context.domain}` },
-        person: { name: input.billingName?.trim() || "Customer" },
-        contact: {
-          phone: input.billingPhone?.trim() || BAP_SUPPORT_PHONE,
-          email: input.billingEmail?.trim() || BAP_SUPPORT_EMAIL,
-        },
-      },
-    },
-    {
-      id: INTERFACING_NP_ACTOR_ID,
-      type: "INTERFACING_NP",
-      info: {
-        org: { name: `${SUBSCRIBER_ID}::${input.context.domain}` },
-        person: { name: BAP_SUPPORT_NAME },
-        contact: { phone: BAP_SUPPORT_PHONE, email: BAP_SUPPORT_EMAIL },
-      },
-    },
-  ];
-
-  const refs: OndcIssueRef[] = [];
-  if (category.applicableRefs.includes("ORDER"))
-    refs.push({ ref_id: input.orderId, ref_type: "ORDER" });
-  if (category.applicableRefs.includes("PROVIDER") && input.providerId)
-    refs.push({ ref_id: input.providerId, ref_type: "PROVIDER" });
-  if (category.applicableRefs.includes("FULFILLMENT") && input.fulfillmentId)
-    refs.push({ ref_id: input.fulfillmentId, ref_type: "FULFILLMENT" });
-  if (category.applicableRefs.includes("ITEM"))
-    for (const item of input.items)
-      refs.push({
-        ref_id: item.id,
-        ref_type: "ITEM",
-        tags: [
-          {
-            descriptor: { code: "message.order.items" },
-            list: [
-              {
-                descriptor: { code: "quantity.selected.count" },
-                value: String(item.quantity),
-              },
-            ],
-          },
-        ],
-      });
-
-  const initialAction: OndcIssueAction = {
-    id: "A1",
-    descriptor: { code: "OPEN", short_desc: "Complaint created" },
-    updated_at: input.now,
-    action_by: INTERFACING_NP_ACTOR_ID,
-    actor_details: { name: input.billingName?.trim() || "Customer" },
-  };
-
-  return {
+  const payload: OndcIssueRequest = {
     context: buildRequestContext("issue", {
       base: input.context,
       bppId: input.bppId,
@@ -191,16 +149,32 @@ export const buildIssuePayload = (input: BuildIssuePayloadInput): OndcIssueReque
     message: {
       issue: {
         id: input.issueId,
-        status: "OPEN",
-        level: "ISSUE",
-        created_at: input.now,
-        updated_at: input.now,
-        refs,
-        actors,
-        source_id: CONSUMER_ACTOR_ID,
-        complainant_id: INTERFACING_NP_ACTOR_ID,
-        descriptor: {
-          code: category.descriptorCode,
+        category: category.igmCategory,
+        sub_category: category.subCategoryV1,
+        complainant_info: {
+          person: { name: input.billingName?.trim() || "Customer" },
+          contact: {
+            phone: input.billingPhone?.trim() || BAP_SUPPORT_PHONE,
+            ...(input.billingEmail?.trim() ? { email: input.billingEmail.trim() } : {}),
+          },
+        },
+        order_details: {
+          id: input.orderId,
+          ...(input.orderState ? { state: input.orderState } : {}),
+          ...(input.items.length ? { items: input.items } : {}),
+          ...(input.fulfillmentId
+            ? {
+                fulfillments: [
+                  {
+                    id: input.fulfillmentId,
+                    ...(input.fulfillmentState ? { state: input.fulfillmentState } : {}),
+                  },
+                ],
+              }
+            : {}),
+          ...(input.providerId ? { provider_id: input.providerId } : {}),
+        },
+        description: {
           short_desc: category.shortDesc,
           long_desc: input.descriptorLongDesc,
           ...(input.descriptorAdditionalDescUrl
@@ -211,24 +185,35 @@ export const buildIssuePayload = (input: BuildIssuePayloadInput): OndcIssueReque
                 },
               }
             : {}),
-          ...(input.images ? { images: input.images } : {}),
-          ...(input.media ? { media: input.media } : {}),
+          ...(input.images?.length ? { images: input.images } : {}),
         },
-        last_action_id: "A1",
-        actions: [initialAction],
+        source: {
+          network_participant_id: `${input.context.bap_id}/ondc`,
+          type: "CONSUMER",
+        },
+        expected_response_time: { duration: EXPECTED_RESPONSE_TIME },
+        expected_resolution_time: { duration: EXPECTED_RESOLUTION_TIME },
+        status: "OPEN",
+        issue_type: "ISSUE",
+        issue_actions: {
+          complainant_actions: [complainantEntry(initialAction, input.context.domain)],
+        },
+        created_at: input.now,
+        updated_at: input.now,
       },
     },
   };
+
+  return { payload, initialAction };
 };
 
-// ── UPDATE ───────────────────────────────────────────────────────────────────
+// ── UPDATE: close (5a) / escalate (5b) ──────────────────────────────────────
 
 export interface BuildIssueUpdatePayloadInput {
   existing: FullIssue;
   actionCode: IssueUpdateActionCode;
-  resolutionId?: string;
-  descriptorLongDesc?: string;
-  images?: { url: string; size_type?: string }[];
+  rating?: IssueRating;
+  shortDesc?: string;
   context: ContextBase;
   transactionId: string;
   messageId: string;
@@ -237,48 +222,36 @@ export interface BuildIssueUpdatePayloadInput {
 
 export interface BuildIssueUpdatePayloadResult {
   payload: OndcIssueRequest;
-  nextStatus: string;
-  nextLevel: string;
+  nextStatus: "OPEN" | "CLOSED";
+  nextIssueType: "ISSUE" | "GRIEVANCE" | "DISPUTE";
   newAction: IssueActionRow;
-  nextLongDesc?: string;
 }
 
-const nextStatusForAction = (
-  actionCode: IssueUpdateActionCode,
-): "OPEN" | "PROCESSING" | "RESOLVED" | "CLOSED" => {
-  switch (actionCode) {
-    case "CLOSED":
-      return "CLOSED";
-    case "OPEN":
-      return "OPEN";
-    default:
-      // RESOLUTION_ACCEPTED | RESOLUTION_REJECTED | INFO_PROVIDED | ESCALATED
-      return "PROCESSING";
-  }
-};
+/** Our previously sent complainant actions, oldest first. */
+export const complainantHistory = (existing: FullIssue): IssueActionRow[] =>
+  existing.actions
+    .filter((a) => a.side === "complainant")
+    .sort((x, y) => x.updatedAt.localeCompare(y.updatedAt));
 
 export const buildIssueUpdatePayload = (
   input: BuildIssueUpdatePayloadInput,
 ): BuildIssueUpdatePayloadResult => {
   const { existing } = input;
-  const nextStatus = nextStatusForAction(input.actionCode);
-  const nextLevel: "ISSUE" | "GRIEVANCE" | "DISPUTE" =
-    input.actionCode === "ESCALATED"
+  const domain = input.context.domain;
+  const history = complainantHistory(existing);
+  const nextStatus = input.actionCode === "CLOSE" ? "CLOSED" : "OPEN";
+  const nextIssueType =
+    input.actionCode === "ESCALATE"
       ? "GRIEVANCE"
       : (existing.level as "ISSUE" | "GRIEVANCE" | "DISPUTE");
-  const nextLongDesc =
-    input.actionCode === "INFO_PROVIDED" && input.descriptorLongDesc !== undefined
-      ? input.descriptorLongDesc
-      : undefined;
 
-  const newAction: IssueActionRow = {
-    actionId: `A${existing.actions.length + 1}`,
-    descriptorCode: input.actionCode,
-    shortDesc: ACTION_SHORT_DESC[input.actionCode],
-    updatedAt: input.now,
-    actionBy: existing.complainantId || INTERFACING_NP_ACTOR_ID,
-    ...(input.resolutionId ? { resolutionId: input.resolutionId } : {}),
-  };
+  const newAction = complainantRow(
+    history.length,
+    input.actionCode,
+    input.shortDesc ?? DEFAULT_ACTION_SHORT_DESC[input.actionCode],
+    input.now,
+    domain,
+  );
 
   const payload: OndcIssueRequest = {
     context: buildRequestContext("issue", {
@@ -293,37 +266,23 @@ export const buildIssueUpdatePayload = (
       issue: {
         id: existing.issueId,
         status: nextStatus,
-        level: nextLevel,
-        created_at: input.now,
-        updated_at: input.now,
-        refs: existing.refs.map(refToOndc),
-        actors: existing.actors.map(actorToOndc),
-        source_id: existing.sourceId || CONSUMER_ACTOR_ID,
-        complainant_id: existing.complainantId || INTERFACING_NP_ACTOR_ID,
-        descriptor: {
-          code: existing.descriptorCode,
-          ...(existing.shortDesc ? { short_desc: existing.shortDesc } : {}),
-          long_desc: nextLongDesc ?? existing.longDesc ?? "",
-          ...(existing.additionalDescUrl
-            ? {
-                additional_desc: {
-                  url: existing.additionalDescUrl,
-                  content_type: existing.additionalDescContentType,
-                },
-              }
-            : {}),
-          ...(input.images ? { images: input.images } : {}),
+        ...(input.actionCode === "ESCALATE" ? { issue_type: nextIssueType } : {}),
+        issue_actions: {
+          complainant_actions: [...history, newAction].map((a) => complainantEntry(a, domain)),
         },
-        last_action_id: newAction.actionId,
-        actions: [...existing.actions.map(actionRowToOndc), actionRowToOndc(newAction)],
+        ...(input.rating ? { rating: input.rating } : {}),
+        // The original create's created_at — identical to the OPEN action's
+        // updated_at we sent (issues.created_at is a DB default, ms apart).
+        created_at: history[0]?.updatedAt ?? existing.createdAt,
+        updated_at: input.now,
       },
     },
   };
 
-  return { payload, nextStatus, nextLevel, newAction, nextLongDesc };
+  return { payload, nextStatus, nextIssueType, newAction };
 };
 
-// ── STATUS ───────────────────────────────────────────────────────────────────
+// ── STATUS (Scenario 1, step 3) ──────────────────────────────────────────────
 
 export interface BuildIssueStatusPayloadInput {
   issueId: string;

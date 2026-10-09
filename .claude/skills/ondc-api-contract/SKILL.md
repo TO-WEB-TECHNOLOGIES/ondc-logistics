@@ -73,7 +73,11 @@ requires 1.0.0 Scenario 1 — see the certification sheet
 `tasks/` is gitignored — read the PDFs from there.
 
 Key 1.0.0 shape facts (do NOT mix with 2.0.0 — iteration 2 failed for exactly that):
-- `context.core_version` is `"1.0.0"`; domain / transaction_id are the order's.
+- `context` follows the transaction domain's spec (contract footnote 4): domain `nic2004:60232`,
+  core_version `1.2.0` (the logistics version, not the sample's retail `"1.0.0"`; Workbench's
+  own /on_issue uses 1.2.0), transaction_id = the order's.
+- Implemented in `src/mappers/issue.mapper.ts` (create / CLOSE / ESCALATE / issue_status);
+  category → `category` + `sub_category` mapping in `src/constants/issueCategories.ts`.
 - `message.issue`: `id`, `category` (`ITEM` / `FULFILLMENT`), `sub_category`
   (e.g. `ITM04`, `FLM04`), `complainant_info { person.name, contact.phone, contact.email }`,
   `order_details { id, state, items[{id, quantity}], fulfillments[{id, state}], provider_id }`,
