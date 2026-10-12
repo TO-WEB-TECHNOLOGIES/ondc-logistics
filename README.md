@@ -112,8 +112,8 @@ postman/          Postman collection for manual API testing
 
 - [`docs/ondc/README.md`](docs/ondc/README.md) — contract entry point (the
   authoritative wire-format reference)
-- [`docs/architecture/database-schema.md`](docs/architecture/database-schema.md),
-  [`database-tables.md`](docs/architecture/database-tables.md) — Postgres schema
+- [`docs/architecture/database/`](docs/architecture/database/README.md) — Postgres
+  schema: every table's role, row variants by condition, and demo data
 - [`docs/architecture/search-overview.md`](docs/architecture/search-overview.md),
   [`on-search-ingestion.md`](docs/architecture/on-search-ingestion.md) — `/search` →
   `/on_search` design in depth
