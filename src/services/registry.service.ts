@@ -1,6 +1,7 @@
 import axios from "axios";
 import { REGISTRY_URL } from "../constants/v1/appConstants.js";
 import { createAuthorizationHeader } from "../utils/crypto.js";
+import { logger } from "../utils/logger.js";
 
 /**
  * Registry lookup of a sender's signing_public_key, used to verify inbound
@@ -69,7 +70,15 @@ export const lookupSigningPublicKey = async (
     });
     data = response.data;
   } catch (error: any) {
-    if (error?.response?.status === 404) return null;
+    if (error?.response?.status === 404) {
+      logger.error("registry", "Signing key lookup miss — registry returned 404.", {
+        subscriberId,
+        ukId,
+        registryUrl: REGISTRY_URL,
+        httpStatus: 404,
+      });
+      return null;
+    }
     const status = error?.response?.status;
     throw new RegistryUnavailableError(
       `registry lookup failed${status ? ` (http ${status})` : ""}: ${error?.message ?? String(error)}`,
@@ -88,7 +97,32 @@ export const lookupSigningPublicKey = async (
       (r.ukId === ukId || r.unique_key_id === ukId) &&
       isUsable(r, now),
   );
-  if (!match?.signing_public_key) return null;
+  if (!match?.signing_public_key) {
+    // Miss diagnostic: enough to tell "wrong registry / not registered" from
+    // "registered but filtered out (status/validity/ukId)". Public keys and
+    // our auth header are never logged.
+    logger.error("registry", "Signing key lookup miss — no usable matching record.", {
+      subscriberId,
+      ukId,
+      registryUrl: REGISTRY_URL,
+      // The registry answers "not registered" with HTTP 200 + a NACK object
+      // (e.g. error 15045), not a 404 — log that body verbatim (truncated).
+      ...(Array.isArray(data)
+        ? {
+            recordCount: records.length,
+            records: records.slice(0, 10).map((r) => ({
+              subscriber_id: r.subscriber_id,
+              ukId: r.ukId ?? r.unique_key_id,
+              status: r.status,
+              valid_from: r.valid_from,
+              valid_until: r.valid_until,
+              hasSigningKey: Boolean(r.signing_public_key),
+            })),
+          }
+        : { body: JSON.stringify(data ?? null).slice(0, 400) }),
+    });
+    return null;
+  }
 
   keyCache.set(cacheKey, {
     key: match.signing_public_key,
