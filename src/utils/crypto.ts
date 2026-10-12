@@ -69,3 +69,100 @@ export const createAuthorizationHeader = async ({
 
   return header;
 };
+
+/** Fixed across the network per the contract's signing scheme; not sender-negotiable. */
+const SIGNATURE_ALGORITHM = "ed25519";
+const SIGNATURE_HEADERS = "(created) (expires) digest";
+/** Tolerated clock drift for a sender's `created` timestamp. */
+const CREATED_CLOCK_SKEW_SECONDS = 60;
+
+export type ParsedAuthorizationHeader = {
+  keyId: string;
+  subscriberId: string;
+  ukId: string;
+  algorithm: string;
+  created: string;
+  expires: string;
+  headers: string;
+  signature: string;
+};
+
+/**
+ * Parses `Signature keyId="sub|ukId|ed25519",algorithm=..,created=..,expires=..,headers=..,signature=..`.
+ * Returns null when the header is malformed or any required parameter is missing.
+ */
+export const parseAuthorizationHeader = (
+  header: string,
+): ParsedAuthorizationHeader | null => {
+  const match = header.match(/^\s*Signature\s+(.*)$/s);
+  if (!match) return null;
+
+  const params: Record<string, string> = {};
+  // Split on commas outside quotes.
+  for (const part of match[1].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)) {
+    const trimmed = part.trim();
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    let value = trimmed.substring(eq + 1).trim();
+    if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
+    params[trimmed.substring(0, eq).trim()] = value;
+  }
+
+  const { keyId, algorithm, created, expires, headers, signature } = params;
+  if (!keyId || !algorithm || !created || !expires || !headers || !signature) return null;
+
+  // keyId = "{subscriber_id}|{unique_key_id}|{algorithm}"
+  const [subscriberId, ukId] = keyId.split("|");
+  if (!subscriberId || !ukId) return null;
+
+  return { keyId, subscriberId, ukId, algorithm, created, expires, headers, signature };
+};
+
+export type SignatureCheck =
+  | { valid: true }
+  | { valid: false; reason: string };
+
+/**
+ * Verifies an inbound ONDC Authorization header against the sender's registry
+ * signing_public_key: BLAKE2b-512 digest of the EXACT raw body bytes (req.rawBody,
+ * see src/index.ts) → signing string → ed25519 detached verify.
+ */
+export const verifyAuthorizationHeader = async ({
+  header,
+  rawBody,
+  publicKeyBase64,
+}: {
+  header: ParsedAuthorizationHeader;
+  rawBody: Buffer;
+  publicKeyBase64: string;
+}): Promise<SignatureCheck> => {
+  if (header.algorithm !== SIGNATURE_ALGORITHM)
+    return { valid: false, reason: `unsupported algorithm "${header.algorithm}"` };
+  if (header.headers !== SIGNATURE_HEADERS)
+    return { valid: false, reason: `unexpected signed headers "${header.headers}"` };
+
+  const created = Number(header.created);
+  const expires = Number(header.expires);
+  if (!Number.isInteger(created) || !Number.isInteger(expires))
+    return { valid: false, reason: "created/expires are not integer timestamps" };
+  const now = Math.floor(Date.now() / 1000);
+  if (created > now + CREATED_CLOCK_SKEW_SECONDS)
+    return { valid: false, reason: "created is in the future" };
+  if (now > expires) return { valid: false, reason: "signature expired" };
+
+  const sodium = await initializeCrypto();
+  try {
+    const hashBytes = sodium.crypto_generichash(64, new Uint8Array(rawBody), null);
+    const digestStr = `BLAKE-512=${sodium.to_base64(hashBytes, sodium.base64_variants.ORIGINAL)}`;
+    const signingString = `(created): ${header.created}\n(expires): ${header.expires}\ndigest: ${digestStr}`;
+
+    const ok = sodium.crypto_sign_verify_detached(
+      sodium.from_base64(header.signature, sodium.base64_variants.ORIGINAL),
+      sodium.from_string(signingString),
+      sodium.from_base64(publicKeyBase64, sodium.base64_variants.ORIGINAL),
+    );
+    return ok ? { valid: true } : { valid: false, reason: "signature mismatch" };
+  } catch (error) {
+    return { valid: false, reason: `malformed signature or key: ${(error as Error).message}` };
+  }
+};

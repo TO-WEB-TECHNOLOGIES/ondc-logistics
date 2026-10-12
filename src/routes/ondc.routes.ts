@@ -52,6 +52,7 @@ import { noApiLogMiddleware } from "../middlewares/no-api-log.middleware.js";
 import { ondcProtocol } from "../config/ondc-protocol.js";
 import { loadTransactionContext } from "../repositories/transaction-context.js";
 import { callbackContextMiddleware } from "../middlewares/callback-context.middleware.js";
+import { verifyOndcSignature } from "../middlewares/ondc-signature.middleware.js";
 
 /** Expected context on core logistics callbacks (see utils/ondc-context.ts). */
 const callbackContext = (action: string) =>
@@ -171,25 +172,25 @@ searchRouter.get("/search/:searchId/events", (request, response) => {
 });
 
 export const onSearchRouter = express.Router();
-onSearchRouter.post("/on_search", noApiLogMiddleware, callbackContext("on_search"), createOnSearchController(onSearchService));
+onSearchRouter.post("/on_search", noApiLogMiddleware, verifyOndcSignature("on_search"), callbackContext("on_search"), createOnSearchController(onSearchService));
 
 export const initRouter = express.Router();
 initRouter.post("/init", createInitController(initService));
 
 export const onInitRouter = express.Router();
-onInitRouter.post("/on_init", noApiLogMiddleware, callbackContext("on_init"), createOnInitController(initService));
+onInitRouter.post("/on_init", noApiLogMiddleware, verifyOndcSignature("on_init"), callbackContext("on_init"), createOnInitController(initService));
 
 export const confirmRouter = express.Router();
 confirmRouter.post("/confirm", createConfirmController(confirmService));
 
 export const onConfirmRouter = express.Router();
-onConfirmRouter.post("/on_confirm", noApiLogMiddleware, callbackContext("on_confirm"), createOnConfirmController(confirmService));
+onConfirmRouter.post("/on_confirm", noApiLogMiddleware, verifyOndcSignature("on_confirm"), callbackContext("on_confirm"), createOnConfirmController(confirmService));
 
 export const updateRouter = express.Router();
 updateRouter.post("/update", createUpdateController(updateService));
 
 export const onUpdateRouter = express.Router();
-onUpdateRouter.post("/on_update", noApiLogMiddleware, callbackContext("on_update"), createOnUpdateController(updateService));
+onUpdateRouter.post("/on_update", noApiLogMiddleware, verifyOndcSignature("on_update"), callbackContext("on_update"), createOnUpdateController(updateService));
 
 export const statusRouter = express.Router();
 statusRouter.post("/status", createStatusController(statusService));
@@ -220,7 +221,7 @@ statusRouter.get("/orders/:orderId/status/events", (request, response) => {
 });
 
 export const onStatusRouter = express.Router();
-onStatusRouter.post("/on_status", noApiLogMiddleware, callbackContext("on_status"), createOnStatusController(statusService));
+onStatusRouter.post("/on_status", noApiLogMiddleware, verifyOndcSignature("on_status"), callbackContext("on_status"), createOnStatusController(statusService));
 
 export const trackRouter = express.Router();
 trackRouter.post("/track", createTrackController(trackService));
@@ -231,10 +232,10 @@ trackRouter.get(
 );
 
 export const onTrackRouter = express.Router();
-onTrackRouter.post("/on_track", noApiLogMiddleware, callbackContext("on_track"), createOnTrackController(trackService));
+onTrackRouter.post("/on_track", noApiLogMiddleware, verifyOndcSignature("on_track"), callbackContext("on_track"), createOnTrackController(trackService));
 
 export const cancelRouter = express.Router();
 cancelRouter.post("/cancel", createCancelController(cancelService));
 
 export const onCancelRouter = express.Router();
-onCancelRouter.post("/on_cancel", noApiLogMiddleware, callbackContext("on_cancel"), createOnCancelController(cancelService));
+onCancelRouter.post("/on_cancel", noApiLogMiddleware, verifyOndcSignature("on_cancel"), callbackContext("on_cancel"), createOnCancelController(cancelService));
