@@ -3,6 +3,7 @@ import {
   createIssueController,
   createIssueDetailsController,
   createIssueStatusController,
+  createIssuesListController,
   createOrderIssuesController,
   createOnIssueController,
   createOnIssueStatusController,
@@ -30,6 +31,7 @@ const issueService = new IssueService({
 export const issueRouter = express.Router();
 issueRouter.post("/issue", createIssueController(issueService));
 issueRouter.post("/issue_status", createIssueStatusController(issueService));
+issueRouter.get("/issues", createIssuesListController(issueRepository));
 issueRouter.get("/issues/:issueId", createIssueDetailsController(issueRepository));
 issueRouter.get("/orders/:orderId/issues", createOrderIssuesController(issueRepository));
 

@@ -500,3 +500,70 @@ export const createOrderIssuesController =
       });
     }
   };
+
+const ISSUE_LIST_STATUSES = ["OPEN", "CLOSED"];
+const ISSUE_LIST_DEFAULT_LIMIT = 50;
+const ISSUE_LIST_MAX_LIMIT = 200;
+
+/** Parses an optional non-negative integer query param; NaN marks it invalid. */
+const intQuery = (value: unknown, fallback: number): number => {
+  if (value === undefined || value === "") return fallback;
+  if (typeof value !== "string" || !/^\d+$/.test(value)) return Number.NaN;
+  return Number(value);
+};
+
+/**
+ * @swagger
+ * /logistics/issues:
+ *   get:
+ *     summary: List issues across all orders (newest first)
+ *     tags: [Issue]
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema: { type: string, enum: [OPEN, CLOSED] }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+ *       - in: query
+ *         name: offset
+ *         schema: { type: integer, minimum: 0, default: 0 }
+ *     responses:
+ *       200:
+ *         description: "{ issues: IssueListItem[], limit, offset }"
+ *       400:
+ *         description: INVALID_ISSUE_LIST_REQUEST
+ */
+export const createIssuesListController =
+  (repository: Pick<IssueRepository, "listIssues">) =>
+  async (request: Request, response: Response): Promise<void> => {
+    const { status } = request.query;
+    const limit = intQuery(request.query.limit, ISSUE_LIST_DEFAULT_LIMIT);
+    const offset = intQuery(request.query.offset, 0);
+    const details: { path: string; message: string }[] = [];
+    if (status !== undefined && (typeof status !== "string" || !ISSUE_LIST_STATUSES.includes(status)))
+      details.push({ path: "status", message: `must be one of ${ISSUE_LIST_STATUSES.join(", ")}` });
+    if (Number.isNaN(limit) || limit < 1 || limit > ISSUE_LIST_MAX_LIMIT)
+      details.push({ path: "limit", message: `must be an integer between 1 and ${ISSUE_LIST_MAX_LIMIT}` });
+    if (Number.isNaN(offset))
+      details.push({ path: "offset", message: "must be a non-negative integer" });
+    if (details.length > 0) {
+      response.status(400).json({
+        error: { code: "INVALID_ISSUE_LIST_REQUEST", message: "Invalid issue list request", details },
+      });
+      return;
+    }
+    try {
+      const issues = await repository.listIssues({
+        status: status as string | undefined,
+        limit,
+        offset,
+      });
+      response.status(200).json({ issues, limit, offset });
+    } catch (error) {
+      console.error("[issues-list.controller] failed", error);
+      response.status(500).json({
+        error: { code: "ISSUES_LIST_FAILED", message: "Unable to load issues" },
+      });
+    }
+  };

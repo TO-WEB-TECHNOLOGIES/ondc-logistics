@@ -2,6 +2,7 @@ import express from "express";
 import type { Request, Response } from "express";
 import http from "http";
 import swaggerUi from "swagger-ui-express";
+import cors from "cors";
 // Sentry namespace — only used here for the Express error handler and flush.
 // SDK init/instrumentation happens in src/instrument.ts, preloaded via --import.
 import * as Sentry from "@sentry/node";
@@ -157,11 +158,21 @@ app.use(
 // sit before the /api/v1 router mount below.
 // app.use(apiLogMiddleware);
 
-// CORS whitelist — only these origins are allowed.
-// Browser requests from other origins will be blocked by CORS.
-// Note: Server-to-server callbacks (Juspay/HDFC webhooks) do NOT go through CORS
-// since they are not browser requests — they bypass CORS entirely.
-const ALLOWED_ORIGINS = ["https://calc.ustart.in", "http://localhost:5173"];
+// CORS whitelist — comma-separated origins from CORS_ALLOWED_ORIGINS (unset/empty → no
+// cross-origin access). Disallowed origins get no CORS headers, so the browser blocks them.
+// Requests without an Origin header (ONDC callbacks, server-to-server) pass through untouched.
+const ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: ALLOWED_ORIGINS,
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type"],
+  }),
+);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello World!");

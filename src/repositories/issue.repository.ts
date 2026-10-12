@@ -147,6 +147,16 @@ export interface IssueSummary {
   updatedAt: string;
 }
 
+export interface IssueListItem extends IssueSummary {
+  orderId: string;
+}
+
+export interface ListIssuesParams {
+  status?: string;
+  limit: number;
+  offset: number;
+}
+
 export interface CreateIssueParams {
   payload: OndcIssueRequest;
   orderId: string;
@@ -169,6 +179,7 @@ export interface IssueRepository {
   findByIssueId(issueId: string): Promise<FullIssue | undefined>;
   getIssueDetails(issueId: string): Promise<IssueDetails | undefined>;
   listIssuesByOrder(orderId: string): Promise<IssueSummary[]>;
+  listIssues(params: ListIssuesParams): Promise<IssueListItem[]>;
   createIssue(params: CreateIssueParams): Promise<{ created: boolean }>;
   appendIssueAction(params: AppendIssueActionParams): Promise<{ created: boolean }>;
   createIssueStatusCheck(
@@ -562,6 +573,26 @@ export class DrizzleIssueRepository implements IssueRepository {
       .orderBy(desc(issues.createdAt));
     return rows.map((row) => ({
       issueId: row.issueId,
+      categoryCode: row.categoryCode,
+      subCategory: row.descriptorCode,
+      status: row.status,
+      issueType: row.level,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    }));
+  }
+
+  async listIssues({ status, limit, offset }: ListIssuesParams): Promise<IssueListItem[]> {
+    const rows = await this.database
+      .select()
+      .from(issues)
+      .where(status ? eq(issues.status, status) : undefined)
+      .orderBy(desc(issues.createdAt))
+      .limit(limit)
+      .offset(offset);
+    return rows.map((row) => ({
+      issueId: row.issueId,
+      orderId: row.orderId,
       categoryCode: row.categoryCode,
       subCategory: row.descriptorCode,
       status: row.status,
