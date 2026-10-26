@@ -370,6 +370,11 @@ The authoritative ONDC Logistics API Contract is located at:
 
 `docs/ondc/README.md lists the guide to use actualy ondc logistics api`
 
+The repo docx omits the contract's footnotes and comment threads (enums,
+required/optional rules, ONDC clarifications). Read those from the
+annotated Google Doc linked in `docs/ondc/README.md` and the
+`ondc-api-contract` skill.
+
 When working on ONDC API behavior, field semantics, required/optional
 attributes, validation, signing, callbacks, error codes, or protocol
 behavior, consult this document rather than guessing.

@@ -106,6 +106,30 @@ const isEmptyObject = (value: unknown) =>
 const preferNonEmpty = <T>(onInitValue: T | undefined, initValue: T): T =>
   onInitValue !== undefined && !isEmptyObject(onInitValue) ? onInitValue : initValue;
 
+/**
+ * Returns why /on_init's payment is not the one we sent in /init, or
+ * undefined when it matches (or /on_init didn't echo payment). The LSP must
+ * not switch payment terms — e.g. turn a prepaid order into CoD — so a
+ * mismatch blocks /confirm rather than being carried into it.
+ */
+export const findPaymentMismatch = (
+  initPayment: Record<string, any> | undefined,
+  onInitPayment: Record<string, any> | undefined,
+): string | undefined => {
+  if (!onInitPayment || isEmptyObject(onInitPayment)) return undefined;
+  if (onInitPayment.type !== initPayment?.type)
+    return `on_init payment.type ${onInitPayment.type} does not match init ${initPayment?.type}`;
+  if (
+    onInitPayment.collected_by !== undefined &&
+    onInitPayment.collected_by !== initPayment?.collected_by
+  )
+    return `on_init payment.collected_by ${onInitPayment.collected_by} does not match init ${initPayment?.collected_by}`;
+  const collection = Number(onInitPayment["@ondc/org/collection_amount"] ?? 0);
+  if (initPayment?.type !== "ON-FULFILLMENT" && collection > 0)
+    return "on_init payment carries a CoD collection_amount for a non-CoD order";
+  return undefined;
+};
+
 export const mergeInitializedOrder = (
   initOrder: OndcInitOrder,
   onInitOrder: OndcInitOrder | undefined,
@@ -123,7 +147,14 @@ export const mergeInitializedOrder = (
     // echo payment either — fall back to /init's values rather than the
     // empty object buildOndcInitOrder returns for a missing snapshot field.
     billing: preferNonEmpty(onInitOrder?.billing, initOrder.billing),
-    payment: preferNonEmpty(onInitOrder?.payment, initOrder.payment),
+    // Layer /on_init's payment over /init's so keys it omits (e.g.
+    // collected_by) keep our values while LSP-supplied ones (e.g.
+    // settlement_details for POST-FULFILLMENT) come through. Callers check
+    // findPaymentMismatch first, so type/collected_by agree here.
+    payment: {
+      ...initOrder.payment,
+      ...(isEmptyObject(onInitOrder?.payment) ? {} : onInitOrder?.payment),
+    },
     items: mergeById(initOrder.items, onInitOrder?.items, []),
     fulfillments: mergeById(initOrder.fulfillments, onInitOrder?.fulfillments, []),
   } as OndcInitOrder;

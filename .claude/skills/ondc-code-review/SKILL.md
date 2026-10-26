@@ -18,6 +18,17 @@ safety.
 -   [ ] Optional fields handled correctly
 -   [ ] Enum values match contract
 -   [ ] No invented wire fields
+-   [ ] Footnotes/comments in the annotated contract Google Doc checked
+    (see ondc-api-contract skill) — the repo docx omits them
+
+### Payment
+
+-   [ ] No COD path: `payment.type` is `ON-ORDER` / `POST-FULFILLMENT`,
+    `collected_by: BAP`
+-   [ ] No `@ondc/org/collection_amount` sent for non-COD types
+-   [ ] `/init` `payment.type` matches the `/search` one
+-   [ ] `/on_init` payment checked against `/init` before `/confirm`
+-   [ ] `settlement_details` optional; `settlement_type` ∈ upi/neft/rtgs
 
 ### Catalog/order relationships
 

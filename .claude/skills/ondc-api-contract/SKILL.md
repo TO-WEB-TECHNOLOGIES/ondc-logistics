@@ -31,6 +31,53 @@ parse as valid JSON: a missing comma in `update.json`
 (`start.instructions`) and a trailing comma in `on_status.json`
 (`fulfillments[0].state.descriptor`). No other content was changed.
 
+## Annotated contract source (footnotes + ONDC answers)
+
+`docs/ondc/ondc logistics.docx` is the v1.2.5 contract **without** its
+footnotes and comment threads — and those are where most enums and
+required/optional rules live. The annotated original is the Google Doc:
+
+https://docs.google.com/document/d/1CkfxtqyLbSQccJZyNmf9BSGzJBH13gcLOk_tywV-LBk/edit?tab=t.0
+
+Fetch as plain text (public):
+`curl -sL "https://docs.google.com/document/d/1CkfxtqyLbSQccJZyNmf9BSGzJBH13gcLOk_tywV-LBk/export?format=txt"`.
+Footnote markers like `"type":"POST-FULFILLMENT[24]"` resolve to the
+`[24] ...` list near the end; comment markers like `[bt]` resolve to the
+comment threads after that (ONDC staff replies there are clarifications
+of the contract).
+
+## Payment & billing rules (from the annotated doc)
+
+- `payment.type` enum: `ON-ORDER` (prepaid, typically thru wallet),
+  `ON-FULFILLMENT` (CoD), `POST-FULFILLMENT` (post-fulfillment billing)
+  — footnotes 24, 70.
+- `@ondc/org/collection_amount` is CoD-only: required in `/search` for
+  `ON-FULFILLMENT` (25); optional, only for `ON-FULFILLMENT`, in `/init`
+  and `/on_init` (61, 69). Never send it for prepaid.
+- `collected_by` required for `ON-ORDER`, `ON-FULFILLMENT` (62); for
+  `POST-FULFILLMENT` it is `BAP` (comments [br]/[bt]).
+- `@ondc/org/settlement_details`: LBNP provides them for CoD (63, [bv]);
+  for `POST-FULFILLMENT` the LSP provides them in `/on_init` ([bv]).
+  Optional until RSF is in place ([ch]); RSF does not apply to B2B —
+  settled offline ([co]). `settlement_type` enum `upi` | `neft` | `rtgs`
+  (`upi` → `upi_address`; `neft`/`rtgs` → `settlement_bank_account_no` +
+  `settlement_ifsc_code`) (64); `beneficiary_name` belongs inside
+  `settlement_details` ([bx]).
+- `/init` `payment.type` must equal the `/search` `payment.type`
+  ([br]/[bt]); LSP re-checks CoD eligibility at `/init` ([bo]).
+- `billing` = the marketplace / LBNP entity being invoiced (55); name and
+  address are what's printed on the invoice (56, 57); `tax_number` is required
+  and is the LBNP GSTIN (58); `email` required (59);
+  `billing.created_at <= context.timestamp` and immutable ([bk]);
+  `/confirm` billing must equal `/init` (118).
+- `fulfillments[].end.contact.email` is optional ([bg]); other contact
+  keys follow the "mandatory unless marked optional" rule.
+
+**Project rule: no COD.** This LBNP uses only `ON-ORDER` /
+`POST-FULFILLMENT` with `collected_by: BAP`. Our `/search` and `/init`
+APIs reject `ON-FULFILLMENT`; `/confirm` is blocked (409) if `/on_init`'s
+payment differs from what we sent in `/init`.
+
 The contract defines: - JSON request/response structures, - mandatory
 and optional attributes, - enumerations, - expected API behavior, -
 signing/verification, - registry lookup, - asynchronous request/callback

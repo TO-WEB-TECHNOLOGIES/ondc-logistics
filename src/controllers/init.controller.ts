@@ -45,11 +45,11 @@ const validation = (error: InitValidationError) => ({
  *               quantity: { type: integer, minimum: 1 }
  *               pickup_contact:
  *                 type: object
- *                 required: [email]
+ *                 required: [phone, email]
  *                 properties: { email: { type: string }, phone: { type: string } }
  *               delivery_contact:
  *                 type: object
- *                 required: [email]
+ *                 required: [phone]
  *                 properties: { email: { type: string }, phone: { type: string } }
  *               billing:
  *                 type: object
@@ -76,14 +76,14 @@ const validation = (error: InitValidationError) => ({
  *               payment:
  *                 type: object
  *                 description: >
- *                   settlement_details is required (non-empty) when type is
- *                   ON-FULFILLMENT; optional/omittable for ON-ORDER and
- *                   POST-FULFILLMENT.
- *                 required: [type, collected_by, amount, currency]
+ *                   Cash on delivery is not supported: type must be ON-ORDER or
+ *                   POST-FULFILLMENT (and match the /search payment.type),
+ *                   collected_by must be BAP, and amount (CoD collection
+ *                   amount) must be omitted. settlement_details is optional.
+ *                 required: [type, collected_by]
  *                 properties:
- *                   type: { type: string, example: ON-FULFILLMENT }
- *                   collected_by: { type: string, example: BPP }
- *                   amount: { type: string }
+ *                   type: { type: string, enum: [ON-ORDER, POST-FULFILLMENT], example: ON-ORDER }
+ *                   collected_by: { type: string, enum: [BAP], example: BAP }
  *                   currency: { type: string, example: INR }
  *                   settlement_details:
  *                     type: array
@@ -122,6 +122,16 @@ export const createInitController =
           console.log("[init.controller] /init failed", {
             error: error instanceof Error ? error.message : error,
           });
+          if (error instanceof InitValidationError) {
+            response.status(400).json({
+              error: {
+                code: "INVALID_INIT_REQUEST",
+                message: "Invalid ONDC init request",
+                details: [validation(error)],
+              },
+            });
+            return;
+          }
           const submission = ondcSubmissionFailure(error);
           if (submission) {
             response.status(submission.status).json(submission.body);

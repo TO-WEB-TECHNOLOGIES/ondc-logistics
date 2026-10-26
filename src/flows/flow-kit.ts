@@ -555,7 +555,7 @@ export async function runSearchInitConfirm(
         value: { amount: "100", currency: "INR" },
         dangerous_goods: false,
       },
-      payment: { type: "POST-FULFILLMENT", collection_amount: "300.00" },
+      payment: { type: "ON-ORDER" },
     },
     { retries: 1 },
   );
@@ -599,18 +599,6 @@ export async function runSearchInitConfirm(
     payment: {
       type: "ON-ORDER",
       collected_by: "BAP",
-      amount: "120.00",
-      currency: "INR",
-      settlement_details: [
-        {
-          settlement_counterparty: "buyer-app",
-          settlement_type: "upi",
-          beneficiary_name: "Buyer App Pvt Ltd",
-          upi_address: "buyerapp@oksbi",
-          settlement_bank_account_no: "1234567890",
-          settlement_ifsc_code: "SBIN0000001",
-        },
-      ],
     },
   });
   await waitFor("4 on_init", "init_result");

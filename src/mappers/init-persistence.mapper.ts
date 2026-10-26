@@ -756,8 +756,14 @@ export const buildOndcInitOrder = (fetched: FetchedInitOrder): OndcInitOrder => 
     payment: fetched.paymentType
       ? {
           type: fetched.paymentType,
-          collected_by: fetched.paymentCollectedBy,
-          "@ondc/org/collection_amount": fetched.paymentCollectionAmount,
+          // Emit only what the snapshot holds — never `null` on the wire;
+          // collection_amount is absent for every non-CoD order.
+          ...(fetched.paymentCollectedBy
+            ? { collected_by: fetched.paymentCollectedBy }
+            : {}),
+          ...(fetched.paymentCollectionAmount
+            ? { "@ondc/org/collection_amount": fetched.paymentCollectionAmount }
+            : {}),
           ...(fetched.settlements.length
             ? {
                 "@ondc/org/settlement_details": fetched.settlements.map((s) => ({

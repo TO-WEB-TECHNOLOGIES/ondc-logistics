@@ -15,6 +15,7 @@ import {
   type TransactionContextLoader,
 } from "../repositories/transaction-context.js";
 import type { CallbackStream } from "../utils/streams/callback-stream.js";
+import { InitValidationError } from "../utils/init-validation.js";
 
 export class InitService {
   constructor(
@@ -41,6 +42,13 @@ export class InitService {
         throw new Error("search option is ambiguous");
       throw new Error("search option not found");
     }
+    // Contract: /init payment.type must be the one sent in /search.
+    const searchPaymentType = resolved.selection.searchPaymentType;
+    if (searchPaymentType && searchPaymentType !== request.payment.type)
+      throw new InitValidationError(
+        `must match the /search payment.type (${searchPaymentType})`,
+        "payment.type",
+      );
     const transactionId = resolved.selection.searchTransactionId;
     // Same city/domain/core_version the LSP saw on this transaction's /search.
     const protocol = await resolveTransactionProtocol(

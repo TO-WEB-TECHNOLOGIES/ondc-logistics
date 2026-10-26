@@ -12,6 +12,10 @@ export class InitValidationError extends Error {
     this.name = "InitValidationError";
   }
 }
+const PAYMENT_TYPES = ["ON-ORDER", "ON-FULFILLMENT", "POST-FULFILLMENT"];
+// This LBNP never offers CoD (ON-FULFILLMENT); prepaid types only.
+const ALLOWED_INIT_PAYMENT_TYPES = ["ON-ORDER", "POST-FULFILLMENT"];
+const SETTLEMENT_TYPES = ["upi", "neft", "rtgs"];
 const record = (v: unknown, p: string): Record<string, any> => {
   if (!v || typeof v !== "object" || Array.isArray(v))
     throw new InitValidationError("must be an object", p);
@@ -112,36 +116,49 @@ const order = (v: unknown, p = "message.order", requireBilling = true) => {
       if (billing[k] !== undefined) str(billing[k], `${p}.billing.${k}`);
     }
   }
-  const payment = record(o.payment, `${p}.payment`);
-  str(payment.type, `${p}.payment.type`);
-  if (
-    !["ON-ORDER", "ON-FULFILLMENT", "POST-FULFILLMENT"].includes(payment.type)
-  )
+  ondcPayment(o.payment, `${p}.payment`);
+  return o;
+};
+// Contract footnotes 24/61-64/69-70: collected_by is required for ON-ORDER
+// and ON-FULFILLMENT, collection_amount only applies to ON-FULFILLMENT (CoD),
+// and settlement_details are optional (LBNP's for CoD, LSP's for
+// POST-FULFILLMENT).
+const ondcPayment = (v: unknown, p: string) => {
+  const payment = record(v, p);
+  str(payment.type, `${p}.type`);
+  if (!PAYMENT_TYPES.includes(payment.type))
     throw new InitValidationError(
       "must be ON-ORDER, ON-FULFILLMENT, or POST-FULFILLMENT",
-      `${p}.payment.type`,
+      `${p}.type`,
     );
-  str(payment.collected_by, `${p}.payment.collected_by`);
-  str(
-    payment["@ondc/org/collection_amount"],
-    `${p}.payment.@ondc/org/collection_amount`,
-  );
-  const settlements = arr(
-    payment["@ondc/org/settlement_details"],
-    `${p}.payment.@ondc/org/settlement_details`,
-  );
-  settlements.forEach((s, n) => {
-    const x = record(s, `${p}.payment.@ondc/org/settlement_details[${n}]`);
+  if (payment.type !== "POST-FULFILLMENT" || payment.collected_by !== undefined)
+    str(payment.collected_by, `${p}.collected_by`);
+  if (
+    payment.type === "ON-FULFILLMENT" ||
+    payment["@ondc/org/collection_amount"] !== undefined
+  )
     str(
-      x.settlement_counterparty,
-      `${p}.payment.@ondc/org/settlement_details[${n}].settlement_counterparty`,
+      payment["@ondc/org/collection_amount"],
+      `${p}.@ondc/org/collection_amount`,
     );
-    str(
-      x.settlement_type,
-      `${p}.payment.@ondc/org/settlement_details[${n}].settlement_type`,
+  if (payment["@ondc/org/settlement_details"] !== undefined) {
+    const settlements = arr(
+      payment["@ondc/org/settlement_details"],
+      `${p}.@ondc/org/settlement_details`,
     );
-  });
-  return o;
+    settlements.forEach((s, n) => {
+      const sp = `${p}.@ondc/org/settlement_details[${n}]`;
+      const x = record(s, sp);
+      str(x.settlement_counterparty, `${sp}.settlement_counterparty`);
+      str(x.settlement_type, `${sp}.settlement_type`);
+      if (!SETTLEMENT_TYPES.includes(x.settlement_type))
+        throw new InitValidationError(
+          "must be upi, neft, or rtgs",
+          `${sp}.settlement_type`,
+        );
+    });
+  }
+  return payment;
 };
 export const parseInitRequest = (value: unknown): OndcInitRequest => {
   const x = record(value, "request body");
@@ -207,13 +224,15 @@ export const parseOnInitResponse = (value: unknown): OndcOnInitResponse => {
   return value as OndcOnInitResponse;
 };
 
-const minimalContact = (v: unknown, p: string) => {
+// phone is mandatory on both contacts; email is mandatory for pickup but
+// optional for delivery (contract comment on fulfillments[].end.contact.email).
+const minimalContact = (v: unknown, p: string, emailRequired: boolean) => {
   const x = record(v, p);
-  str(x.email, `${p}.email`);
-  if (x.phone !== undefined) str(x.phone, `${p}.phone`);
+  str(x.phone, `${p}.phone`);
+  if (emailRequired || x.email !== undefined) str(x.email, `${p}.email`);
   return {
-    ...(x.phone !== undefined ? { phone: x.phone } : {}),
-    email: x.email,
+    phone: x.phone as string,
+    ...(x.email !== undefined ? { email: x.email as string } : {}),
   };
 };
 
@@ -248,32 +267,35 @@ export const parseMinimalInitRequest = (value: unknown): InitRequest => {
   if (billing.email !== undefined) str(billing.email, "billing.email");
   const payment = record(x.payment, "payment");
   str(payment.type, "payment.type");
+  if (payment.type === "ON-FULFILLMENT")
+    throw new InitValidationError(
+      "cash on delivery (ON-FULFILLMENT) is not supported",
+      "payment.type",
+    );
+  if (!ALLOWED_INIT_PAYMENT_TYPES.includes(payment.type))
+    throw new InitValidationError(
+      "must be ON-ORDER or POST-FULFILLMENT",
+      "payment.type",
+    );
   str(payment.collected_by, "payment.collected_by");
-  if (
-    (typeof payment.amount !== "string" &&
-      typeof payment.amount !== "number") ||
-    String(payment.amount).trim() === ""
-  )
-    throw new InitValidationError("must be a decimal value", "payment.amount");
-  str(payment.currency, "payment.currency");
+  if (payment.collected_by !== "BAP")
+    throw new InitValidationError(
+      "must be BAP for ON-ORDER / POST-FULFILLMENT",
+      "payment.collected_by",
+    );
+  // amount maps to @ondc/org/collection_amount, which is CoD-only.
+  if (payment.amount !== undefined)
+    throw new InitValidationError(
+      "is only applicable to cash on delivery; omit it",
+      "payment.amount",
+    );
+  if (payment.currency !== undefined) str(payment.currency, "payment.currency");
   if (
     payment.settlement_details !== undefined &&
     !Array.isArray(payment.settlement_details)
   )
     throw new InitValidationError(
       "must be an array",
-      "payment.settlement_details",
-    );
-  const normalizedPaymentType = String(payment.type)
-    .toUpperCase()
-    .replace(/_/g, "-");
-  if (
-    normalizedPaymentType === "ON-FULFILLMENT" &&
-    (!Array.isArray(payment.settlement_details) ||
-      payment.settlement_details.length === 0)
-  )
-    throw new InitValidationError(
-      "is required and must be a non-empty array when payment.type is ON-FULFILLMENT",
       "payment.settlement_details",
     );
   return {
@@ -285,8 +307,12 @@ export const parseMinimalInitRequest = (value: unknown): InitRequest => {
       ? { fulfillmentId: x.fulfillment_id }
       : {}),
     ...(x.quantity !== undefined ? { quantity: x.quantity } : {}),
-    pickupContact: minimalContact(x.pickup_contact, "pickup_contact"),
-    deliveryContact: minimalContact(x.delivery_contact, "delivery_contact"),
+    pickupContact: minimalContact(x.pickup_contact, "pickup_contact", true),
+    deliveryContact: minimalContact(
+      x.delivery_contact,
+      "delivery_contact",
+      false,
+    ),
     billing: {
       name: billing.name,
       email: billing.email,
@@ -308,8 +334,7 @@ export const parseMinimalInitRequest = (value: unknown): InitRequest => {
     payment: {
       type: payment.type,
       collectedBy: payment.collected_by,
-      amount: payment.amount,
-      currency: payment.currency,
+      ...(payment.currency !== undefined ? { currency: payment.currency } : {}),
       settlementDetails: payment.settlement_details ?? [],
     },
   };

@@ -1,5 +1,4 @@
 ﻿import type {
-  DecimalInput,
   NormalizedSearchEnvelope,
   SearchAddress,
 } from "../search/internal.js";
@@ -17,8 +16,7 @@ export interface InitBilling {
 export interface InitPayment {
   type: string;
   collectedBy: string;
-  amount: DecimalInput;
-  currency: string;
+  currency?: string;
   settlementDetails: Record<string, unknown>[];
 }
 export interface InitContact {
@@ -69,6 +67,8 @@ export interface ResolvedInitSelection {
   providerLocations: ResolvedInitProviderLocation[];
   item: ResolvedInitItem;
   fulfillment: ResolvedInitFulfillment;
+  /** payment.type sent in this transaction's /search, if any. */
+  searchPaymentType?: string;
   searchEnvelope: NormalizedSearchEnvelope;
 }
 export interface InitResponse {

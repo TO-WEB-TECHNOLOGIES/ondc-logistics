@@ -603,11 +603,15 @@ const parseMinimalPayment = (value: unknown): SearchPayment | undefined => {
   const type = requiredString(p.type, "payment.type");
   if (!PAYMENT_TYPES.includes(type))
     throw new SearchValidationError("payment.type is invalid");
-  return {
-    type,
-    collectionAmount:
-      p.collection_amount === undefined
-        ? undefined
-        : decimalInput(p.collection_amount, "payment.collection_amount"),
-  };
+  // This LBNP never offers CoD; collection_amount is CoD-only (contract
+  // footnote 25).
+  if (type === "ON-FULFILLMENT")
+    throw new SearchValidationError(
+      "payment.type ON-FULFILLMENT (cash on delivery) is not supported",
+    );
+  if (p.collection_amount !== undefined)
+    throw new SearchValidationError(
+      "payment.collection_amount is only applicable to cash on delivery; omit it",
+    );
+  return { type };
 };

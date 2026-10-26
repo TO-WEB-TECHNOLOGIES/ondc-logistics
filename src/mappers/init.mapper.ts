@@ -139,7 +139,8 @@ export const mapInitRequestToOndc = (
         payment: {
           type: request.payment.type,
           collected_by: request.payment.collectedBy,
-          "@ondc/org/collection_amount": String(request.payment.amount),
+          // No @ondc/org/collection_amount: it is CoD-only (contract
+          // footnote 61) and this LBNP never sends ON-FULFILLMENT.
           // Omit rather than send `[]` — the validator rejects an empty array.
           ...(request.payment.settlementDetails.length > 0
             ? { "@ondc/org/settlement_details": request.payment.settlementDetails }

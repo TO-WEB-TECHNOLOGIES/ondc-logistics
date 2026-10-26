@@ -106,14 +106,21 @@ const validateBasicOrder = (v: unknown, p = "message.order") => {
   arr(q.breakup, p + ".quote.breakup");
   const payment = record(o.payment, p + ".payment");
   str(payment.type, p + ".payment.type");
-  str(payment.collected_by, p + ".payment.collected_by");
   if (
-    payment["@ondc/org/collection_amount"] === undefined &&
-    payment.paid_amount === undefined
+    !["ON-ORDER", "ON-FULFILLMENT", "POST-FULFILLMENT"].includes(payment.type)
   )
     throw new ConfirmValidationError(
-      "payment amount is required",
-      p + ".payment",
+      "must be ON-ORDER, ON-FULFILLMENT, or POST-FULFILLMENT",
+      p + ".payment.type",
+    );
+  // Contract footnotes 61-62/69: collected_by is required for ON-ORDER and
+  // ON-FULFILLMENT; collection_amount only applies to ON-FULFILLMENT (CoD).
+  if (payment.type !== "POST-FULFILLMENT" || payment.collected_by !== undefined)
+    str(payment.collected_by, p + ".payment.collected_by");
+  if (payment.type === "ON-FULFILLMENT")
+    str(
+      payment["@ondc/org/collection_amount"],
+      p + ".payment.@ondc/org/collection_amount",
     );
   return o;
 };

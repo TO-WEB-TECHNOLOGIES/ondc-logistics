@@ -14,6 +14,7 @@ import {
 import {
   buildConfirmOrder,
   buildConfirmPayload,
+  findPaymentMismatch,
   mergeInitializedOrder,
   toSuppliedOrder,
 } from "../mappers/confirm.mapper.js";
@@ -37,6 +38,17 @@ export class ConfirmService {
     );
     const initOrder = state.init.message.order as any;
     const onInitOrder = state.onInit.message?.order as any;
+    const paymentMismatch = findPaymentMismatch(
+      initOrder?.payment,
+      onInitOrder?.payment,
+    );
+    if (paymentMismatch) {
+      console.log("[confirm.service] /on_init payment mismatch", {
+        initTransactionId: input.initTransactionId,
+        reason: paymentMismatch,
+      });
+      throw new ConfirmValidationError(paymentMismatch, "message.order.payment");
+    }
     const initialized = mergeInitializedOrder(initOrder, onInitOrder) as any;
     const suppliedOrder = toSuppliedOrder(input);
     const initTransactionId = input.initTransactionId;

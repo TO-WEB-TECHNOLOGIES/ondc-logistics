@@ -333,6 +333,7 @@ export class DrizzleInitRepository implements InitRepository {
         transactionId: ondcTransactions.transactionId,
         authorizationStartType: logisticsSearches.authorizationStartType,
         authorizationEndType: logisticsSearches.authorizationEndType,
+        paymentType: logisticsSearches.paymentType,
         startGps: logisticsSearches.startGps,
         startAddressName: logisticsSearches.startAddressName,
         startAddressBuilding: logisticsSearches.startAddressBuilding,
@@ -528,6 +529,7 @@ export class DrizzleInitRepository implements InitRepository {
                 tags: fulfillmentTagsByRowId.get(fulfillment.id) ?? [],
                 pickupDuration: fulfillment.pickupDuration ?? undefined,
               },
+              searchPaymentType: search.paymentType ?? undefined,
               searchEnvelope: {
                 start: {
                   gps: search.startGps ?? "",
