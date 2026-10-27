@@ -16,6 +16,10 @@ import {
 } from "./logistics-order-shared.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
 import type { CallbackStream } from "../utils/streams/callback-stream.js";
+import {
+  buildOrderEventDetails,
+  errorFields,
+} from "../mappers/order-event.mapper.js";
 
 export type { LogisticsOrderRow };
 export type UpdateCallbackResult =
@@ -364,8 +368,7 @@ export class DrizzleUpdateRepository implements UpdateRepository {
     if (response.error) {
       stream.push(c.transaction_id, "update_error", {
         orderId: row.orderId,
-        code: response.error.code,
-        message: response.error.message,
+        ...errorFields(response.error),
       });
     } else {
       stream.push(c.transaction_id, "order_updated", {
@@ -373,6 +376,9 @@ export class DrizzleUpdateRepository implements UpdateRepository {
         state: updatedFields?.state,
         awbNo: updatedFields?.awbNo,
         updatedAt: new Date().toISOString(),
+        // Slots after RTS, agent, shipping label/proof, weight-differential
+        // quote lines (diff/tax_diff) and updated linked-order weight/dims.
+        ...buildOrderEventDetails(response.message?.order as any, c),
       });
     }
 

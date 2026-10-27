@@ -32,6 +32,7 @@ export const buildStatusFulfillments = (order: AnyOrder) =>
         fulfillmentId: f.id as string,
         ...compact({
           type: f.type as string | undefined,
+          awbNo: f["@ondc/org/awb_no"] as string | undefined,
           state: compact({
             code: f.state?.descriptor?.code as string | undefined,
             shortDesc: f.state?.descriptor?.short_desc as string | undefined,
@@ -46,6 +47,13 @@ export const buildStatusFulfillments = (order: AnyOrder) =>
           tracking: typeof f.tracking === "boolean" ? f.tracking : undefined,
           trackingInfo: tagListToRecord(tags, "tracking"),
           delay: tagListToRecord(tags, "fulfillment_delay"),
+          // /on_cancel (RTO) fulfillment tags (contract footnotes 162–168).
+          rtoEvent: tagListToRecord(tags, "rto_event"),
+          precancelState: tagListToRecord(tags, "precancel_state"),
+          igmIssueId: tagListToRecord(tags, "igm_request")?.id,
+          // Inter-state e-way bill, provided by the LSP (footnote 154).
+          ewayBillNo: f["@ondc/org/ewaybillno"] as string | undefined,
+          ewayBillExpiry: f["@ondc/org/ebnexpirydate"] as string | undefined,
           start: side(f.start),
           end: side(f.end),
           tags: tags.length ? tags : undefined,

@@ -3,6 +3,10 @@ import { db1 } from "../db/index.js";
 import { logisticsOrder, ondcTransactions } from "../db/schema/index.js";
 import { buildOndcInitOrder } from "../mappers/init-persistence.mapper.js";
 import {
+  buildOrderEventDetails,
+  errorFields,
+} from "../mappers/order-event.mapper.js";
+import {
   buildLogisticsOrderColumns,
   syncLogisticsOrderTags,
   type AnyOrder,
@@ -360,8 +364,7 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
     if (response.error) {
       stream.push(c.transaction_id, "confirm_error", {
         orderId: row.orderId,
-        code: response.error.code,
-        message: response.error.message,
+        ...errorFields(response.error),
       });
     } else if (row.orderId) {
       stream.push(c.transaction_id, "order_confirmed", {
@@ -392,6 +395,10 @@ export class DrizzleConfirmRepository implements ConfirmRepository {
           type: columns?.paymentType,
           collectedBy: columns?.paymentCollectedBy,
         },
+        ...buildOrderEventDetails(
+          response.message?.order as unknown as AnyOrder | undefined,
+          c,
+        ),
       });
     }
 

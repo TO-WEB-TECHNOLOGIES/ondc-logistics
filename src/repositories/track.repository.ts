@@ -10,6 +10,8 @@ import {
   type LogisticsOrderRow,
 } from "./logistics-order-shared.js";
 import type { OndcOnTrackResponse, OndcTrackRequest } from "../types/track/ondc.js";
+import { buildTrackingDetails } from "../mappers/track-event.mapper.js";
+import { errorFields } from "../mappers/order-event.mapper.js";
 
 export type TrackCallbackResult =
   "processed" | "duplicate" | "not_found" | "invalid_fulfillment";
@@ -208,6 +210,7 @@ export class DrizzleTrackRepository implements TrackRepository {
         locationTimestamp: tracking?.location?.time?.timestamp,
         path,
         updatedAt: new Date().toISOString(),
+        ...buildTrackingDetails(tracking),
       });
       stream.push(c.transaction_id, "order_tracking", {
         orderId: row.orderId,
@@ -217,12 +220,12 @@ export class DrizzleTrackRepository implements TrackRepository {
         locationTimestamp: tracking?.location?.time?.timestamp,
         path,
         updatedAt: new Date().toISOString(),
+        ...buildTrackingDetails(tracking),
       });
     } else if (response.error) {
       stream.push(c.transaction_id, "track_error", {
         orderId: row.orderId,
-        code: response.error.code,
-        message: response.error.message,
+        ...errorFields(response.error),
       });
     }
 

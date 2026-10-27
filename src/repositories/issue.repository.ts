@@ -8,6 +8,8 @@ import {
   ondcTransactions,
 } from "../db/schema/index.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
+import { buildIssueEventDetails } from "../mappers/issue-event.mapper.js";
+import { errorFields } from "../mappers/order-event.mapper.js";
 import type { CallbackStream } from "../utils/streams/callback-stream.js";
 import { loadLogisticsOrder, type LogisticsOrderRow, type Tx } from "./logistics-order-shared.js";
 import type {
@@ -1056,14 +1058,14 @@ export class DrizzleIssueRepository implements IssueRepository {
       stream.push(c.transaction_id, "issue_error", {
         issueId: incomingIssueId,
         orderId: issueRow.orderId,
-        code: response.error.code,
-        message: response.error.message,
+        ...errorFields(response.error),
       });
     } else {
       stream.push(c.transaction_id, "issue_updated", {
         issueId: incomingIssueId,
         orderId: issueRow.orderId,
         newActionCount: newActions.length,
+        ...buildIssueEventDetails(response.message?.issue, newActions),
       });
     }
     return "processed";
@@ -1262,14 +1264,14 @@ export class DrizzleIssueRepository implements IssueRepository {
       stream.push(c.transaction_id, "issue_status_error", {
         issueId: incomingIssueId,
         orderId,
-        code: response.error.code,
-        message: response.error.message,
+        ...errorFields(response.error),
       });
     } else {
       stream.push(c.transaction_id, "issue_status_updated", {
         issueId: incomingIssueId,
         orderId,
         newActionCount: newActions.length,
+        ...buildIssueEventDetails(response.message?.issue, newActions),
       });
     }
     return "processed";

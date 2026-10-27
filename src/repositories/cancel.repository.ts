@@ -13,6 +13,10 @@ import {
   type LogisticsOrderRow,
 } from "./logistics-order-shared.js";
 import type { OndcCancelRequest, OndcOnCancelResponse } from "../types/cancel/ondc.js";
+import {
+  buildOrderEventDetails,
+  errorFields,
+} from "../mappers/order-event.mapper.js";
 
 export type CancelCallbackResult =
   | "processed"
@@ -342,6 +346,8 @@ export class DrizzleCancelRepository implements CancelRepository {
     if (confirmed) {
       const cancellationReasonId = order?.cancellation?.reason?.id;
       const cancellationReasonText = getCancellationReasonText(cancellationReasonId);
+      // RTO fulfillment, rto/tax quote lines, pre-cancel state, IGM link.
+      const details = buildOrderEventDetails(order, c);
       orderSseManager.publish(resolvedOrderId, {
         event: "order_status",
         orderId: resolvedOrderId,
@@ -352,6 +358,7 @@ export class DrizzleCancelRepository implements CancelRepository {
         cancellationReasonText,
         cancelledBy: order?.cancellation?.cancelled_by,
         updatedAt: new Date().toISOString(),
+        ...details,
       });
       stream.push(c.transaction_id, "order_cancelled", {
         orderId: resolvedOrderId,
@@ -362,12 +369,12 @@ export class DrizzleCancelRepository implements CancelRepository {
         cancellationReasonText,
         cancelledBy: order?.cancellation?.cancelled_by,
         updatedAt: new Date().toISOString(),
+        ...details,
       });
     } else if (response.error) {
       stream.push(c.transaction_id, "cancel_error", {
         orderId: resolvedOrderId,
-        code: response.error.code,
-        message: response.error.message,
+        ...errorFields(response.error),
       });
     }
 
