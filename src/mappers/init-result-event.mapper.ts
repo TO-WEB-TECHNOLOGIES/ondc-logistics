@@ -1,20 +1,9 @@
 import type { extractInitOrder } from "./init-persistence.mapper.js";
 import { tagListToRecord } from "../utils/ondc-tags.js";
+import { compact } from "../utils/compact.js";
 
 type ExtractedInitOrder = ReturnType<typeof extractInitOrder>;
 type ExtractedSide = ExtractedInitOrder["fulfillments"][number]["start"];
-
-/** Drops undefined values and empty objects so events never carry `null`/`{}` noise. */
-const compact = <T extends Record<string, unknown>>(value: T) => {
-  const out: Record<string, unknown> = {};
-  for (const [key, v] of Object.entries(value)) {
-    if (v === undefined) continue;
-    if (v && typeof v === "object" && !Array.isArray(v) && !Object.keys(v).length)
-      continue;
-    out[key] = v;
-  }
-  return Object.keys(out).length ? (out as Partial<T>) : undefined;
-};
 
 const side = (s: ExtractedSide) =>
   compact({

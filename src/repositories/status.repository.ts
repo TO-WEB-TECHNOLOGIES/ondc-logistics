@@ -12,6 +12,7 @@ import {
   type LogisticsOrderRow,
 } from "./logistics-order-shared.js";
 import type { OndcOnStatusResponse, OndcStatusRequest } from "../types/status/ondc.js";
+import { buildStatusFulfillments } from "../mappers/status-event.mapper.js";
 
 export type StatusCallbackResult = "processed" | "not_found" | "invalid_bpp";
 
@@ -141,6 +142,12 @@ export class DrizzleStatusRepository implements StatusRepository {
     }
 
     let columns: ReturnType<typeof buildLogisticsOrderColumns> | undefined;
+    // Stream-only details (agent, vehicle, tracking, times, delay, proof);
+    // not persisted — see status-event.mapper.ts.
+    const fulfillments =
+      !response.error && response.message?.order
+        ? buildStatusFulfillments(response.message.order as unknown as AnyOrder)
+        : [];
 
     await this.database.transaction(async (tx) => {
       if (!response.error && response.message?.order) {
@@ -191,6 +198,7 @@ export class DrizzleStatusRepository implements StatusRepository {
         fulfillmentState: columns.fulfillmentStateCode,
         awbNo: columns.awbNo,
         updatedAt: new Date().toISOString(),
+        ...(fulfillments.length ? { fulfillments } : {}),
       });
       stream.push(c.transaction_id, "order_status", {
         orderId: row.orderId,
@@ -198,6 +206,7 @@ export class DrizzleStatusRepository implements StatusRepository {
         fulfillmentState: columns.fulfillmentStateCode,
         awbNo: columns.awbNo,
         updatedAt: new Date().toISOString(),
+        ...(fulfillments.length ? { fulfillments } : {}),
       });
     } else if (response.error) {
       stream.push(c.transaction_id, "status_error", {
