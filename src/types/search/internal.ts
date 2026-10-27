@@ -45,7 +45,8 @@ export interface SearchDimensions {
 
 export interface SearchPayload {
   weight: SearchMeasurement;
-  dimensions: SearchDimensions;
+  /** Optional only for Immediate Delivery (hyperlocal); see search-validation.ts. */
+  dimensions?: SearchDimensions;
   category: string;
   value: { amount: DecimalInput; currency: string };
   dangerousGoods: boolean;

@@ -49,7 +49,7 @@ export interface OndcMeasurement {
 
 export interface OndcPayloadDetails {
   weight: OndcMeasurement;
-  dimensions: {
+  dimensions?: {
     length: OndcMeasurement;
     breadth: OndcMeasurement;
     height: OndcMeasurement;

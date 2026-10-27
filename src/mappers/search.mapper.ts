@@ -70,7 +70,9 @@ export const mapSearchRequestToOndc = (
   if (request.payload)
     intent["@ondc/org/payload_details"] = {
       weight: request.payload.weight,
-      dimensions: request.payload.dimensions,
+      ...(request.payload.dimensions
+        ? { dimensions: request.payload.dimensions }
+        : {}),
       category: request.payload.category,
       value: {
         currency: request.payload.value.currency,

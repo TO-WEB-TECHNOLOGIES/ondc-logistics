@@ -102,18 +102,25 @@ export class DrizzleSearchRepository implements SearchRepository {
             ? {
                 payloadWeightValue: numeric(request.payload.weight.value),
                 payloadWeightUnit: request.payload.weight.unit,
-                payloadLengthValue: numeric(
-                  request.payload.dimensions.length.value,
-                ),
-                payloadLengthUnit: request.payload.dimensions.length.unit,
-                payloadBreadthValue: numeric(
-                  request.payload.dimensions.breadth.value,
-                ),
-                payloadBreadthUnit: request.payload.dimensions.breadth.unit,
-                payloadHeightValue: numeric(
-                  request.payload.dimensions.height.value,
-                ),
-                payloadHeightUnit: request.payload.dimensions.height.unit,
+                // Dimensions are optional for Immediate Delivery; leave the
+                // columns null when they weren't sent.
+                ...(request.payload.dimensions
+                  ? {
+                      payloadLengthValue: numeric(
+                        request.payload.dimensions.length.value,
+                      ),
+                      payloadLengthUnit: request.payload.dimensions.length.unit,
+                      payloadBreadthValue: numeric(
+                        request.payload.dimensions.breadth.value,
+                      ),
+                      payloadBreadthUnit:
+                        request.payload.dimensions.breadth.unit,
+                      payloadHeightValue: numeric(
+                        request.payload.dimensions.height.value,
+                      ),
+                      payloadHeightUnit: request.payload.dimensions.height.unit,
+                    }
+                  : {}),
                 payloadCategory: request.payload.category,
                 payloadValueAmount: numeric(request.payload.value.amount),
                 payloadValueCurrency: request.payload.value.currency,

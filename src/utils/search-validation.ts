@@ -383,35 +383,43 @@ export const parseMinimalSearchRequest = (value: unknown): SearchRequest => {
         throw new SearchValidationError("payload.weight must be an object");
       })();
 
-  const dimensions = isRecord(payload.dimensions)
-    ? payload.dimensions
-    : (() => {
-        throw new SearchValidationError("payload.dimensions must be an object");
-      })();
-
-  const length = isRecord(dimensions.length)
-    ? dimensions.length
-    : (() => {
+  // Contract footnote 27: package dimensions are mandatory for intercity,
+  // optional for hyperlocal. Immediate Delivery is the hyperlocal category,
+  // so dimensions may be omitted only there; if sent, all three are required.
+  const parsedDimensions = (() => {
+    if (payload.dimensions === undefined) {
+      if (value.category_id !== "Immediate Delivery")
         throw new SearchValidationError(
-          "payload.dimensions.length must be an object",
+          "payload.dimensions is required unless category_id is Immediate Delivery",
         );
-      })();
-
-  const breadth = isRecord(dimensions.breadth)
-    ? dimensions.breadth
-    : (() => {
-        throw new SearchValidationError(
-          "payload.dimensions.breadth must be an object",
-        );
-      })();
-
-  const height = isRecord(dimensions.height)
-    ? dimensions.height
-    : (() => {
-        throw new SearchValidationError(
-          "payload.dimensions.height must be an object",
-        );
-      })();
+      return undefined;
+    }
+    const dimensions = isRecord(payload.dimensions)
+      ? payload.dimensions
+      : (() => {
+          throw new SearchValidationError(
+            "payload.dimensions must be an object",
+          );
+        })();
+    const side = (key: "length" | "breadth" | "height") => {
+      const d = isRecord(dimensions[key])
+        ? dimensions[key]
+        : (() => {
+            throw new SearchValidationError(
+              `payload.dimensions.${key} must be an object`,
+            );
+          })();
+      return {
+        value: requiredDecimal(d.value, `payload.dimensions.${key}.value`),
+        unit: requiredString(d.unit, `payload.dimensions.${key}.unit`),
+      };
+    };
+    return {
+      length: side("length"),
+      breadth: side("breadth"),
+      height: side("height"),
+    };
+  })();
 
   const payloadValue = isRecord(payload.value)
     ? payload.value
@@ -529,31 +537,7 @@ export const parseMinimalSearchRequest = (value: unknown): SearchRequest => {
         unit: requiredString(weight.unit, "payload.weight.unit"),
       },
 
-      dimensions: {
-        length: {
-          value: requiredDecimal(
-            length.value,
-            "payload.dimensions.length.value",
-          ),
-          unit: requiredString(length.unit, "payload.dimensions.length.unit"),
-        },
-
-        breadth: {
-          value: requiredDecimal(
-            breadth.value,
-            "payload.dimensions.breadth.value",
-          ),
-          unit: requiredString(breadth.unit, "payload.dimensions.breadth.unit"),
-        },
-
-        height: {
-          value: requiredDecimal(
-            height.value,
-            "payload.dimensions.height.value",
-          ),
-          unit: requiredString(height.unit, "payload.dimensions.height.unit"),
-        },
-      },
+      ...(parsedDimensions ? { dimensions: parsedDimensions } : {}),
 
       category: requiredString(payload.category, "payload.category"),
 

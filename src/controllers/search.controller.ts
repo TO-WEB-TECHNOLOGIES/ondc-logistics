@@ -63,7 +63,10 @@ import { ondcSubmissionFailure } from "../utils/ondc-error-response.js";
  *                 description: Pickup/delivery scheduling window.
  *               payload:
  *                 type: object
- *                 required: [weight, dimensions, category, value]
+ *                 required: [weight, category, value]
+ *                 description: >
+ *                   dimensions is optional when category_id is Immediate Delivery
+ *                   (hyperlocal) and required for every other category.
  *                 properties:
  *                   weight:
  *                     type: object
