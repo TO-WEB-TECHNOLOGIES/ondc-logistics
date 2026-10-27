@@ -35,7 +35,10 @@ api.interceptors.response.use(
     const action = extractActionFromUrl(response.config.url ?? "", response.config.baseURL ?? "");
     if (action) {
       const noType = getNoApiType(action, true);
-      const payload = extractContextAndMessage(response.data);
+      const payload = withRequestContextFallback(
+        extractContextAndMessage(response.data),
+        response.config?.data,
+      );
       if (payload) {
         pushTransactionLog(noType, payload);
       }
@@ -48,7 +51,10 @@ api.interceptors.response.use(
     const action = extractActionFromUrl(error.config?.url ?? "", error.config?.baseURL ?? "");
     if (action) {
       const noType = getNoApiType(action, true);
-      const payload = extractContextAndMessage(error.response?.data ?? {});
+      const payload = withRequestContextFallback(
+        extractContextAndMessage(error.response?.data ?? {}),
+        error.config?.data,
+      );
       if (payload) {
         pushTransactionLog(noType, payload);
       }
@@ -127,4 +133,31 @@ function extractContextAndMessage(data: unknown): Record<string, unknown> {
   const message = extractMessageFromData(data);
 
   return { context, message };
+}
+
+/**
+ * Many participants ACK/NACK with only `{ message: { ack } }` and no context,
+ * which the NO API rejects ("data.context.action must be a string"). The ACK
+ * belongs to the request we sent, so fall back to that request's context.
+ * By response time axios has already serialized `config.data` to a string.
+ */
+function withRequestContextFallback(
+  payload: Record<string, unknown>,
+  requestData: unknown,
+): Record<string, unknown> {
+  const context = payload.context as Record<string, unknown> | undefined;
+  if (context && typeof context.action === "string") return payload;
+
+  let parsed: unknown = requestData;
+  if (typeof requestData === "string") {
+    try {
+      parsed = JSON.parse(requestData);
+    } catch {
+      return payload;
+    }
+  }
+  const requestContext = extractContextFromData(parsed);
+  return typeof requestContext.action === "string"
+    ? { ...payload, context: requestContext }
+    : payload;
 }
