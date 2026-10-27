@@ -576,12 +576,15 @@ export async function runSearchInitConfirm(
   }
   const itemId: string = item.catalogItemId;
   const fulfillmentId: string = item.fulfillmentId ?? provider.fulfillments?.[0]?.fulfillmentId;
-  log("2 on_search", `provider=${providerId} item=${itemId} fulfillment=${fulfillmentId}`);
+  log("2 on_search", `bpp=${searchResult.bppId ?? "?"} provider=${providerId} item=${itemId} fulfillment=${fulfillmentId}`);
   debug("2 on_search", `searchId=${searchId} items=${provider.items?.length ?? 0} fulfillments=${provider.fulfillments?.length ?? 0}`);
   if (!fulfillmentId) warn("2 on_search", "no fulfillmentId on item or provider.fulfillments[0] — init will be sent without one");
 
   const init = await post("3 init", "/logistics/init", {
     search_id: searchId,
+    // Pins the selection to the LSP that sent this option; without it, two
+    // LSPs reusing the same provider/item/fulfillment ids make /init ambiguous.
+    bpp_id: searchResult.bppId,
     provider_id: providerId,
     item_id: itemId,
     fulfillment_id: fulfillmentId,

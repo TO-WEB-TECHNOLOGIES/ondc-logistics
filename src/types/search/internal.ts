@@ -155,6 +155,9 @@ export interface NormalizedSearchEnvelope {
 export interface SearchResultEvent {
   event: "search_result";
   searchId: string;
+  /** LSP that returned this option; pass as bpp_id to /init. */
+  bppId: string;
+  bppUri?: string;
   provider: NormalizedProviderResult;
 }
 

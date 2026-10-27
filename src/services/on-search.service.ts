@@ -33,14 +33,27 @@ export class InProcessOnSearchQueue implements OnSearchQueue {
           searchId: result.searchId,
           providerCount: result.providers.length,
         });
+        // Provider/item/fulfillment ids are only unique within one LSP's
+        // catalog; bppId (signature-verified context.bpp_id, the value /init
+        // filters on) tells same-id options from different LSPs apart.
+        // Same fallback as DrizzleOnSearchRepository.stage so the event value
+        // always equals the stored one (bpp_id is required upstream anyway).
+        const origin = {
+          bppId: response.context.bpp_id ?? "unknown",
+          ...(response.context.bpp_uri
+            ? { bppUri: response.context.bpp_uri }
+            : {}),
+        };
         for (const provider of result.providers) {
           searchSseManager.publish(result.searchId, {
             event: "search_result",
             searchId: result.searchId,
+            ...origin,
             provider,
           });
           stream.push(response.context.transaction_id, "search_result", {
             searchId: result.searchId,
+            ...origin,
             provider,
           });
         }
