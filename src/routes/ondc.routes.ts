@@ -48,6 +48,7 @@ import { DrizzleCancelRepository } from "../repositories/cancel.repository.js";
 import { searchSseManager } from "../utils/streams/search-sse.js";
 import { orderSseManager } from "../utils/streams/order-sse.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
+import { createStreamBindController } from "../controllers/stream-bind.controller.js";
 import { noApiLogMiddleware } from "../middlewares/no-api-log.middleware.js";
 import { callbackLogMiddleware } from "../middlewares/callback-log.middleware.js";
 import { ondcProtocol } from "../config/ondc-protocol.js";
@@ -143,6 +144,7 @@ export const streamRouter = express.Router();
 streamRouter.get("/stream/:clientId", (request, response) => {
   clientStreamManager.subscribe(request.params.clientId, response);
 });
+streamRouter.post("/stream/:clientId/bind", createStreamBindController());
 
 export const searchRouter = express.Router();
 searchRouter.post("/search", createSearchController(searchService));
