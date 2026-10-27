@@ -3,6 +3,8 @@ import type { OnSearchRepository } from "../repositories/on-search.repository.js
 import { searchSseManager } from "../utils/streams/search-sse.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
 import type { CallbackStream } from "../utils/streams/callback-stream.js";
+import type { SearchResultBpp } from "../types/search/internal.js";
+import { normalizeTags, tagListToRecord } from "../utils/ondc-tags.js";
 
 export interface OnSearchQueue {
   enqueue(
@@ -38,11 +40,21 @@ export class InProcessOnSearchQueue implements OnSearchQueue {
         // filters on) tells same-id options from different LSPs apart.
         // Same fallback as DrizzleOnSearchRepository.stage so the event value
         // always equals the stored one (bpp_id is required upstream anyway).
+        const descriptor = response.message.catalog["bpp/descriptor"];
+        const bppTerms = tagListToRecord(descriptor?.tags, "bpp_terms");
+        const bpp: SearchResultBpp = {
+          ...(descriptor?.name ? { name: descriptor.name } : {}),
+          ...(bppTerms ? { terms: bppTerms } : {}),
+          ...(descriptor?.tags?.length
+            ? { tags: normalizeTags(descriptor.tags) }
+            : {}),
+        };
         const origin = {
           bppId: response.context.bpp_id ?? "unknown",
           ...(response.context.bpp_uri
             ? { bppUri: response.context.bpp_uri }
             : {}),
+          ...(Object.keys(bpp).length ? { bpp } : {}),
         };
         for (const provider of result.providers) {
           searchSseManager.publish(result.searchId, {

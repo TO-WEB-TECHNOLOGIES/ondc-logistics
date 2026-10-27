@@ -19,6 +19,7 @@ import {
   tags,
 } from "../db/schema/index.js";
 import { extractInitOrder } from "../mappers/init-persistence.mapper.js";
+import { buildInitResultEvent } from "../mappers/init-result-event.mapper.js";
 import { fetchSearchAddressNames } from "./init-order-reader.js";
 import { clientStreamManager } from "../utils/streams/client-stream.js";
 import type { CallbackStream } from "../utils/streams/callback-stream.js";
@@ -739,22 +740,11 @@ export class DrizzleInitRepository implements InitRepository {
         message: response.error.message,
       });
     } else if (extracted) {
-      stream.push(c.transaction_id, "init_result", {
-        providerId: extracted.providerId,
-        items: extracted.items.map((item) => ({
-          itemId: item.itemId,
-          name: item.descriptorName,
-          fulfillmentId: item.fulfillmentId,
-          quantityCount: item.quantityCount,
-        })),
-        fulfillments: extracted.fulfillments.map((f) => ({
-          fulfillmentId: f.fulfillmentId,
-          type: f.type,
-        })),
-        quote: extracted.quote,
-        quoteBreakups: extracted.quoteBreakups,
-        cancellationTerms: extracted.cancellationTerms,
-      });
+      stream.push(
+        c.transaction_id,
+        "init_result",
+        buildInitResultEvent(extracted, c),
+      );
     }
     return "processed" as const;
   }

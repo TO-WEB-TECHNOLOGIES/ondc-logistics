@@ -106,6 +106,8 @@ export interface NormalizedProviderResult {
     pickupDuration?: string;
     motorableDistance?: DecimalInput;
     motorableDistanceUnit?: string;
+    /** All fulfillment tags as sent by the LSP (distance included). */
+    tags?: Array<{ code: string; list: Array<{ code: string; value?: string }> }>;
   }>;
   locations: Array<{
     locationId: string;
@@ -152,12 +154,21 @@ export interface NormalizedSearchEnvelope {
   end: NormalizedSearchSide;
 }
 
+export interface SearchResultBpp {
+  name?: string;
+  /** bpp_terms flattened to { code: value } (static_terms, static_terms_new, effective_date, …). */
+  terms?: Record<string, string>;
+  tags?: Array<{ code: string; list: Array<{ code: string; value?: string }> }>;
+}
+
 export interface SearchResultEvent {
   event: "search_result";
   searchId: string;
   /** LSP that returned this option; pass as bpp_id to /init. */
   bppId: string;
   bppUri?: string;
+  /** LSP-level details from catalog["bpp/descriptor"]. */
+  bpp?: SearchResultBpp;
   provider: NormalizedProviderResult;
 }
 

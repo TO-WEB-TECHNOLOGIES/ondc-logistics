@@ -18,6 +18,7 @@ import type {
   OndcProvider,
 } from "../types/search/ondc.js";
 import type { NormalizedProviderResult } from "../types/search/internal.js";
+import { normalizeTags } from "../utils/ondc-tags.js";
 
 export interface OnSearchRepository {
   stage(
@@ -64,6 +65,7 @@ const normalizeProvider = (p: OndcProvider): NormalizedProviderResult => ({
       pickupDuration: x.start?.time?.duration,
       motorableDistance: distance.value,
       motorableDistanceUnit: distance.unit,
+      ...(x.tags?.length ? { tags: normalizeTags(x.tags) } : {}),
     };
   }),
   locations: (p.locations ?? []).map((x) => ({
