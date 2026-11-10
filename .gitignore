@@ -2,6 +2,7 @@ node_modules/
 dist/
 .env
 .env.*
+.store.env
 !.env.example
 
 drizzle/meta/
