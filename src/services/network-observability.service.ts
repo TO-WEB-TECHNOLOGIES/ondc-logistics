@@ -20,6 +20,7 @@
 
 import axios from "axios";
 import { ENV, NO_ANALYTICS_TOKEN } from "../constants/v1/appConstants.js";
+import { envFor } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 import { utcNowISO } from "../utils/indian-time.js";
 
@@ -58,7 +59,7 @@ type NoApiResponse = NoApiSuccessResponse | NoApiErrorResponse;
 
 // ─── Token Expiry Check ────────────────────────────────────────────────────────
 
-const NO_ANALYTICS_TOKEN_LAST_UPDATED = process.env.NO_ANALYTICS_TOKEN_LAST_UPDATED; // DD-MM-YYYY
+const NO_ANALYTICS_TOKEN_LAST_UPDATED = envFor("NO_ANALYTICS_TOKEN_LAST_UPDATED"); // DD-MM-YYYY
 
 function checkTokenExpiry(): void {
   if (!NO_ANALYTICS_TOKEN_LAST_UPDATED) {

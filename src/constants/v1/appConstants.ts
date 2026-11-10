@@ -1,21 +1,22 @@
 import dotenv from "dotenv";
 dotenv.config();
+import { ENV, envFor } from "../../config/env.js";
 
 // City codes (formerly the hardcoded presentCityCodes array here) are now admin-managed via
 // the city_code DB table — see services/city-code.service.ts's getActiveCityCodes() and the
 // /admin/city-codes CRUD API (admin.routes.ts).
 
-const BFF = process.env.BFF!;
+const BFF = envFor("BFF")!;
 
 // ONDC Keys
-const SIGNING_PRIVATE_KEY = process.env.SIGNING_PRIVATE_KEY!;
-const SIGNING_PUBLIC_KEY = process.env.SIGNING_PUBLIC_KEY!;
-const ENCRYPTION_PRIVATE_KEY = process.env.ENCRYPTION_PRIVATE_KEY!;
-const ENCRYPTION_PUBLIC_KEY = process.env.ENCRYPTION_PUBLIC_KEY!;
-const UNIQUE_KEY_ID = process.env.UNIQUE_KEY_ID!;
+const SIGNING_PRIVATE_KEY = envFor("SIGNING_PRIVATE_KEY")!;
+const SIGNING_PUBLIC_KEY = envFor("SIGNING_PUBLIC_KEY")!;
+const ENCRYPTION_PRIVATE_KEY = envFor("ENCRYPTION_PRIVATE_KEY")!;
+const ENCRYPTION_PUBLIC_KEY = envFor("ENCRYPTION_PUBLIC_KEY")!;
+const UNIQUE_KEY_ID = envFor("UNIQUE_KEY_ID")!;
 
 // PLATFORM DETAILS
-const SUBSCRIBER_ID = process.env.SUBSCRIBER_ID!;
+const SUBSCRIBER_ID = envFor("SUBSCRIBER_ID")!;
 // const DOMAIN = process.env.DOMAIN!;
 // const APP_TYPE = process.env.APP_TYPE!;
 // const APP_OPS_NO = Number(process.env.APP_OPS_NO || 1);
@@ -24,20 +25,20 @@ const SUBSCRIBER_ID = process.env.SUBSCRIBER_ID!;
 // const BAP_FINDER_FEE_TYPE = process.env.BFF_TYPE || "percent";
 
 // APP CONFIGURATION
-const ENV = (process.env.ENV || "PREPROD") as "PROD" | "PREPROD";
+// ENV (PROD | PREPROD) and envFor() live in config/env.ts — envFor("X") reads
+// `${ENV}_X` when set, else plain X.
 
 // Network Observability (NO) API — ONDC compliance transaction-log push
-const NO_ANALYTICS_TOKEN = process.env.NO_ANALYTICS_TOKEN || "";
+const NO_ANALYTICS_TOKEN = envFor("NO_ANALYTICS_TOKEN") || "";
 
+// PROD_REGISTRY_URL / PREPROD_REGISTRY_URL (and the plain REGISTRY_URL fallback) via envFor.
 const REGISTRY_URL =
-  ENV === "PROD"
-    ? process.env.PROD_REGISTRY_URL || "https://registry.ondc.org/"
-    : process.env.PREPROD_REGISTRY_URL || "https://preprod.registry.ondc.org/";
+  envFor("REGISTRY_URL") ||
+  (ENV === "PROD" ? "https://registry.ondc.org/" : "https://preprod.registry.ondc.org/");
 
 const GATEWAY_URL =
-  ENV === "PROD"
-    ? process.env.PROD_GATEWAY_URL || "https://prod.gateway.ondc.org/"
-    : process.env.PREPROD_GATEWAY_URL || "https://preprod.gateway.ondc.org/";
+  envFor("GATEWAY_URL") ||
+  (ENV === "PROD" ? "https://prod.gateway.ondc.org/" : "https://preprod.gateway.ondc.org/");
 
 export const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 

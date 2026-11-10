@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import * as ondcSchema from "./schema/index.js";
 // import * as customerSchema from "./customer/schema/index.js";
 import { logger } from "../utils/logger.js";
+import { envFor, envForFirst } from "../config/env.js";
 
 // ─── Process role (3-process split, 2026-06-20) ───────────────────────────────
 //
@@ -15,6 +16,12 @@ import { logger } from "../utils/logger.js";
 // it doesn't use (e.g. the webhook process must not touch pool1/pool2/poolIngest).
 const NODE_ROLE = process.env.NODE_ROLE || "api";
 const APP_NAME = `ondc-${NODE_ROLE}`;
+
+// ENV-scoped DB URL (config/env.ts): ${ENV}_PSQL_URI → ${ENV}_DATABASE_URL → PSQL_URI →
+// DATABASE_URL → local default. Environment-specific values win over any plain value.
+const ONDC_DB_URL =
+  envForFirst("PSQL_URI", "DATABASE_URL") ||
+  "postgresql://postgres:postgres@localhost:5432/ondc";
 
 // ─── Pool 1 — ONDC catalog + order-flow data ──────────────────────────────────
 //
@@ -35,9 +42,7 @@ const APP_NAME = `ondc-${NODE_ROLE}`;
 
 const pool1 = new Pool({
   connectionString:
-    process.env.PSQL_URI ||
-    process.env.DATABASE_URL ||
-    "postgresql://postgres:postgres@localhost:5432/ondc",
+    ONDC_DB_URL,
   max: Number(process.env.POOL1_MAX) || 50,
   application_name: APP_NAME,
   idleTimeoutMillis: 30_000,
@@ -59,7 +64,7 @@ pool1.on("error", (err) =>
 
 const pool2 = new Pool({
   connectionString:
-    process.env.PSQL_URI_AUTH ||
+    envFor("PSQL_URI_AUTH") ||
     "postgresql://postgres:postgres@localhost:5432/ondc_customer",
   max: Number(process.env.POOL2_MAX) || 25,
   application_name: APP_NAME,
@@ -86,9 +91,7 @@ pool2.on("error", (err) =>
 
 const poolIngest = new Pool({
   connectionString:
-    process.env.PSQL_URI ||
-    process.env.DATABASE_URL ||
-    "postgresql://postgres:postgres@localhost:5432/ondc",
+    ONDC_DB_URL,
   // 2026-06-20 (3-process split): env-configurable (POOL_INGEST_MAX, default 15).
   // This pool only does the consumer's staging-table bookkeeping (claim/done/fail),
   // so the worker can keep it small and leave more of ondc_db's budget for pool1.
@@ -121,9 +124,7 @@ poolIngest.on("error", (err) =>
 
 const poolWebhook = new Pool({
   connectionString:
-    process.env.PSQL_URI ||
-    process.env.DATABASE_URL ||
-    "postgresql://postgres:postgres@localhost:5432/ondc",
+    ONDC_DB_URL,
   max: Number(process.env.POOL_WEBHOOK_MAX) || 15,
   application_name: APP_NAME,
   idleTimeoutMillis: 30_000,

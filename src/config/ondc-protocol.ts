@@ -7,15 +7,19 @@
  * on a transaction takes its city (and domain/country/core_version) from that
  * transaction's stored /search context — see
  * repositories/transaction-context.ts.
+ *
+ * Values resolve via envFor(): `${ENV}_X` when set, else plain X.
  */
+import { envFor } from "./env.js";
+
 export const ondcProtocol = {
-  domain: process.env.ONDC_DOMAIN ?? "nic2004:60232",
-  country: process.env.ONDC_COUNTRY ?? "IND",
-  city: process.env.ONDC_CITY ?? "std:080",
-  coreVersion: process.env.ONDC_CORE_VERSION ?? "1.2.0",
-  bapId: process.env.BAP_ID ?? process.env.SUBSCRIBER_ID ?? "",
-  bapUri: process.env.BAP_URI ?? "",
-  ttl: process.env.ONDC_TTL ?? "PT30S",
+  domain: envFor("ONDC_DOMAIN") ?? "nic2004:60232",
+  country: envFor("ONDC_COUNTRY") ?? "IND",
+  city: envFor("ONDC_CITY") ?? "std:080",
+  coreVersion: envFor("ONDC_CORE_VERSION") ?? "1.2.0",
+  bapId: envFor("BAP_ID") ?? envFor("SUBSCRIBER_ID") ?? "",
+  bapUri: envFor("BAP_URI") ?? "",
+  ttl: envFor("ONDC_TTL") ?? "PT30S",
 };
 
 export type OndcProtocol = typeof ondcProtocol;

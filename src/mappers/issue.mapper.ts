@@ -12,6 +12,7 @@
  */
 import { buildRequestContext } from "../utils/ondc-context.js";
 import { SUBSCRIBER_ID } from "../constants/v1/appConstants.js";
+import { envFor } from "../config/env.js";
 import type { IssueCategory } from "../constants/issueCategories.js";
 import type { OndcContext } from "../types/search/ondc.js";
 import type { FullIssue, IssueActionRow } from "../repositories/issue.repository.js";
@@ -27,9 +28,9 @@ import type {
 // No BAP support-contact config exists yet in this repo — read from env with
 // obvious placeholders so this is easy to grep for and replace with real values.
 // Sent as complainant_actions[].updated_by (the interfacing app's representative).
-const BAP_SUPPORT_NAME = process.env.BAP_SUPPORT_NAME || "Support";
-const BAP_SUPPORT_PHONE = process.env.BAP_SUPPORT_PHONE || "9999999999";
-const BAP_SUPPORT_EMAIL = process.env.BAP_SUPPORT_EMAIL || "support@example.com";
+const BAP_SUPPORT_NAME = envFor("BAP_SUPPORT_NAME") || "Support";
+const BAP_SUPPORT_PHONE = envFor("BAP_SUPPORT_PHONE") || "9999999999";
+const BAP_SUPPORT_EMAIL = envFor("BAP_SUPPORT_EMAIL") || "support@example.com";
 
 // IGM policy maximums (contract footnote 18); buyer apps may shorten them.
 const EXPECTED_RESPONSE_TIME = "PT2H";
