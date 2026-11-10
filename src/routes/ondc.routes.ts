@@ -52,6 +52,7 @@ import { createStreamBindController } from "../controllers/stream-bind.controlle
 import { noApiLogMiddleware } from "../middlewares/no-api-log.middleware.js";
 import { callbackLogMiddleware } from "../middlewares/callback-log.middleware.js";
 import { ondcProtocol } from "../config/ondc-protocol.js";
+import { envFor } from "../config/env.js";
 import { loadTransactionContext } from "../repositories/transaction-context.js";
 import { callbackContextMiddleware } from "../middlewares/callback-context.middleware.js";
 import { verifyOndcSignature } from "../middlewares/ondc-signature.middleware.js";
@@ -77,7 +78,7 @@ const searchService = new SearchService({
 const onSearchService = new OnSearchService(new DrizzleOnSearchRepository());
 const initProtocol = {
   ...protocol,
-  bapUri: process.env.BAP_URI ?? process.env.BFF ?? "",
+  bapUri: envFor("BAP_URI") ?? envFor("BFF") ?? "",
 };
 const initService = new InitService({
   transport,

@@ -23,6 +23,7 @@ import { connectPostgres } from "./db/index.js";
 // circuit-breaker) — no new pool coupling.
 // import { startQuoteCleanupCron, startStagingCleanupCron } from "./services/quote-cleanup.service.js";
 import { logger } from "./utils/logger.js";
+import { ENV, envSourceSummary } from "./config/env.js";
 // import { apiLogMiddleware } from "./middleware/api-log.middleware.js";
 
 const app = express();
@@ -205,4 +206,5 @@ const port = Number(process.env.PORT) || 3000;
 
 server.listen(port, () => {
   logger.info("server", `Server started on port ${port}`);
+  logger.info("server", `ENV=${ENV} — env sources: ${envSourceSummary()}`);
 });
