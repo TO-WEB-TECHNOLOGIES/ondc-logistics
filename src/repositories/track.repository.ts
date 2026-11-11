@@ -12,6 +12,9 @@ import {
 import type { OndcOnTrackResponse, OndcTrackRequest } from "../types/track/ondc.js";
 import { buildTrackingDetails } from "../mappers/track-event.mapper.js";
 import { errorFields } from "../mappers/order-event.mapper.js";
+import { forwardOnTrack, omitEmpty, osrmBffEnabled } from "../utils/osrm-bff.client.js";
+import { loadOrderRoutePoints } from "./order-route-points.js";
+import { logger } from "../utils/logger.js";
 
 export type TrackCallbackResult =
   "processed" | "duplicate" | "not_found" | "invalid_fulfillment";
@@ -222,6 +225,41 @@ export class DrizzleTrackRepository implements TrackRepository {
         updatedAt: new Date().toISOString(),
         ...buildTrackingDetails(tracking),
       });
+
+      // osrm-bff forward (additive, fire-and-forget): same order_tracking
+      // body + fulfillmentState/startGps/endGps. Runs after the commit and
+      // the existing publishes; never awaited, never throws into this flow.
+      if (osrmBffEnabled()) {
+        const orderId = row.orderId;
+        const base = {
+          event: "order_tracking" as const,
+          transactionId: c.transaction_id,
+          orderId,
+          url: columns.trackingUrl,
+          status: columns.trackingStatus,
+          gps: columns.trackingGps,
+          locationTimestamp: tracking?.location?.time?.timestamp,
+          path,
+          updatedAt: new Date().toISOString(),
+          ...buildTrackingDetails(tracking),
+          fulfillmentState: orderRow?.fulfillmentStateCode ?? undefined,
+        };
+        void loadOrderRoutePoints(
+          this.database,
+          orderRow?.transactionId ?? c.transaction_id,
+          orderRow?.fulfillmentId,
+        )
+          .catch((error) => {
+            logger.warn("osrm-bff", "route points lookup failed", {
+              orderId,
+              transactionId: c.transaction_id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+            return {};
+          })
+          .then((points) => forwardOnTrack(omitEmpty({ ...base, ...points })))
+          .catch(() => undefined);
+      }
     } else if (response.error) {
       stream.push(c.transaction_id, "track_error", {
         orderId: row.orderId,
